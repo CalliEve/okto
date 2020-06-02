@@ -14,7 +14,7 @@ use serenity::{
 };
 
 use crate::{
-    models::{caches::PictureCacheContainerKey, pictures::*},
+    models::{caches::PictureCacheKey, pictures::*},
     utils::{constants::*, other::cutoff_on_last_dot, pictures::*},
 };
 
@@ -74,6 +74,7 @@ fn earthpic(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
                         get_date_epic_image(&epic_image_data.date),
                         epic_image_data.image
                     ))
+                    .timestamp(&Utc::now())
             })
         })?;
 
@@ -136,6 +137,7 @@ fn spacepic(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                     f.text(format!("APOD of {}", date.format("%Y-%m-%d")))
                 })
                 .image(apod_image.url)
+                .timestamp(&Utc::now())
             })
         })?;
 
@@ -146,7 +148,7 @@ fn spacepic(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 fn hubble(ctx: &mut Context, msg: &Message) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http);
 
-    let picn: i32 = if let Some(pic_cache) = ctx.data.read().get::<PictureCacheContainerKey>() {
+    let picn: i32 = if let Some(pic_cache) = ctx.data.read().get::<PictureCacheKey>() {
         *pic_cache
             .hubble_pics
             .choose(&mut thread_rng())
@@ -181,6 +183,7 @@ fn hubble(ctx: &mut Context, msg: &Message) -> CommandResult {
                     f.text(format!("source: hubblesite.org, pic ID: {}", picn))
                 })
                 .image(pic)
+                .timestamp(&Utc::now())
             })
         })?;
 
@@ -229,6 +232,7 @@ fn spirit(ctx: &mut Context, msg: &Message) -> CommandResult {
                 )
                 .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
                 .image(pic.img_src)
+                .timestamp(&Utc::now())
             })
         })?;
 
@@ -276,6 +280,7 @@ fn opportunity(ctx: &mut Context, msg: &Message) -> CommandResult {
                 )
                 .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
                 .image(pic.img_src)
+                .timestamp(&Utc::now())
             })
         })?;
 

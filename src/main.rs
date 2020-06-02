@@ -1,13 +1,17 @@
 mod commands;
 mod events;
+mod launch_tracking;
 mod models;
 mod utils;
 
-use serenity::{framework::StandardFramework, prelude::Client};
-use std::env;
+use serenity::{
+    framework::StandardFramework,
+    prelude::{Client, RwLock},
+};
+use std::{env, sync::Arc};
 
-use commands::{general::*, pictures::*};
-use models::caches::PictureCacheContainerKey;
+use commands::{general::*, launches::*, pictures::*};
+use models::caches::{LaunchesCacheKey, PictureCacheKey};
 use utils::preloading::preload_data;
 
 fn main() {
@@ -17,7 +21,8 @@ fn main() {
 
     {
         let mut data = client.data.write();
-        data.insert::<PictureCacheContainerKey>(preload_data());
+        data.insert::<PictureCacheKey>(preload_data());
+        data.insert::<LaunchesCacheKey>(Arc::new(RwLock::new(Vec::new())));
     }
 
     client.with_framework(
@@ -25,6 +30,7 @@ fn main() {
             .configure(|c| c.prefix("!;")) // set the bot's prefix to "~"
             .group(&GENERAL_GROUP)
             .group(&PICTURES_GROUP)
+            .group(&LAUNCHES_GROUP)
             .after(|ctx, msg, cmd_name, error| {
                 //  Print out an error if it happened
                 if let Err(why) = error {

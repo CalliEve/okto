@@ -1,6 +1,8 @@
-use serenity::prelude::TypeMapKey;
+use std::sync::Arc;
 
-use super::pictures::MarsRoverPicture;
+use serenity::prelude::{RwLock, TypeMapKey};
+
+use super::{launches::LaunchData, pictures::MarsRoverPicture};
 
 #[derive(Debug, Clone)]
 pub struct PictureDataCache {
@@ -10,8 +12,14 @@ pub struct PictureDataCache {
     pub host_stars: Vec<String>,
 }
 
-pub struct PictureCacheContainerKey;
+pub struct PictureCacheKey;
 
-impl TypeMapKey for PictureCacheContainerKey {
+impl TypeMapKey for PictureCacheKey {
     type Value = PictureDataCache;
+}
+
+pub struct LaunchesCacheKey;
+
+impl TypeMapKey for LaunchesCacheKey {
+    type Value = Arc<RwLock<Vec<LaunchData>>>;
 }
