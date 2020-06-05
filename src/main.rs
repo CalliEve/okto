@@ -1,4 +1,5 @@
 mod commands;
+mod event_handling;
 mod events;
 mod launch_tracking;
 mod models;
@@ -8,21 +9,25 @@ use serenity::{
     framework::StandardFramework,
     prelude::{Client, RwLock},
 };
-use std::{env, sync::Arc};
+use std::{collections::HashMap, env, sync::Arc};
 
 use commands::{general::*, launches::*, pictures::*};
-use models::caches::{LaunchesCacheKey, PictureCacheKey};
+use models::caches::{EmbedSessionsKey, LaunchesCacheKey, PictureCacheKey};
 use utils::preloading::preload_data;
 
 fn main() {
     // Login with a bot token from the environment
-    let mut client = Client::new(&env::var("DISCORD_TOKEN").expect("token"), events::Handler)
-        .expect("Error creating client");
+    let mut client = Client::new(
+        &env::var("DISCORD_TOKEN").expect("token"),
+        event_handling::Handler,
+    )
+    .expect("Error creating client");
 
     {
         let mut data = client.data.write();
         data.insert::<PictureCacheKey>(preload_data());
         data.insert::<LaunchesCacheKey>(Arc::new(RwLock::new(Vec::new())));
+        data.insert::<EmbedSessionsKey>(HashMap::new());
     }
 
     client.with_framework(

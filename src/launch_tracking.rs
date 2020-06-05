@@ -29,6 +29,7 @@ pub fn launch_tracking(cache: Arc<RwLock<Vec<LaunchData>>>) {
                 continue;
             },
         };
+        launches.sort_by_key(|l| l.net);
 
         println!("got {} launches", launches.len());
 

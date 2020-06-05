@@ -1,9 +1,19 @@
 use serenity::{
-    model::id::GuildId,
+    model::{
+        channel::Reaction,
+        id::{ChannelId, GuildId, MessageId},
+    },
     prelude::{Context, EventHandler},
 };
 
-use crate::{launch_tracking::launch_tracking, models::caches::LaunchesCacheKey};
+use crate::{
+    events::statefulembed::{
+        on_message_delete as embed_delete,
+        on_reaction_add as embed_reactions,
+    },
+    launch_tracking::launch_tracking,
+    models::caches::LaunchesCacheKey,
+};
 
 pub struct Handler;
 
@@ -28,5 +38,13 @@ impl EventHandler for Handler {
             let launches_cache_clone = launches_cache.clone();
             std::thread::spawn(|| launch_tracking(launches_cache_clone));
         }
+    }
+
+    fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
+        embed_reactions(ctx, add_reaction)
+    }
+
+    fn message_delete(&self, ctx: Context, channel_id: ChannelId, deleted_message_id: MessageId) {
+        embed_delete(ctx, deleted_message_id)
     }
 }
