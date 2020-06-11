@@ -19,7 +19,7 @@ pub fn cutoff_on_last_dot(text: &str, length: usize) -> &str {
             }
         }
     }
-    return text;
+    text
 }
 
 pub fn default_embed<'a>(
@@ -48,10 +48,10 @@ pub fn format_duration(dur: Duration) -> String {
 
     let mut res = String::new();
 
-    if days == 1 {
-        res.push_str(&format!("{} day", days));
-    } else if days > 1 {
-        res.push_str(&format!("{} days", days));
+    match days {
+        1 => res.push_str(&format!("{} day", days)),
+        x if x > 1 => res.push_str(&format!("{} days", days)),
+        _ => {},
     }
 
     if hours > 0 {

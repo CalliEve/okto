@@ -18,11 +18,7 @@ pub fn launch_tracking(cache: Arc<RwLock<Vec<LaunchData>>>) {
         println!("getting launch information");
 
         let mut launches: Vec<LaunchData> = match get_new_launches() {
-            Ok(ls) => ls
-                .launches
-                .into_iter()
-                .map(|l| LaunchData::from(l))
-                .collect(),
+            Ok(ls) => ls.launches.into_iter().map(LaunchData::from).collect(),
             Err(e) => {
                 dbg!(e);
                 sleep(Duration::from_secs(60));

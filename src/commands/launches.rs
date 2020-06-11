@@ -24,13 +24,14 @@ use crate::{
     utils::{constants::*, default_embed, format_duration, launches::*},
 };
 
-const FINAL_PAGE_EMOJI: &'static str = "⏭";
-const NEXT_PAGE_EMOJI: &'static str = "▶";
-const LAST_PAGE_EMOJI: &'static str = "◀";
-const FIRST_PAGE_EMOJI: &'static str = "⏮";
+const FINAL_PAGE_EMOJI: &str = "⏭";
+const NEXT_PAGE_EMOJI: &str = "▶";
+const LAST_PAGE_EMOJI: &str = "◀";
+const FIRST_PAGE_EMOJI: &str = "⏮";
+const EXIT_EMOJI: &str = "❌";
 const CERTAIN_EMOJI: u64 = 447805610482728964;
 const UNCERTAIN_EMOJI: u64 = 447805624923717642;
-const LAUNCH_LIBRARY_URL: &'static str = "http://www.launchlibrary.net/";
+const LAUNCH_LIBRARY_URL: &str = "http://www.launchlibrary.net/";
 
 #[group]
 #[commands(nextlaunch, listlaunches)]
@@ -38,7 +39,7 @@ struct Launches;
 
 #[command]
 #[aliases(nl)]
-fn nextlaunch(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
             Ok(launch_cache.read().to_vec())
@@ -63,6 +64,17 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult
             })?;
         return Ok(());
     }
+
+    launches = match filter_launches(launches, args) {
+        Ok(ls) => ls,
+        Err(err) => {
+            msg.channel_id
+                .send_message(&ctx.http, |m: &mut CreateMessage| {
+                    m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
+                })?;
+            return Ok(());
+        },
+    };
 
     let launch = &launches[0];
 
@@ -123,7 +135,7 @@ fn list_page(
     } else {
         list.iter()
             .filter(|l| l.status == LaunchStatus::Go)
-            .map(|l| l.clone())
+            .cloned()
             .collect()
     };
 
@@ -146,7 +158,7 @@ fn list_page(
 
         if all {
             e.description("
-            This list shows the next 100 upcoming launches, both certain and uncertain.
+            This list shows the upcoming launches (max 100), both certain and uncertain.
             Use the arrow reactions to get to other pages and the green reaction to filter on only the launches that are certain.
             ");
         } else {
@@ -156,6 +168,7 @@ fn list_page(
             ");
         }
 
+        #[allow(clippy::needless_range_loop)]
         for i in min..top {
             e.field(
                 format!(
@@ -204,7 +217,7 @@ fn list_page(
         });
     }
 
-    if all {
+    if all && launches.iter().any(|l| l.status == LaunchStatus::Go) {
         let certain_page_launches = list.clone();
         let certain_page_session = session.clone();
         em.add_option(
@@ -222,7 +235,7 @@ fn list_page(
                 )
             },
         );
-    } else {
+    } else if !all {
         let uncertain_page_launches = list.clone();
         let uncertain_page_session = session.clone();
         em.add_option(
@@ -256,7 +269,7 @@ fn list_page(
     }
 
     if page_num < max_page {
-        let final_page_launches = list.clone();
+        let final_page_launches = list;
         let final_page_session = session.clone();
         em.add_option(&ReactionType::from(FINAL_PAGE_EMOJI), move || {
             list_page(
@@ -268,6 +281,12 @@ fn list_page(
         });
     }
 
+    em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
+        let lock = session.read();
+        let http = lock.http.clone();
+        lock.message.as_ref().map(|m| m.delete(&http));
+    });
+
     let res = em.show();
     if res.is_err() {
         dbg!(res.unwrap_err());
@@ -276,7 +295,7 @@ fn list_page(
 
 #[command]
 #[aliases(ll)]
-fn listlaunches(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
+fn listlaunches(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
             Ok(launch_cache.read().to_vec())
@@ -285,9 +304,20 @@ fn listlaunches(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResu
         }
     }?;
 
-    if launches.len() == 0 {
+    if launches.is_empty() {
         return Err("No launches found".into());
     }
+
+    launches = match filter_launches(launches, args) {
+        Ok(ls) => ls,
+        Err(err) => {
+            msg.channel_id
+                .send_message(&ctx.http, |m: &mut CreateMessage| {
+                    m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
+                })?;
+            return Ok(());
+        },
+    };
 
     let session = EmbedSession::new(&ctx.http, msg.channel_id, msg.author.id).show(&ctx)?;
 

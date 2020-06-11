@@ -1,5 +1,4 @@
 use super::launches::{LaunchData, LaunchInfo};
-use chrono::Duration;
 
 impl From<LaunchInfo> for LaunchData {
     fn from(info: LaunchInfo) -> LaunchData {

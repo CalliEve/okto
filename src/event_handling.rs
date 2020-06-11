@@ -44,7 +44,7 @@ impl EventHandler for Handler {
         embed_reactions(ctx, add_reaction)
     }
 
-    fn message_delete(&self, ctx: Context, channel_id: ChannelId, deleted_message_id: MessageId) {
+    fn message_delete(&self, ctx: Context, _channel_id: ChannelId, deleted_message_id: MessageId) {
         embed_delete(ctx, deleted_message_id)
     }
 }
