@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use mongodb::sync::Database;
 use serenity::{
     model::id::MessageId,
     prelude::{RwLock, TypeMapKey},
@@ -32,4 +33,10 @@ pub struct EmbedSessionsKey;
 
 impl TypeMapKey for EmbedSessionsKey {
     type Value = HashMap<MessageId, Arc<RwLock<EmbedSession>>>;
+}
+
+pub struct DatabaseKey;
+
+impl TypeMapKey for DatabaseKey {
+    type Value = Database;
 }

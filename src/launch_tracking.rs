@@ -1,31 +1,31 @@
-use reqwest::Result;
-use serde::Deserialize;
+use reqwest::{header::AUTHORIZATION, Result};
 use serenity::prelude::RwLock;
 use std::{collections::HashMap, sync::Arc, thread::sleep, time::Duration};
 
 use crate::{
-    models::launches::{LaunchData, LaunchInfo},
-    utils::constants::DEFAULT_CLIENT,
+    models::launches::{LaunchContainer, LaunchData},
+    utils::constants::{DEFAULT_CLIENT, LL_KEY},
 };
-
-#[derive(Deserialize)]
-struct LaunchContainer {
-    pub launches: Vec<LaunchInfo>,
-}
 
 pub fn launch_tracking(cache: Arc<RwLock<Vec<LaunchData>>>) {
     loop {
         println!("getting launch information");
 
         let mut launches: Vec<LaunchData> = match get_new_launches() {
-            Ok(ls) => ls.launches.into_iter().map(LaunchData::from).collect(),
+            Ok(ls) => ls.results.into_iter().map(LaunchData::from).collect(),
             Err(e) => {
                 dbg!(e);
-                sleep(Duration::from_secs(60));
+                sleep(Duration::from_secs(300));
                 continue;
-            },
+            }
         };
         launches.sort_by_key(|l| l.net);
+
+        let mut i = 0;
+        for launch in launches.iter_mut() {
+            launch.id = i;
+            i += 1;
+        }
 
         println!("got {} launches", launches.len());
 
@@ -41,14 +41,15 @@ pub fn launch_tracking(cache: Arc<RwLock<Vec<LaunchData>>>) {
 
 fn get_new_launches() -> Result<LaunchContainer> {
     let mut params = HashMap::new();
-    params.insert("next", "100");
+    params.insert("limit", "100");
     params.insert(
         "fields",
         "vidURLs,status,name,rocket,lsp,net,location,tbddate,tbdtime,windowstart,windowend,missions,mission",
     );
 
     Ok(DEFAULT_CLIENT
-        .get("https://launchlibrary.net/1.4.1/launch")
+        .get("https://ll.thespacedevs.com/2.0.0/launch/upcoming")
+        .header(AUTHORIZATION, LL_KEY.as_str())
         .query(&params)
         .send()?
         .error_for_status()?

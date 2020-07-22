@@ -3,30 +3,32 @@ use super::launches::{LaunchData, LaunchInfo};
 impl From<LaunchInfo> for LaunchData {
     fn from(info: LaunchInfo) -> LaunchData {
         LaunchData {
-            id: info.id,
+            id: 0,
+            ll_id: info.id,
             launch_name: info.name,
-            status: info.status,
+            status: info.status.id,
             payload: info
-                .missions
-                .first()
-                .map(|m| m.name.as_str())
-                .unwrap_or("Payload Unknown")
-                .to_owned(),
+                .mission
+                .clone()
+                .map(|m| m.name)
+                .unwrap_or(String::from("payload unknown")),
             vid_urls: info.vid_urls.unwrap_or_default(),
-            vehicle: info.rocket.name,
-            location: info
-                .location
-                .pads
-                .first()
-                .map(|p| p.name.as_str())
-                .unwrap_or(info.location.name.as_str())
-                .to_owned(),
+            vehicle: info.rocket.configuration.full_name,
+            location: info.pad.name,
             net: info.net,
-            launch_window: info.windowend - info.windowstart,
-            rocket_img: info.rocket.image_url,
-            mission_type: info.missions.first().map(|m| m.mission_type.clone()),
-            mission_description: info.missions.first().map(|m| m.description.clone()),
-            lsp: info.lsp.name,
+            launch_window: info.window_end - info.window_start,
+            rocket_img: info.image,
+            mission_type: info
+                .mission
+                .clone()
+                .map(|m| m.mission_type)
+                .unwrap_or(String::from("mission type unknown")),
+            mission_description: info
+                .mission
+                .clone()
+                .map(|m| m.description)
+                .unwrap_or(String::from("mission description unknown")),
+            lsp: info.launch_service_provider.name,
         }
     }
 }

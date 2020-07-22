@@ -3,17 +3,39 @@ mod event_handling;
 mod events;
 mod launch_tracking;
 mod models;
+mod reminder_tracking;
 mod utils;
 
 use serenity::{
-    framework::StandardFramework,
-    prelude::{Client, RwLock},
+    client::{Client, Context},
+    framework::standard::{
+        help_commands, macros::help, Args, CommandGroup, CommandResult, HelpOptions,
+        StandardFramework,
+    },
+    model::prelude::{Message, UserId},
+    prelude::RwLock,
 };
-use std::{collections::HashMap, env, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    env,
+    sync::Arc,
+};
 
-use commands::{general::*, launches::*, pictures::*};
+use commands::{general::*, launches::*, pictures::*, reminders::*};
 use models::caches::{EmbedSessionsKey, LaunchesCacheKey, PictureCacheKey};
 use utils::preloading::preload_data;
+
+#[help]
+fn help_cmd(
+    context: &mut Context,
+    msg: &Message,
+    args: Args,
+    help_options: &'static HelpOptions,
+    groups: &[&'static CommandGroup],
+    owners: HashSet<UserId>,
+) -> CommandResult {
+    help_commands::with_embeds(context, msg, args, help_options, groups, owners)
+}
 
 fn main() {
     // Login with a bot token from the environment
@@ -25,9 +47,9 @@ fn main() {
 
     {
         let mut data = client.data.write();
+        data.insert::<EmbedSessionsKey>(HashMap::new());
         data.insert::<PictureCacheKey>(preload_data());
         data.insert::<LaunchesCacheKey>(Arc::new(RwLock::new(Vec::new())));
-        data.insert::<EmbedSessionsKey>(HashMap::new());
     }
 
     client.with_framework(
@@ -36,6 +58,8 @@ fn main() {
             .group(&GENERAL_GROUP)
             .group(&PICTURES_GROUP)
             .group(&LAUNCHES_GROUP)
+            .group(&REMINDERS_GROUP)
+            .help(&HELP_CMD)
             .after(|ctx, msg, cmd_name, error| {
                 //  Print out an error if it happened
                 if let Err(why) = error {

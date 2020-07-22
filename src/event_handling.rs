@@ -8,11 +8,11 @@ use serenity::{
 
 use crate::{
     events::statefulembed::{
-        on_message_delete as embed_delete,
-        on_reaction_add as embed_reactions,
+        on_message_delete as embed_delete, on_reaction_add as embed_reactions,
     },
     launch_tracking::launch_tracking,
-    models::caches::LaunchesCacheKey,
+    models::caches::{DatabaseKey, LaunchesCacheKey},
+    reminder_tracking::reminder_tracking,
 };
 
 pub struct Handler;
@@ -37,6 +37,15 @@ impl EventHandler for Handler {
         if let Some(launches_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
             let launches_cache_clone = launches_cache.clone();
             std::thread::spawn(|| launch_tracking(launches_cache_clone));
+
+            if let Some(db) = ctx.data.read().get::<DatabaseKey>() {
+                let launches_cache_clone = launches_cache.clone();
+                let http_clone = ctx.http.clone();
+                let db_clone = db.clone();
+                std::thread::spawn(|| {
+                    reminder_tracking(http_clone, launches_cache_clone, db_clone)
+                });
+            }
         }
     }
 

@@ -5,8 +5,7 @@ use serenity::{
     builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage},
     framework::standard::{
         macros::{command, group},
-        Args,
-        CommandResult,
+        Args, CommandResult,
     },
     model::{
         channel::{Message, ReactionType},
@@ -31,10 +30,10 @@ const FIRST_PAGE_EMOJI: &str = "⏮";
 const EXIT_EMOJI: &str = "❌";
 const CERTAIN_EMOJI: u64 = 447805610482728964;
 const UNCERTAIN_EMOJI: u64 = 447805624923717642;
-const LAUNCH_LIBRARY_URL: &str = "http://www.launchlibrary.net/";
+const LAUNCH_LIBRARY_URL: &str = "https://thespacedevs.com";
 
 #[group]
-#[commands(nextlaunch, listlaunches)]
+#[commands(nextlaunch, listlaunches, launchinfo, filtersinfo)]
 struct Launches;
 
 #[command]
@@ -73,7 +72,7 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                     m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
                 })?;
             return Ok(());
-        },
+        }
     };
 
     let launch = &launches[0];
@@ -87,9 +86,9 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                     })
                     .timestamp(&Utc::now())
                     .title(format!(
-                        "{}\n\nStatus: {}",
+                        "{}\nStatus: {}",
                         &launch.vehicle,
-                        launch.status.to_emoji()
+                        launch.status.as_str()
                     ))
                     .description(format!(
                         "**Payload:** {}
@@ -169,21 +168,21 @@ fn list_page(
         }
 
         #[allow(clippy::needless_range_loop)]
-        for i in min..top {
+        for launch in &launches[min..top] {
             e.field(
                 format!(
                     "{}: {} {}",
-                    i + 1,
-                    &launches[i].vehicle,
-                    launches[i].status.to_emoji()
+                    launch.id,
+                    &launch.vehicle,
+                    launch.status.as_str()
                 ),
                 format!(
                     "**Payload:** {}\n**Date:** {}\n**Time:** {}\n**Provider:** {}\n**Location:** {}",
-                    &launches[i].payload,
-                    launches[i].net.format("%d %B %Y"),
-                    launches[i].net.format("%T"),
-                    &launches[i].lsp,
-                    &launches[i].location
+                    &launch.payload,
+                    launch.net.format("%d %B %Y"),
+                    launch.net.format("%T"),
+                    &launch.lsp,
+                    &launch.location
                 ),
                 false,
             );
@@ -316,12 +315,154 @@ fn listlaunches(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                     m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
                 })?;
             return Ok(());
-        },
+        }
     };
 
     let session = EmbedSession::new(&ctx.http, msg.channel_id, msg.author.id).show(&ctx)?;
 
     list_page(session, launches, 0, true);
+
+    Ok(())
+}
+
+#[command]
+#[aliases(li)]
+fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+    let launches: Vec<LaunchData> = {
+        if let Some(launch_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
+            Ok(launch_cache.read().to_vec())
+        } else {
+            Err("Can't get launch cache")
+        }
+    }?;
+
+    if launches.is_empty() {
+        return Err("No launches found".into());
+    }
+
+    let launch = match args.current().map(|a| a.parse::<i32>()) {
+        Some(Ok(id)) => {
+            if let Some(l) = launches.into_iter().find(|l| l.id == id) {
+                l
+            } else {
+                msg.channel_id
+                    .send_message(&ctx.http, |m: &mut CreateMessage| {
+                        m.embed(|e: &mut CreateEmbed| {
+                            default_embed(e, "No launch was found with that ID :(", false)
+                        })
+                    })?;
+                return Ok(());
+            }
+        }
+        Some(_) => {
+            if let Ok(l) = request_launch(
+                args.current()
+                    .expect("no arg supplied while it should have been"),
+            ) {
+                l
+            } else {
+                msg.channel_id
+                    .send_message(&ctx.http, |m: &mut CreateMessage| {
+                        m.embed(|e: &mut CreateEmbed| {
+                            default_embed(e, "No launch was found with that ID :(", false)
+                        })
+                    })?;
+                return Ok(());
+            }
+        }
+        None => launches[0].clone(),
+    };
+
+    msg.channel_id
+        .send_message(&ctx.http, |m: &mut CreateMessage| {
+            m.embed(|e: &mut CreateEmbed| {
+                e.color(DEFAULT_COLOR)
+                    .author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Detailed info").icon_url(DEFAULT_ICON)
+                    })
+                    .timestamp(&Utc::now())
+                    .title(format!(
+                        "{}\nStatus: {}",
+                        &launch.vehicle,
+                        launch.status.as_str()
+                    ))
+                    .field("Date:", &launch.net.format("%d %B, %Y; %H:%m:%S UTC").to_string(), false)
+                    .field(
+                        "General information",
+                        format!(
+                            "**Payload:** {}
+                            **Provider:** {}
+                            **Location:** {}
+                            **Launch Window:** {}",
+                            &launch.payload,
+                            &launch.lsp,
+                            &launch.location,
+                            format_duration(launch.launch_window)
+                        ),
+                        false,
+                    );
+
+                if launch.net > Utc::now().naive_utc() {
+                    e.field(
+                        "Time until launch:",
+                        format_duration(launch.net - Utc::now().naive_utc()),
+                        false,
+                    );
+                }
+
+                e.field("Desciption:", &launch.mission_description, false);
+
+                if let Some(img) = &launch.rocket_img {
+                    e.thumbnail(img);
+                }
+
+                e.field(
+                    "links",
+                    &format!(
+                        "**My Source:** [The Space Devs]({0})
+                        **Rocket Watch:** [rocket.watch](https://rocket.watch/#id={1})
+                        **Go4Liftoff:** [go4liftoff.com](https://go4liftoff.com/#page=singleLaunch?filters=launchID={1})",
+                        LAUNCH_LIBRARY_URL, launch.id,
+                    ),
+                    false,
+                )
+            })
+        })?;
+
+    Ok(())
+}
+
+#[command]
+fn filtersinfo(ctx: &mut Context, msg: &Message) -> CommandResult {
+    msg.channel_id
+        .send_message(&ctx.http, |m: &mut CreateMessage| {
+            m.embed(|e: &mut CreateEmbed| {
+                e.color(DEFAULT_COLOR)
+                    .author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Filters Info").icon_url(DEFAULT_ICON)
+                    })
+                    .timestamp(&Utc::now())
+                    .title("The following filters can be used to filter launches:")
+                    .field(
+                        "Vehicles:",
+                        LAUNCH_VEHICLES
+                            .keys()
+                            .copied()
+                            .collect::<Vec<&str>>()
+                            .join(", "),
+                        false,
+                    )
+                    .field(
+                        "Launch Service Providers:",
+                        LAUNCH_AGENCIES
+                            .keys()
+                            .copied()
+                            .collect::<Vec<&str>>()
+                            .join(", "),
+                        false,
+                    )
+            })
+        })?;
 
     Ok(())
 }
