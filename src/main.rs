@@ -19,7 +19,7 @@ use serenity::{
         help_commands, macros::help, Args, CommandGroup, CommandResult, HelpOptions,
         StandardFramework,
     },
-    model::prelude::{Message, UserId},
+    model::prelude::{ChannelId, Message, UserId},
     prelude::RwLock,
 };
 
@@ -73,11 +73,14 @@ fn main() {
             .after(|ctx, msg, cmd_name, error| {
                 //  Print out an error if it happened
                 if let Err(why) = error {
-                    println!("Error in {}: {:?}", cmd_name, why);
+                    println!("Error in {}: {:?}", cmd_name, &why);
                     let _ = msg.channel_id
                         .send_message(&ctx.http, |m| {
                             m.content("Oh no, an error happened.\nPlease try again at a later time")
                         });
+                    let _ = ChannelId(447876053109702668).send_message(&ctx.http, |m| {
+                        m.content(format!("An error happened in {}:\n```{:?}```", cmd_name, why))
+                    });
                 }
             }),
     );
