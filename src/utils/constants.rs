@@ -1,10 +1,12 @@
 use std::{collections::HashMap, env};
 
 use lazy_static::lazy_static;
+use regex::Regex;
 use reqwest::{
     blocking::{Client, ClientBuilder},
     header::{HeaderMap, ACCEPT},
 };
+use serenity::model::{channel::ReactionType, id::EmojiId};
 
 pub const DEFAULT_COLOR: u32 = 16750899;
 pub const DEFAULT_ICON: &str = "https://i.imgur.com/ruFc9fc.png";
@@ -27,6 +29,18 @@ lazy_static! {
         .default_headers(default_headers())
         .build()
         .expect("reqwest client could not be built");
+    pub static ref PROGRADE: ReactionType = ReactionType::Custom {
+        animated: false,
+        name: Some("Prograde".to_owned()),
+        id: EmojiId(433308892584476674),
+    };
+    pub static ref RETROGRADE: ReactionType = ReactionType::Custom {
+        animated: false,
+        name: Some("Retrograde".to_owned()),
+        id: EmojiId(433308874343448576),
+    };
+    pub static ref MENTION_REGEX: Regex = Regex::new("<[@#][!&]?([0-9]{17,18})>").unwrap();
+    pub static ref ID_REGEX: Regex = Regex::new("^[0-9]{17,18}$").unwrap();
 }
 
 fn agency_map() -> HashMap<&'static str, &'static str> {

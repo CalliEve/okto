@@ -35,7 +35,7 @@ pub fn launch_tracking(cache: Arc<RwLock<Vec<LaunchData>>>) {
             launch_cache.append(&mut launches);
         }
 
-        sleep(Duration::from_secs(60))
+        sleep(Duration::from_secs(300))
     }
 }
 

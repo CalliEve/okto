@@ -20,6 +20,7 @@ use crate::{
     utils::{
         constants::{DEFAULT_COLOR, DEFAULT_ICON, LAUNCH_AGENCIES},
         format_duration,
+        reminders::{get_guild_settings, get_user_settings},
     },
 };
 
@@ -53,10 +54,14 @@ pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, d
                 };
 
             'channel: for c in &reminders.channels {
-                for filter in &c.filters {
-                    if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
-                        if *agency == &l.lsp {
-                            continue 'channel;
+                let settings_res = get_guild_settings(&db, c.guild.into());
+
+                if let Ok(settings) = &settings_res {
+                    for filter in &settings.filters {
+                        if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
+                            if *agency == &l.lsp {
+                                continue 'channel;
+                            }
                         }
                     }
                 }
@@ -64,12 +69,14 @@ pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, d
                 let _ = c.channel.send_message(&http, |m: &mut CreateMessage| {
                     m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference));
 
-                    if !c.mentions.is_empty() {
-                        let mut mentions = String::new();
-                        for mention in &c.mentions {
-                            mentions.push_str(&format!(" <@&{}>", mention.as_u64()))
+                    if let Ok(settings) = &settings_res {
+                        if !settings.mentions.is_empty() {
+                            let mut mentions = String::new();
+                            for mention in &settings.mentions {
+                                mentions.push_str(&format!(" <@&{}>", mention.as_u64()))
+                            }
+                            m.content(mentions);
                         }
-                        m.content(mentions);
                     }
 
                     m
@@ -77,15 +84,19 @@ pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, d
             }
 
             'user: for u in &reminders.users {
-                for filter in &u.filters {
-                    if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
-                        if *agency == &l.lsp {
-                            continue 'user;
+                let settings_res = get_user_settings(&db, u.0);
+
+                if let Ok(settings) = settings_res {
+                    for filter in &settings.filters {
+                        if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
+                            if *agency == &l.lsp {
+                                continue 'user;
+                            }
                         }
                     }
                 }
 
-                if let Ok(chan) = u.user.create_dm_channel(&http) {
+                if let Ok(chan) = u.create_dm_channel(&http) {
                     let _ = chan.send_message(&http, |m: &mut CreateMessage| {
                         m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference))
                     });
@@ -110,13 +121,16 @@ fn reminder_embed<'a>(
 ) -> &'a mut CreateEmbed {
     e.color(DEFAULT_COLOR)
         .author(|a: &mut CreateEmbedAuthor| {
-            a.name(format!("NET {}", format_duration(diff)))
+            a.name(format!("{} till launch", format_duration(diff, false)))
                 .icon_url(DEFAULT_ICON)
         })
         .description(format!(
             "**Payload:** {}
-            **Vehicle:** {}",
-            &l.payload, &l.vehicle
+            **Vehicle:** {}
+            **NET:** {}",
+            &l.payload,
+            &l.vehicle,
+            &l.net.format("%d %B, %Y; %H:%m:%S UTC").to_string()
         ));
 
     if let Some(img) = &l.rocket_img {

@@ -2,12 +2,12 @@ use std::{collections::HashMap, sync::Arc};
 
 use mongodb::sync::Database;
 use serenity::{
-    model::id::MessageId,
+    model::id::{ChannelId, MessageId, UserId},
     prelude::{RwLock, TypeMapKey},
 };
 
 use super::{launches::LaunchData, pictures::MarsRoverPicture};
-use crate::events::statefulembed::EmbedSession;
+use crate::events::{statefulembed::EmbedSession, waitfor::WaitFor};
 
 #[derive(Debug, Clone)]
 pub struct PictureDataCache {
@@ -33,6 +33,12 @@ pub struct EmbedSessionsKey;
 
 impl TypeMapKey for EmbedSessionsKey {
     type Value = HashMap<MessageId, Arc<RwLock<EmbedSession>>>;
+}
+
+pub struct WaitForKey;
+
+impl TypeMapKey for WaitForKey {
+    type Value = HashMap<(ChannelId, UserId), WaitFor>;
 }
 
 pub struct DatabaseKey;

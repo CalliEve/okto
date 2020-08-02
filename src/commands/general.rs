@@ -1,4 +1,4 @@
-use chrono::Utc;
+use chrono::{DateTime, FixedOffset, Utc};
 use serde::{Deserialize, Serialize};
 use serenity::{
     builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage, EditMessage},
@@ -8,8 +8,7 @@ use serenity::{
     },
     model::{channel::Message, ModelError},
     prelude::Context,
-    Error,
-    Result,
+    Error, Result,
 };
 
 use crate::utils::constants::*;
@@ -20,7 +19,24 @@ struct General;
 
 #[command]
 fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
-    msg.reply(ctx, "Pong!")?;
+    let start = Utc::now();
+    let mut message = msg.channel_id.send_message(&ctx, |m: &mut CreateMessage| {
+        m.embed(|e: &mut CreateEmbed| e.description("🏓 pong..."))
+    })?;
+    let end = Utc::now();
+
+    let round_trip = end - start;
+    let ws_delay = DateTime::<FixedOffset>::from(start) - msg.id.created_at();
+
+    message.edit(ctx, |e: &mut EditMessage| {
+        e.embed(|e: &mut CreateEmbed| {
+            e.title("Pong!").description(format!(
+                "🏓\nws delay: {}ms\napi ping: {}ms",
+                ws_delay.num_milliseconds(),
+                round_trip.num_milliseconds()
+            ))
+        })
+    })?;
 
     Ok(())
 }

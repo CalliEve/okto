@@ -1,14 +1,15 @@
 use serenity::{
     model::{
-        channel::Reaction,
+        channel::{Message, Reaction},
         id::{ChannelId, GuildId, MessageId},
     },
     prelude::{Context, EventHandler},
 };
 
 use crate::{
-    events::statefulembed::{
-        on_message_delete as embed_delete, on_reaction_add as embed_reactions,
+    events::{
+        statefulembed::{on_message_delete as embed_delete, on_reaction_add as embed_reactions},
+        waitfor::{waitfor_message, waitfor_reaction},
     },
     launch_tracking::launch_tracking,
     models::caches::{DatabaseKey, LaunchesCacheKey},
@@ -50,10 +51,15 @@ impl EventHandler for Handler {
     }
 
     fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
-        embed_reactions(ctx, add_reaction)
+        waitfor_reaction(&ctx, add_reaction.clone());
+        embed_reactions(&ctx, add_reaction.clone());
     }
 
     fn message_delete(&self, ctx: Context, _channel_id: ChannelId, deleted_message_id: MessageId) {
-        embed_delete(ctx, deleted_message_id)
+        embed_delete(&ctx, deleted_message_id)
+    }
+
+    fn message(&self, ctx: Context, message: Message) {
+        waitfor_message(&ctx, message)
     }
 }

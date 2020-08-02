@@ -100,11 +100,11 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                         launch.net.format("%Y-%m-%d %H:%M:%S"),
                         &launch.lsp,
                         &launch.location,
-                        format_duration(launch.launch_window)
+                        format_duration(launch.launch_window, true)
                     ))
                     .field(
                         "Time until launch:",
-                        format_duration(launch.net - Utc::now().naive_utc()),
+                        format_duration(launch.net - Utc::now().naive_utc(), true),
                         false,
                     );
 
@@ -318,7 +318,7 @@ fn listlaunches(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         }
     };
 
-    let session = EmbedSession::new(&ctx.http, msg.channel_id, msg.author.id).show(&ctx)?;
+    let session = EmbedSession::new_show(&ctx, msg.channel_id, msg.author.id)?;
 
     list_page(session, launches, 0, true);
 
@@ -397,7 +397,7 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                             &launch.payload,
                             &launch.lsp,
                             &launch.location,
-                            format_duration(launch.launch_window)
+                            format_duration(launch.launch_window, true)
                         ),
                         false,
                     );
@@ -405,7 +405,7 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                 if launch.net > Utc::now().naive_utc() {
                     e.field(
                         "Time until launch:",
-                        format_duration(launch.net - Utc::now().naive_utc()),
+                        format_duration(launch.net - Utc::now().naive_utc(), true),
                         false,
                     );
                 }

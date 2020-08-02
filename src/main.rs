@@ -6,6 +6,13 @@ mod models;
 mod reminder_tracking;
 mod utils;
 
+use std::{
+    collections::{HashMap, HashSet},
+    env,
+    sync::Arc,
+};
+
+use mongodb::sync::Client as MongoClient;
 use serenity::{
     client::{Client, Context},
     framework::standard::{
@@ -15,14 +22,11 @@ use serenity::{
     model::prelude::{Message, UserId},
     prelude::RwLock,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    sync::Arc,
-};
 
 use commands::{general::*, launches::*, pictures::*, reminders::*};
-use models::caches::{EmbedSessionsKey, LaunchesCacheKey, PictureCacheKey};
+use models::caches::{
+    DatabaseKey, EmbedSessionsKey, LaunchesCacheKey, PictureCacheKey, WaitForKey,
+};
 use utils::preloading::preload_data;
 
 #[help]
@@ -48,8 +52,14 @@ fn main() {
     {
         let mut data = client.data.write();
         data.insert::<EmbedSessionsKey>(HashMap::new());
+        data.insert::<WaitForKey>(HashMap::new());
         data.insert::<PictureCacheKey>(preload_data());
         data.insert::<LaunchesCacheKey>(Arc::new(RwLock::new(Vec::new())));
+        data.insert::<DatabaseKey>(
+            MongoClient::with_uri_str("mongodb://mongo:27017")
+                .unwrap()
+                .database("okto"),
+        );
     }
 
     client.with_framework(

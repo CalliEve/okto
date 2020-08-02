@@ -3,12 +3,13 @@ use std::sync::Arc;
 use chrono::Utc;
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
+    cache::CacheRwLock,
     http::Http,
     model::{
         channel::{Message, Reaction, ReactionType},
         id::{ChannelId, MessageId, UserId},
     },
-    prelude::{Context, RwLock},
+    prelude::{Context, RwLock, ShareMap},
     Error,
 };
 
@@ -28,6 +29,7 @@ pub struct StatefulEmbed {
 }
 
 impl StatefulEmbed {
+    #[allow(dead_code)]
     pub fn new(session: Arc<RwLock<EmbedSession>>) -> Self {
         Self {
             inner: CreateEmbed::default(),
@@ -60,7 +62,8 @@ impl StatefulEmbed {
     ) where
         F: Fn() + Send + Sync + 'static,
     {
-        self.inner.field(name, value, inline);
+        let full_name = format!("{} {}", emoji.to_string(), name);
+        self.inner.field(full_name, value, inline);
         self.options.push(StatefulOption {
             emoji: emoji.clone(),
             handler: Arc::new(Box::new(handler)),
@@ -83,7 +86,20 @@ impl StatefulEmbed {
             "No message in session, first run EmbedSession.show()",
         ))?;
 
-        let _ = message.delete_reactions(&session.http);
+        let res = message.delete_reactions(&session.http);
+        if let Err(_) = res {
+            for r in &message.reactions {
+                if r.me {
+                    let _ = message.channel_id.delete_reaction(
+                        &session.http,
+                        message.id,
+                        Some(message.author.id),
+                        r.reaction_type.clone(),
+                    );
+                }
+            }
+        }
+
         for opt in &self.options {
             message.react(&session.http, opt.emoji.clone())?;
         }
@@ -122,20 +138,24 @@ pub struct EmbedSession {
     pub channel: ChannelId,
     pub author: UserId,
     pub http: Arc<Http>,
+    pub data: Arc<RwLock<ShareMap>>,
+    pub cache: CacheRwLock,
 }
 
 impl EmbedSession {
-    pub fn new(http: &Arc<Http>, channel: ChannelId, author: UserId) -> Self {
+    pub fn new(ctx: &Context, channel: ChannelId, author: UserId) -> Self {
         Self {
             channel,
             author,
-            http: http.clone(),
+            http: ctx.http.clone(),
             current_state: None,
             message: None,
+            data: ctx.data.clone(),
+            cache: ctx.cache.clone(),
         }
     }
 
-    pub fn show(mut self, ctx: &Context) -> serenity::Result<Arc<RwLock<Self>>> {
+    pub fn show(mut self) -> serenity::Result<Arc<RwLock<Self>>> {
         let res = self
             .channel
             .send_message(&self.http, |m: &mut CreateMessage| {
@@ -147,13 +167,21 @@ impl EmbedSession {
             })?;
         self.message = Some(res.clone());
 
-        let session = Arc::new(RwLock::new(self));
+        let session = Arc::new(RwLock::new(self.clone()));
 
-        if let Some(embeds) = ctx.data.write().get_mut::<EmbedSessionsKey>() {
+        if let Some(embeds) = self.data.write().get_mut::<EmbedSessionsKey>() {
             embeds.insert(res.id, session.clone());
         }
 
         Ok(session)
+    }
+
+    pub fn new_show(
+        ctx: &Context,
+        channel: ChannelId,
+        author: UserId,
+    ) -> serenity::Result<Arc<RwLock<Self>>> {
+        Self::new(ctx, channel, author).show()
     }
 
     pub fn set_embed(&mut self, em: StatefulEmbed) {
@@ -161,7 +189,7 @@ impl EmbedSession {
     }
 }
 
-pub fn on_reaction_add(ctx: Context, add_reaction: Reaction) {
+pub fn on_reaction_add(ctx: &Context, add_reaction: Reaction) {
     let handler = if let Some(cache) = ctx.data.read().get::<EmbedSessionsKey>() {
         if let Some(session_lock) = cache.get(&add_reaction.message_id) {
             let session = session_lock.read();
@@ -195,7 +223,7 @@ pub fn on_reaction_add(ctx: Context, add_reaction: Reaction) {
     handler();
 }
 
-pub fn on_message_delete(ctx: Context, deleted_message_id: MessageId) {
+pub fn on_message_delete(ctx: &Context, deleted_message_id: MessageId) {
     if let Some(cache) = ctx.data.write().get_mut::<EmbedSessionsKey>() {
         cache.remove(&deleted_message_id);
     }
