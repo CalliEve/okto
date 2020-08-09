@@ -8,34 +8,29 @@ use crate::{
 };
 
 pub fn launch_tracking(cache: Arc<RwLock<Vec<LaunchData>>>) {
-    loop {
-        println!("getting launch information");
+    println!("getting launch information");
 
-        let mut launches: Vec<LaunchData> = match get_new_launches() {
-            Ok(ls) => ls.results.into_iter().map(LaunchData::from).collect(),
-            Err(e) => {
-                dbg!(e);
-                sleep(Duration::from_secs(300));
-                continue;
-            }
-        };
-        launches.sort_by_key(|l| l.net);
-
-        let mut i = 0;
-        for launch in launches.iter_mut() {
-            launch.id = i;
-            i += 1;
+    let mut launches: Vec<LaunchData> = match get_new_launches() {
+        Ok(ls) => ls.results.into_iter().map(LaunchData::from).collect(),
+        Err(e) => {
+            dbg!(e);
+            return;
         }
+    };
+    launches.sort_by_key(|l| l.net);
 
-        println!("got {} launches", launches.len());
+    let mut i = 0;
+    for launch in launches.iter_mut() {
+        launch.id = i;
+        i += 1;
+    }
 
-        {
-            let mut launch_cache = cache.write();
-            launch_cache.clear();
-            launch_cache.append(&mut launches);
-        }
+    println!("got {} launches", launches.len());
 
-        sleep(Duration::from_secs(300))
+    {
+        let mut launch_cache = cache.write();
+        launch_cache.clear();
+        launch_cache.append(&mut launches);
     }
 }
 

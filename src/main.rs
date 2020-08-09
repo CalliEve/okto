@@ -84,11 +84,6 @@ fn main() {
     }
 
     if let Some(launches_cache) = client.data.read().get::<LaunchesCacheKey>() {
-        let launches_cache_clone = launches_cache.clone();
-        client
-            .threadpool
-            .execute(|| launch_tracking(launches_cache_clone));
-
         if let Some(db) = client.data.read().get::<DatabaseKey>() {
             let launches_cache_clone = launches_cache.clone();
             let http_clone = client.cache_and_http.http.clone();

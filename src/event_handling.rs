@@ -18,11 +18,11 @@ impl EventHandler for Handler {
     fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
         let cache = ctx.cache.read();
         println!(
-            "############
-            Logged in as:\n{} - {}
-            guilds: {}
-            Users: {}
-            CPUs: {}
+            "############\n\
+            Logged in as: {} - {}\n\
+            guilds: {}\n\
+            Users: {}\n\
+            CPUs: {}\n\
             ############",
             cache.user.name,
             cache.user.id,

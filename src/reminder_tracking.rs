@@ -13,6 +13,7 @@ use serenity::{
 };
 
 use crate::{
+    launch_tracking,
     models::{
         launches::{LaunchData, LaunchStatus},
         reminders::Reminder,
@@ -25,7 +26,16 @@ use crate::{
 };
 
 pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, db: Database) {
+    let mut loop_count = 0;
     loop {
+        println!("running loop {}", loop_count);
+
+        if loop_count % 5 == 0 {
+            launch_tracking(cache.clone())
+        }
+
+        loop_count += 1;
+
         let launches: Vec<LaunchData> = cache
             .read()
             .iter()
@@ -105,7 +115,6 @@ pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, d
         }
 
         std::thread::sleep(std::time::Duration::from_secs(55));
-        continue;
     }
 }
 
