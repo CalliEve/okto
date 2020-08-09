@@ -39,6 +39,7 @@ use crate::{
 struct Reminders;
 
 #[command]
+#[only_in(guild)]
 fn notifychannel(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     if msg.guild_id.is_none() {
         return Ok(());

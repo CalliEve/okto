@@ -12,7 +12,10 @@ use std::{
     sync::Arc,
 };
 
-use mongodb::sync::Client as MongoClient;
+use mongodb::{
+    bson::{self, doc},
+    sync::Client as MongoClient,
+};
 use serenity::{
     client::{Client, Context},
     framework::standard::{
@@ -23,9 +26,10 @@ use serenity::{
     prelude::RwLock,
 };
 
-use commands::{general::*, launches::*, pictures::*, reminders::*};
-use models::caches::{
-    DatabaseKey, EmbedSessionsKey, LaunchesCacheKey, PictureCacheKey, WaitForKey,
+use commands::{general::*, launches::*, pictures::*, reminders::*, settings::*};
+use models::{
+    caches::{DatabaseKey, EmbedSessionsKey, LaunchesCacheKey, PictureCacheKey, WaitForKey},
+    settings::GuildSettings,
 };
 use utils::preloading::preload_data;
 
@@ -64,22 +68,45 @@ fn main() {
 
     client.with_framework(
         StandardFramework::new()
-            .configure(|c| c.prefix("!;")) // set the bot's prefix to "~"
+            .configure(|c| {
+                c.prefix("!;")
+                    .dynamic_prefix(|ctx: &mut Context, msg: &Message| {
+                        if msg.guild_id.is_none() {
+                            return None;
+                        }
+
+                        let db = if let Some(db) = ctx.data.read().get::<DatabaseKey>() {
+                            db.clone()
+                        } else {
+                            return None;
+                        };
+
+                        db.collection("reminders")
+                            .find_one(doc! { "guild": msg.guild_id.unwrap().0 }, None)
+                            .ok()
+                            .flatten()
+                            .and_then(|c| bson::from_bson::<GuildSettings>(c.into()).ok())
+                            .map(|s| s.prefix)
+                    })
+            })
             .group(&GENERAL_GROUP)
             .group(&PICTURES_GROUP)
             .group(&LAUNCHES_GROUP)
             .group(&REMINDERS_GROUP)
+            .group(&SETTINGS_GROUP)
             .help(&HELP_CMD)
             .after(|ctx, msg, cmd_name, error| {
                 //  Print out an error if it happened
                 if let Err(why) = error {
                     println!("Error in {}: {:?}", cmd_name, &why);
-                    let _ = msg.channel_id
-                        .send_message(&ctx.http, |m| {
-                            m.content("Oh no, an error happened.\nPlease try again at a later time")
-                        });
+                    let _ = msg.channel_id.send_message(&ctx.http, |m| {
+                        m.content("Oh no, an error happened.\nPlease try again at a later time")
+                    });
                     let _ = ChannelId(447876053109702668).send_message(&ctx.http, |m| {
-                        m.content(format!("An error happened in {}:\n```{:?}```", cmd_name, why))
+                        m.content(format!(
+                            "An error happened in {}:\n```{:?}```",
+                            cmd_name, why
+                        ))
                     });
                 }
             }),
