@@ -29,7 +29,17 @@ impl EventHandler for Handler {
             cache.all_guilds().len(),
             cache.users.len(),
             num_cpus::get()
-        )
+        );
+
+        if let Some(channel) = cache.guild_channel(448224720177856513) {
+            let _ = channel.read().send_message(&ctx.http, |m| {
+                m.content(format!(
+                    "**OKTO Beta** restarted\nServing {} servers with {} members total",
+                    cache.all_guilds().len(),
+                    cache.users.len()
+                ))
+            });
+        }
     }
 
     fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {

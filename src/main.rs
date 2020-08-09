@@ -56,9 +56,7 @@ fn main() {
     )
     .expect("Error creating client");
 
-    if num_cpus::get() < 6 {
-        client.threadpool = ThreadPool::default();
-    }
+    client.threadpool = ThreadPool::new(8);
 
     let mongo_uri = if let Ok(user) = env::var("MONGO_USER") {
         format!(
