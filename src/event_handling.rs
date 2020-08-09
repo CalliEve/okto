@@ -1,3 +1,4 @@
+use num_cpus;
 use serenity::{
     model::{
         channel::{Message, Reaction},
@@ -17,15 +18,17 @@ impl EventHandler for Handler {
     fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
         let cache = ctx.cache.read();
         println!(
-            "############\n\
-            Logged in as:\n{}\n{}\n\
-            guilds: {}\n\
-            Users: {}\n\
+            "############
+            Logged in as:\n{} - {}
+            guilds: {}
+            Users: {}
+            CPUs: {}
             ############",
             cache.user.name,
             cache.user.id,
             cache.all_guilds().len(),
-            cache.users.len()
+            cache.users.len(),
+            num_cpus::get()
         )
     }
 

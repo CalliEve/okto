@@ -17,6 +17,8 @@ rand = "0.7"
 bson = "1.0.0"
 url = "2.1"
 regex = "1"
+num_cpus = "1.13"
+threadpool = "1.8"
 
 [dependencies.mongodb]
 version = "1.0.0"

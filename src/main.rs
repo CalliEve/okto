@@ -25,6 +25,7 @@ use serenity::{
     model::prelude::{ChannelId, Message, UserId},
     prelude::RwLock,
 };
+use threadpool::ThreadPool;
 
 use commands::{general::*, launches::*, pictures::*, reminders::*, settings::*};
 use launch_tracking::launch_tracking;
@@ -54,6 +55,10 @@ fn main() {
         event_handling::Handler,
     )
     .expect("Error creating client");
+
+    if num_cpus::get() < 6 {
+        client.threadpool = ThreadPool::default();
+    }
 
     let mongo_uri = if let Ok(user) = env::var("MONGO_USER") {
         format!(
