@@ -6,48 +6,27 @@ use serenity::{
     prelude::{Context, EventHandler},
 };
 
-use crate::{
-    events::{
-        statefulembed::{on_message_delete as embed_delete, on_reaction_add as embed_reactions},
-        waitfor::{waitfor_message, waitfor_reaction},
-    },
-    launch_tracking::launch_tracking,
-    models::caches::{DatabaseKey, LaunchesCacheKey},
-    reminder_tracking::reminder_tracking,
+use crate::events::{
+    statefulembed::{on_message_delete as embed_delete, on_reaction_add as embed_reactions},
+    waitfor::{waitfor_message, waitfor_reaction},
 };
 
 pub struct Handler;
 
 impl EventHandler for Handler {
     fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
-        {
-            let cache = ctx.cache.read();
-            println!(
-                "############\n\
-                Logged in as:\n{}\n{}\n\
-                guilds: {}\n\
-                Users: {}\n\
-                ############",
-                cache.user.name,
-                cache.user.id,
-                cache.all_guilds().len(),
-                cache.users.len()
-            )
-        }
-
-        if let Some(launches_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
-            let launches_cache_clone = launches_cache.clone();
-            std::thread::spawn(|| launch_tracking(launches_cache_clone));
-
-            if let Some(db) = ctx.data.read().get::<DatabaseKey>() {
-                let launches_cache_clone = launches_cache.clone();
-                let http_clone = ctx.http.clone();
-                let db_clone = db.clone();
-                std::thread::spawn(|| {
-                    reminder_tracking(http_clone, launches_cache_clone, db_clone)
-                });
-            }
-        }
+        let cache = ctx.cache.read();
+        println!(
+            "############\n\
+            Logged in as:\n{}\n{}\n\
+            guilds: {}\n\
+            Users: {}\n\
+            ############",
+            cache.user.name,
+            cache.user.id,
+            cache.all_guilds().len(),
+            cache.users.len()
+        )
     }
 
     fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {

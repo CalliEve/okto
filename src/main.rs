@@ -27,10 +27,12 @@ use serenity::{
 };
 
 use commands::{general::*, launches::*, pictures::*, reminders::*, settings::*};
+use launch_tracking::launch_tracking;
 use models::{
     caches::{DatabaseKey, EmbedSessionsKey, LaunchesCacheKey, PictureCacheKey, WaitForKey},
     settings::GuildSettings,
 };
+use reminder_tracking::reminder_tracking;
 use utils::preloading::preload_data;
 
 #[help]
@@ -76,6 +78,22 @@ fn main() {
         );
     }
 
+    if let Some(launches_cache) = client.data.read().get::<LaunchesCacheKey>() {
+        let launches_cache_clone = launches_cache.clone();
+        client
+            .threadpool
+            .execute(|| launch_tracking(launches_cache_clone));
+
+        if let Some(db) = client.data.read().get::<DatabaseKey>() {
+            let launches_cache_clone = launches_cache.clone();
+            let http_clone = client.cache_and_http.http.clone();
+            let db_clone = db.clone();
+            client
+                .threadpool
+                .execute(|| reminder_tracking(http_clone, launches_cache_clone, db_clone));
+        }
+    }
+
     client.with_framework(
         StandardFramework::new()
             .configure(|c| {
@@ -91,7 +109,7 @@ fn main() {
                             return None;
                         };
 
-                        db.collection("reminders")
+                        db.collection("general_settings")
                             .find_one(doc! { "guild": msg.guild_id.unwrap().0 }, None)
                             .ok()
                             .flatten()
