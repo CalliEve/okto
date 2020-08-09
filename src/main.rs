@@ -53,6 +53,16 @@ fn main() {
     )
     .expect("Error creating client");
 
+    let mongo_uri = if let Ok(user) = env::var("MONGO_USER") {
+        format!(
+            "mongodb://{}:{}@mongo:27017",
+            user,
+            &env::var("MONGO_PASSWORD").expect("mongo password"),
+        )
+    } else {
+        "mongodb://{}:{}@mongo:27017".to_owned()
+    };
+
     {
         let mut data = client.data.write();
         data.insert::<EmbedSessionsKey>(HashMap::new());
@@ -60,7 +70,7 @@ fn main() {
         data.insert::<PictureCacheKey>(preload_data());
         data.insert::<LaunchesCacheKey>(Arc::new(RwLock::new(Vec::new())));
         data.insert::<DatabaseKey>(
-            MongoClient::with_uri_str("mongodb://mongo:27017")
+            MongoClient::with_uri_str(&mongo_uri)
                 .unwrap()
                 .database("okto"),
         );
