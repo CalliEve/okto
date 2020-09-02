@@ -1,4 +1,4 @@
-use mongodb::bson::doc;
+use mongodb::{bson::doc, options::UpdateOptions};
 use serenity::{
     builder::{CreateEmbed, CreateMessage},
     framework::standard::{
@@ -36,7 +36,7 @@ fn setprefix(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
         doc! {
             "prefix": &prefix
         },
-        None,
+        Some(UpdateOptions::builder().upsert(true).build()),
     );
 
     if res.is_ok() {
