@@ -55,8 +55,11 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
         m.embed(|e: &mut CreateEmbed| {
             e.title("Helpful Links")
             .description(
-                "**__[Bot Invite](https://discordapp.com/oauth2/authorize?client_id=429306620439166977&scope=bot&permissions=289856)__**
-                **__[OKTO server](https://discord.gg/dXPHfPJ)__**"
+                format!(
+                    "**__[Bot Invite](https://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=289856)__**
+                    **__[OKTO server](https://discord.gg/dXPHfPJ)__**",
+                    ctx.cache.read().user.id
+                )
             )
         })
     });
