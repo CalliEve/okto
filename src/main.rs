@@ -25,7 +25,6 @@ use serenity::{
     model::prelude::{ChannelId, Message, UserId},
     prelude::RwLock,
 };
-use threadpool::ThreadPool;
 
 use commands::{general::*, launches::*, pictures::*, reminders::*, settings::*};
 use launch_tracking::launch_tracking;
@@ -51,21 +50,19 @@ fn help_cmd(
 fn main() {
     // Login with a bot token from the environment
     let mut client = Client::new(
-        &env::var("DISCORD_TOKEN").expect("token"),
+        &env::var("DISCORD_TOKEN").expect("no bot token"),
         event_handling::Handler,
     )
     .expect("Error creating client");
 
-    client.threadpool = ThreadPool::new(8);
-
     let mongo_uri = if let Ok(user) = env::var("MONGO_USER") {
         format!(
-            "mongodb://{}:{}@mongo:27017",
+            "mongodb://{}:{}@mongodb:27017",
             user,
             &env::var("MONGO_PASSWORD").expect("mongo password"),
         )
     } else {
-        "mongodb://{}:{}@mongo:27017".to_owned()
+        "mongodb://mongo:27017".to_owned()
     };
 
     {
@@ -86,9 +83,7 @@ fn main() {
             let launches_cache_clone = launches_cache.clone();
             let http_clone = client.cache_and_http.http.clone();
             let db_clone = db.clone();
-            client
-                .threadpool
-                .execute(|| reminder_tracking(http_clone, launches_cache_clone, db_clone));
+            std::thread::spawn(|| reminder_tracking(http_clone, launches_cache_clone, db_clone));
         }
     }
 

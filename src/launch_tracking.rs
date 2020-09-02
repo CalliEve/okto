@@ -1,6 +1,6 @@
 use reqwest::{header::AUTHORIZATION, Result};
 use serenity::prelude::RwLock;
-use std::{collections::HashMap, sync::Arc, thread::sleep, time::Duration};
+use std::{collections::HashMap, sync::Arc};
 
 use crate::{
     models::launches::{LaunchContainer, LaunchData},
