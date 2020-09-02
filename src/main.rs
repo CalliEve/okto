@@ -57,9 +57,10 @@ fn main() {
 
     let mongo_uri = if let Ok(user) = env::var("MONGO_USER") {
         format!(
-            "mongodb://{}:{}@mongodb:27017",
+            "mongodb://{}:{}@{}:27017",
             user,
             &env::var("MONGO_PASSWORD").expect("mongo password"),
+            &env::var("MONGO_HOST").unwrap_or("mongodb".to_owned())
         )
     } else {
         "mongodb://mongo:27017".to_owned()
