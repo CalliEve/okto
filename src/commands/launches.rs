@@ -91,10 +91,10 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                         launch.status.as_str()
                     ))
                     .description(format!(
-                        "**Payload:** {}
-                        **NET:** {}
-                        **Provider:** {}
-                        **Location:** {}
+                        "**Payload:** {}\n\
+                        **NET:** {}\n\
+                        **Provider:** {}\n\
+                        **Location:** {}\n\
                         **Launch Window:** {}",
                         &launch.payload,
                         launch.net.format("%Y-%m-%d %H:%M:%S"),
@@ -157,12 +157,12 @@ fn list_page(
 
         if all {
             e.description("
-            This list shows the upcoming launches (max 100), both certain and uncertain.
+            This list shows the upcoming launches (max 100), both certain and uncertain.\n\
             Use the arrow reactions to get to other pages and the green reaction to filter on only the launches that are certain.
             ");
         } else {
             e.description("
-            This list shows upcoming launches that are certain.
+            This list shows upcoming launches that are certain.\n\
             Use the arrow reactions to get to other pages and the red reaction to get all the launches.
             ");
         }
@@ -390,9 +390,9 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                     .field(
                         "General information",
                         format!(
-                            "**Payload:** {}
-                            **Provider:** {}
-                            **Location:** {}
+                            "**Payload:** {}\n\
+                            **Provider:** {}\n\
+                            **Location:** {}\n\
                             **Launch Window:** {}",
                             &launch.payload,
                             &launch.lsp,
@@ -419,8 +419,8 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                 e.field(
                     "links",
                     &format!(
-                        "**My Source:** [The Space Devs]({0})
-                        **Rocket Watch:** [rocket.watch](https://rocket.watch/#id={1})
+                        "**My Source:** [The Space Devs]({0})\n\
+                        **Rocket Watch:** [rocket.watch](https://rocket.watch/#id={1})\n\
                         **Go4Liftoff:** [go4liftoff.com](https://go4liftoff.com/#page=singleLaunch?filters=launchID={1})",
                         LAUNCH_LIBRARY_URL, launch.id,
                     ),

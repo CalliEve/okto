@@ -56,7 +56,7 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
             e.title("Helpful Links")
             .description(
                 format!(
-                    "**__[Bot Invite](https://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=289856)__**
+                    "**__[Bot Invite](https://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=289856)__**\n\
                     **__[OKTO server](https://discord.gg/dXPHfPJ)__**",
                     ctx.cache.read().user.id
                 )
@@ -380,9 +380,9 @@ fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandResult 
                 .field(
                     "System Data",
                     format!(
-                        "**Number of planets in system:** {}
-                        **Letters used to designate planets in the system:** {}
-                        **Distance from us in lightyears:** {}
+                        "**Number of planets in system:** {}\n\
+                        **Letters used to designate planets in the system:** {}\n\
+                        **Distance from us in lightyears:** {}\n\
                         **Distance from us in parsecs:** {}",
                         star.pl_num,
                         planets,
@@ -396,11 +396,11 @@ fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandResult 
                 .field(
                     "Star Data",
                     format!(
-                        "**Stellar Age:** {}
-                        **Spectral Type:** {}
-                        **Henry Draper Catalog Name:** {}
-                        **Radius Star:** {}
-                        **Mass of the star:** {}
+                        "**Stellar Age:** {}\n\
+                        **Spectral Type:** {}\n\
+                        **Henry Draper Catalog Name:** {}\n\
+                        **Radius Star:** {}\n\
+                        **Mass of the star:** {}\n\
                         **Stellar Density:** {}",
                         star.get_age(),
                         star.st_spstr
@@ -470,11 +470,11 @@ fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> CommandRes
             .field(
                 "Planet Data",
                 format!(
-                    "**Planet Radius compared to Jupiter:** {}
-                    **Planet Radius compared to Earth:** {}
-                    **Planet Density:** {}
-                    **Planet Mass compared to Jupiter:** {}
-                    **Planet Mass compared to Earth:** {}
+                    "**Planet Radius compared to Jupiter:** {}\n\
+                    **Planet Radius compared to Earth:** {}\n\
+                    **Planet Density:** {}\n\
+                    **Planet Mass compared to Jupiter:** {}\n\
+                    **Planet Mass compared to Earth:** {}\n\
                     **Planet Equilibrium Temperature:** {}",
                     planet
                         .pl_radj
@@ -506,10 +506,10 @@ fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> CommandRes
             .field(
                 "Orbit Data",
                 format!(
-                    "**Eccentricity:** {}
-                    **Inclination:** {}
-                    **Orbital Period:** {} days
-                    **Orbit Semi-Major Axis:** {}
+                    "**Eccentricity:** {}\n\
+                    **Inclination:** {}\n\
+                    **Orbital Period:** {} days\n\
+                    **Orbit Semi-Major Axis:** {}\n\
                     **Host Star:** {}",
                     planet
                         .pl_orbeccen
@@ -538,9 +538,9 @@ fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> CommandRes
             .field(
                 "Discovery Info",
                 format!(
-                    "**Year of Discovery:** {}
-                    **Discovery Method:** {}
-                    **Location of observation of planet discovery:** {}
+                    "**Year of Discovery:** {}\n\
+                    **Discovery Method:** {}\n\
+                    **Location of observation of planet discovery:** {}\n\
                     **Name of telescoped used:** {}",
                     planet
                         .pl_disc

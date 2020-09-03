@@ -37,10 +37,7 @@ pub fn launch_tracking(cache: Arc<RwLock<Vec<LaunchData>>>) {
 fn get_new_launches() -> Result<LaunchContainer> {
     let mut params = HashMap::new();
     params.insert("limit", "100");
-    params.insert(
-        "fields",
-        "vidURLs,status,name,rocket,lsp,net,location,tbddate,tbdtime,windowstart,windowend,missions,mission",
-    );
+    params.insert("mode", "detailed");
 
     Ok(DEFAULT_CLIENT
         .get("https://ll.thespacedevs.com/2.0.0/launch/upcoming")

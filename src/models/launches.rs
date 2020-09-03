@@ -16,7 +16,7 @@ pub struct LaunchData {
     pub launch_name: String,
     pub status: LaunchStatus,
     pub payload: String,
-    pub vid_urls: Vec<String>,
+    pub vid_urls: Vec<VidURL>,
     pub vehicle: String,
     pub location: String,
     pub rocket_img: Option<String>,
@@ -45,7 +45,7 @@ pub struct LaunchInfo {
     pub mission: Option<MissionInfo>,
     pub launch_service_provider: AgencyInfo,
     #[serde(rename = "vidURLs")]
-    pub vid_urls: Option<Vec<String>>,
+    pub vid_urls: Option<Vec<VidURL>>,
     #[serde(with = "string_option")]
     pub image: Option<String>,
 }
@@ -147,6 +147,14 @@ pub struct LauncherConfigDetail {
     pub info_url: Option<String>,
     #[serde(with = "string_option")]
     pub wiki_url: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct VidURL {
+    pub priority: i32,
+    pub title: String,
+    pub description: String,
+    pub url: String,
 }
 
 #[derive(Serialize_repr, Deserialize_repr, Debug, Clone, PartialEq)]

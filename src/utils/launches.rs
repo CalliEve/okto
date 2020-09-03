@@ -4,17 +4,20 @@ use reqwest::header::AUTHORIZATION;
 use serenity::framework::standard::{Args, CommandError};
 
 use crate::{
-    models::launches::{LaunchData, LaunchInfo},
+    models::launches::{LaunchData, LaunchInfo, VidURL},
     utils::constants::{DEFAULT_CLIENT, LAUNCH_AGENCIES, LAUNCH_VEHICLES, LL_KEY},
 };
 
-pub fn format_links(links: &[String]) -> Option<String> {
+pub fn format_links(links: &[VidURL]) -> Option<String> {
     let mut res = String::new();
 
-    for str_link in links {
-        if let Ok(link) = url::Url::from_str(&str_link) {
+    for link_obj in links {
+        if let Ok(link) = url::Url::from_str(&link_obj.url) {
             if let Some(domain) = link.domain() {
-                res.push_str(&format!("[{}]({})", domain, &str_link));
+                res.push_str(&format!(
+                    "\"{}\" on [{}]({})",
+                    &link_obj.title, domain, &link_obj.url
+                ));
             }
         }
     }
@@ -60,10 +63,7 @@ pub fn filter_launches(launches: Vec<LaunchData>, args: Args) -> Result<Vec<Laun
 
 pub fn request_launch(id: &str) -> Result<LaunchData, CommandError> {
     let mut params = HashMap::new();
-    params.insert(
-        "fields",
-        "vidURLs,status,name,rocket,lsp,net,location,tbddate,tbdtime,windowstart,windowend,missions,mission",
-    );
+    params.insert("mode", "detailed");
 
     let res: LaunchInfo = DEFAULT_CLIENT
         .get(&format!("https://ll.thespacedevs.com/2.0.0/launch/{}", id))

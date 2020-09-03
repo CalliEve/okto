@@ -129,7 +129,7 @@ fn reminder_embed<'a>(
     diff: Duration,
 ) -> &'a mut CreateEmbed {
     let live = if let Some(link) = l.vid_urls.first() {
-        format!("**Live at:** {}", link)
+        format!("**Live at:** {}", link.url)
     } else {
         "".to_owned()
     };
