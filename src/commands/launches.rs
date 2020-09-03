@@ -80,6 +80,11 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
+                let mut window = format_duration(launch.launch_window, true);
+                if window.is_empty() {
+                    window.push_str("instantaneous")
+                }
+
                 e.color(DEFAULT_COLOR)
                     .author(|a: &mut CreateEmbedAuthor| {
                         a.name("Next Launch").icon_url(DEFAULT_ICON)
@@ -100,7 +105,7 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                         launch.net.format("%Y-%m-%d %H:%M:%S"),
                         &launch.lsp,
                         &launch.location,
-                        format_duration(launch.launch_window, true)
+                        window
                     ))
                     .field(
                         "Time until launch:",
@@ -171,7 +176,7 @@ fn list_page(
         for launch in &launches[min..top] {
             e.field(
                 format!(
-                    "{}: {} {}",
+                    "{}: {} - {}",
                     launch.id,
                     &launch.vehicle,
                     launch.status.as_str()
@@ -376,6 +381,11 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
+                let mut window = format_duration(launch.launch_window, true);
+                if window.is_empty() {
+                    window.push_str("instantaneous")
+                }
+
                 e.color(DEFAULT_COLOR)
                     .author(|a: &mut CreateEmbedAuthor| {
                         a.name("Detailed info").icon_url(DEFAULT_ICON)
@@ -397,7 +407,7 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                             &launch.payload,
                             &launch.lsp,
                             &launch.location,
-                            format_duration(launch.launch_window, true)
+                            window
                         ),
                         false,
                     );

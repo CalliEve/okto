@@ -1,10 +1,18 @@
 use super::launches::{LaunchData, LaunchInfo};
+use std::str::FromStr;
 
 impl From<LaunchInfo> for LaunchData {
     fn from(mut info: LaunchInfo) -> LaunchData {
         if let Some(urls) = info.vid_urls.as_mut() {
             urls.sort_by_key(|u| u.priority);
-            urls.dedup_by_key(|u| u.title.clone());
+            urls.dedup_by_key(|u| {
+                if let Ok(link) = url::Url::from_str(&u.url) {
+                    if let Some(domain) = link.domain() {
+                        return domain.to_owned();
+                    };
+                };
+                return u.title.clone();
+            });
         };
 
         LaunchData {

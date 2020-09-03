@@ -162,7 +162,8 @@ fn reminder_embed<'a>(
 
 fn format_url(rawlink: &str) -> String {
     if let Ok(link) = url::Url::from_str(rawlink) {
-        if let Some(domain) = link.domain() {
+        if let Some(mut domain) = link.domain() {
+            domain = domain.trim_start_matches("www.");
             return format!("[{}]({})\n", domain, rawlink);
         }
     };
