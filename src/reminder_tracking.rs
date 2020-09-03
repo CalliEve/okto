@@ -26,6 +26,9 @@ use crate::{
 };
 
 pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, db: Database) {
+    // wait for client to have started
+    std::thread::sleep(std::time::Duration::from_secs(60));
+
     let mut loop_count = 0;
     loop {
         println!("running loop {}", loop_count);

@@ -1,8 +1,12 @@
+use std::thread;
+use std::time::Duration;
+
 use num_cpus;
 use serenity::{
     model::{
         channel::{Message, Reaction},
         id::{ChannelId, GuildId, MessageId},
+        prelude::Activity,
     },
     prelude::{Context, EventHandler},
 };
@@ -16,30 +20,41 @@ pub struct Handler;
 
 impl EventHandler for Handler {
     fn cache_ready(&self, ctx: Context, _guilds: Vec<GuildId>) {
-        let cache = ctx.cache.read();
-        println!(
-            "############\n\
+        {
+            let cache = ctx.cache.read();
+            println!(
+                "############\n\
             Logged in as: {} - {}\n\
             guilds: {}\n\
             Users: {}\n\
             CPUs: {}\n\
             ############",
-            cache.user.name,
-            cache.user.id,
-            cache.all_guilds().len(),
-            cache.users.len(),
-            num_cpus::get()
-        );
+                cache.user.name,
+                cache.user.id,
+                cache.all_guilds().len(),
+                cache.users.len(),
+                num_cpus::get()
+            );
 
-        if let Some(channel) = cache.guild_channel(448224720177856513) {
-            let _ = channel.read().send_message(&ctx.http, |m| {
-                m.content(format!(
-                    "**OKTO Beta** restarted\nServing {} servers with {} members total",
-                    cache.all_guilds().len(),
-                    cache.users.len()
-                ))
-            });
+            if let Some(channel) = cache.guild_channel(448224720177856513) {
+                let _ = channel.read().send_message(&ctx.http, |m| {
+                    m.content(format!(
+                        "**OKTO Beta** restarted\nServing {} servers with {} members total",
+                        cache.all_guilds().len(),
+                        cache.users.len()
+                    ))
+                });
+            }
         }
+
+        thread::spawn(move || {
+            let cache = ctx.cache.read();
+            ctx.shard.set_activity(Some(Activity::listening(&format!(
+                "{} servers",
+                cache.all_guilds().len()
+            ))));
+            thread::sleep(Duration::from_secs(300));
+        });
     }
 
     fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
