@@ -47,7 +47,7 @@ impl EventHandler for Handler {
             }
         }
 
-        thread::spawn(move || {
+        thread::spawn(move || loop {
             let cache = ctx.cache.read();
             ctx.shard.set_activity(Some(Activity::listening(&format!(
                 "{} servers",
