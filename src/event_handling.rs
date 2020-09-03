@@ -48,11 +48,13 @@ impl EventHandler for Handler {
         }
 
         thread::spawn(move || loop {
-            let cache = ctx.cache.read();
-            ctx.shard.set_activity(Some(Activity::listening(&format!(
-                "{} servers",
-                cache.all_guilds().len()
-            ))));
+            {
+                let cache = ctx.cache.read();
+                ctx.shard.set_activity(Some(Activity::listening(&format!(
+                    "{} servers",
+                    cache.all_guilds().len()
+                ))));
+            }
             thread::sleep(Duration::from_secs(300));
         });
     }
