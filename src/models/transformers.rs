@@ -3,7 +3,8 @@ use super::launches::{LaunchData, LaunchInfo};
 impl From<LaunchInfo> for LaunchData {
     fn from(mut info: LaunchInfo) -> LaunchData {
         if let Some(urls) = info.vid_urls.as_mut() {
-            urls.sort_by_key(|u| u.priority)
+            urls.sort_by_key(|u| u.priority);
+            urls.dedup_by_key(|u| u.title.clone());
         };
 
         LaunchData {
