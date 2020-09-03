@@ -128,6 +128,12 @@ fn reminder_embed<'a>(
     l: &LaunchData,
     diff: Duration,
 ) -> &'a mut CreateEmbed {
+    let live = if let Some(link) = l.vid_urls.first() {
+        format!("**Live at:** {}", link)
+    } else {
+        "".to_owned()
+    };
+
     e.color(DEFAULT_COLOR)
         .author(|a: &mut CreateEmbedAuthor| {
             a.name(format!("{} till launch", format_duration(diff, false)))
@@ -136,10 +142,12 @@ fn reminder_embed<'a>(
         .description(format!(
             "**Payload:** {}
             **Vehicle:** {}
-            **NET:** {}",
+            **NET:** {}
+            {}",
             &l.payload,
             &l.vehicle,
-            &l.net.format("%d %B, %Y; %H:%m:%S UTC").to_string()
+            &l.net.format("%d %B, %Y; %H:%m:%S UTC").to_string(),
+            live
         ));
 
     if let Some(img) = &l.rocket_img {
