@@ -15,7 +15,7 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
         if let Ok(link) = url::Url::from_str(&link_obj.url) {
             if let Some(domain) = link.domain() {
                 res.push_str(&format!(
-                    "\"{}\" on [{}]({})",
+                    "\"{}\"\n[{}]({})\n\n",
                     &link_obj.title, domain, &link_obj.url
                 ));
             }

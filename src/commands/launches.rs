@@ -416,6 +416,10 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                     e.thumbnail(img);
                 }
 
+                if let Some(links) = format_links(&launch.vid_urls) {
+                    e.field("vids", links, false);
+                }
+
                 e.field(
                     "links",
                     &format!(

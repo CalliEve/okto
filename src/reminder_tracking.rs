@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use chrono::{Duration, NaiveDateTime, Utc};
 use mongodb::{
@@ -129,7 +129,7 @@ fn reminder_embed<'a>(
     diff: Duration,
 ) -> &'a mut CreateEmbed {
     let live = if let Some(link) = l.vid_urls.first() {
-        format!("**Live at:** {}", link.url)
+        format!("**Live at:** {}", format_url(&link.url))
     } else {
         "".to_owned()
     };
@@ -155,4 +155,13 @@ fn reminder_embed<'a>(
     }
 
     e
+}
+
+fn format_url(rawlink: &str) -> String {
+    if let Ok(link) = url::Url::from_str(rawlink) {
+        if let Some(domain) = link.domain() {
+            return format!("[{}]({})\n", domain, rawlink);
+        }
+    };
+    rawlink.to_owned()
 }
