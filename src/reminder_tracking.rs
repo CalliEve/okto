@@ -140,9 +140,9 @@ fn reminder_embed<'a>(
                 .icon_url(DEFAULT_ICON)
         })
         .description(format!(
-            "**Payload:** {}
-            **Vehicle:** {}
-            **NET:** {}
+            "**Payload:** {}\n\
+            **Vehicle:** {}\n\
+            **NET:** {}\n\
             {}",
             &l.payload,
             &l.vehicle,
