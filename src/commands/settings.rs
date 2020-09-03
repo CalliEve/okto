@@ -40,6 +40,11 @@ fn setprefix(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     );
 
     if res.is_ok() {
+        let res = res.unwrap();
+        if res.modified_count == 0 && res.upserted_id.is_none() {
+            return Err("No document got updated when changing the guild prefix".into());
+        }
+
         msg.channel_id
             .send_message(&ctx.http, |m: &mut CreateMessage| {
                 m.embed(|e: &mut CreateEmbed| {

@@ -107,7 +107,17 @@ fn main() {
                             .find_one(doc! { "guild": msg.guild_id.unwrap().0 }, None)
                             .ok()
                             .flatten()
-                            .and_then(|c| bson::from_bson::<GuildSettings>(c.into()).ok())
+                            .and_then(|c| {
+                                let settings = bson::from_bson::<GuildSettings>(c.into());
+                                if settings.is_err() {
+                                    println!(
+                                        "Error in getting prefix: {:?}",
+                                        settings.unwrap_err()
+                                    );
+                                    return None;
+                                }
+                                return Some(settings.unwrap());
+                            })
                             .map(|s| s.prefix)
                     })
             })
