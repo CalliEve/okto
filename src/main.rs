@@ -94,6 +94,7 @@ fn main() {
                 c.prefix("!;")
                     .dynamic_prefix(|ctx: &mut Context, msg: &Message| {
                         if msg.guild_id.is_none() {
+                            println!("Message not in guild: {}", &msg.content);
                             return None;
                         }
 
@@ -103,10 +104,16 @@ fn main() {
                             return None;
                         };
 
-                        db.collection("general_settings")
-                            .find_one(doc! { "guild": msg.guild_id.unwrap().0 }, None)
-                            .ok()
-                            .flatten()
+                        let res = db
+                            .collection("general_settings")
+                            .find_one(doc! { "guild": msg.guild_id.unwrap().0 }, None);
+
+                        if res.is_err() {
+                            println!("Error in getting prefix: {:?}", res.unwrap_err());
+                            return None;
+                        }
+
+                        res.unwrap()
                             .and_then(|c| {
                                 let settings = bson::from_bson::<GuildSettings>(c.into());
                                 if settings.is_err() {

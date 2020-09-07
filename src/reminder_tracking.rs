@@ -1,4 +1,4 @@
-use std::{str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 use chrono::{Duration, NaiveDateTime, Utc};
 use mongodb::{
@@ -30,6 +30,8 @@ pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, d
     std::thread::sleep(std::time::Duration::from_secs(60));
 
     let mut loop_count = 0;
+    let mut reminded: HashMap<String, i64> = HashMap::new();
+
     loop {
         println!("running loop {}", loop_count);
 
@@ -55,64 +57,16 @@ pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, d
         for l in launches {
             let difference = l.net - NaiveDateTime::from_timestamp(now, 0);
 
-            let reminders: Reminder =
-                if let Ok(Some(r)) = get_reminders(&db, difference.num_minutes()) {
-                    if let Ok(res) = bson::from_bson(r.into()) {
-                        res
-                    } else {
-                        continue;
-                    }
-                } else {
+            if let Some(dur) = reminded.get(&l.ll_id) {
+                if *dur == difference.num_minutes() {
                     continue;
-                };
-
-            'channel: for c in &reminders.channels {
-                let settings_res = get_guild_settings(&db, c.guild.into());
-
-                if let Ok(settings) = &settings_res {
-                    for filter in &settings.filters {
-                        if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
-                            if *agency == &l.lsp {
-                                continue 'channel;
-                            }
-                        }
-                    }
                 }
-
-                let _ = c.channel.send_message(&http, |m: &mut CreateMessage| {
-                    m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference));
-
-                    if let Ok(settings) = &settings_res {
-                        if !settings.mentions.is_empty() {
-                            let mut mentions = String::new();
-                            for mention in &settings.mentions {
-                                mentions.push_str(&format!(" <@&{}>", mention.as_u64()))
-                            }
-                            m.content(mentions);
-                        }
-                    }
-
-                    m
-                });
             }
+            reminded.insert(l.ll_id.clone(), difference.num_minutes());
 
-            'user: for u in &reminders.users {
-                let settings_res = get_user_settings(&db, u.0);
-
-                if let Ok(settings) = settings_res {
-                    for filter in &settings.filters {
-                        if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
-                            if *agency == &l.lsp {
-                                continue 'user;
-                            }
-                        }
-                    }
-                }
-
-                if let Ok(chan) = u.create_dm_channel(&http) {
-                    let _ = chan.send_message(&http, |m: &mut CreateMessage| {
-                        m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference))
-                    });
+            if let Ok(Some(r)) = get_reminders(&db, difference.num_minutes()) {
+                if let Ok(res) = bson::from_bson(r.into()) {
+                    execute_reminder(&db, &http, res, &l, difference)
                 }
             }
         }
@@ -124,6 +78,64 @@ pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, d
 fn get_reminders(db: &Database, minutes: i64) -> MongoResult<Option<Document>> {
     db.collection("reminders")
         .find_one(doc! { "minutes": minutes }, None)
+}
+
+fn execute_reminder(
+    db: &Database,
+    http: &Arc<Http>,
+    reminder: Reminder,
+    l: &LaunchData,
+    difference: Duration,
+) {
+    'channel: for c in &reminder.channels {
+        let settings_res = get_guild_settings(&db, c.guild.into());
+
+        if let Ok(settings) = &settings_res {
+            for filter in &settings.filters {
+                if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
+                    if *agency == &l.lsp {
+                        continue 'channel;
+                    }
+                }
+            }
+        }
+
+        let _ = c.channel.send_message(&http, |m: &mut CreateMessage| {
+            m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference));
+
+            if let Ok(settings) = &settings_res {
+                if !settings.mentions.is_empty() {
+                    let mut mentions = String::new();
+                    for mention in &settings.mentions {
+                        mentions.push_str(&format!(" <@&{}>", mention.as_u64()))
+                    }
+                    m.content(mentions);
+                }
+            }
+
+            m
+        });
+    }
+
+    'user: for u in &reminder.users {
+        let settings_res = get_user_settings(&db, u.0);
+
+        if let Ok(settings) = settings_res {
+            for filter in &settings.filters {
+                if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
+                    if *agency == &l.lsp {
+                        continue 'user;
+                    }
+                }
+            }
+        }
+
+        if let Ok(chan) = u.create_dm_channel(&http) {
+            let _ = chan.send_message(&http, |m: &mut CreateMessage| {
+                m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference))
+            });
+        }
+    }
 }
 
 fn reminder_embed<'a>(

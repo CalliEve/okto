@@ -79,17 +79,23 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
 fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
     msg.channel_id.send_message(&ctx.http, |m: &mut CreateMessage| {
         m.embed(|e: &mut CreateEmbed| {
-            e.title("Helpful Links")
+            e.title("OKTO")
             .description(
-                "This is a bot to show upcoming launches and provide additional information on everything to do with spaceflight
-                **Author:** Callidus#3141
-                **Library:** [Serenity](https://github.com/serenity-rs/serenity)
-                \n<:discord:314003252830011395>
-                [**Support Server**](https://discord.gg/dXPHfPJ)
-                [**Rocket Watch server**](https://discord.gg/Hyd4umg)
-                \n<:botTag:230105988211015680>
-                If you want OKTO on your server, click [**here**](https://discordapp.com/oauth2/authorize?client_id=429306620439166977&scope=bot&permissions=289856)
-                If you like OKTO, please [**vote**](https://discordbots.org/bot/429306620439166977/vote) ^-^"
+                format!(
+                    "This is a bot to show upcoming launches and provide additional information on everything to do with spaceflight\n\
+                    **Author:** Callidus#3141\n\
+                    **Version:** 3.0 \"rewrite it in rust\"\n\
+                    **Library:** [Serenity](https://github.com/serenity-rs/serenity)\n\
+                    <:RustRainbow:752508751675654204>\n\
+                    \n<:discord:314003252830011395>\n\
+                    [**Support Server**](https://discord.gg/dXPHfPJ)\n\
+                    [**The Space Devs**](https://discord.gg/p7ntkNA)\n\
+                    [**Rocket Watch server**](https://discord.gg/Hyd4umg)\n\
+                    \n<:botTag:230105988211015680>\n\
+                    If you want OKTO on your server, click [**here**](https://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=289856)\n\
+                    If you like OKTO, please [**vote**](https://discordbots.org/bot/429306620439166977/vote) ^-^",
+                    ctx.cache.read().user.id
+                )
             )
             .author(|a: &mut CreateEmbedAuthor| {
                 a.name("Bot Information")
