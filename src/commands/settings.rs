@@ -5,7 +5,7 @@ use serenity::{
         macros::{command, group},
         Args, CommandResult,
     },
-    model::channel::Message,
+    model::channel::{Channel, Message},
     prelude::{Context, RwLock},
 };
 
@@ -122,12 +122,19 @@ fn loaddb(ctx: &mut Context, msg: &Message) -> CommandResult {
     }
 
     for channel_reminder in &legacy_settings.channels {
-        for dur in channel_reminder.to_vec() {
-            add_reminder(
-                &ses,
-                ID::User(u64::from_str(&channel_reminder.id)?.into()),
-                get_dur(dur),
-            )
+        let channel_opt = ctx
+            .cache
+            .read()
+            .channel(u64::from_str(&channel_reminder.id)?);
+
+        if let Some(Channel::Guild(channel)) = channel_opt {
+            for dur in channel_reminder.to_vec() {
+                add_reminder(
+                    &ses,
+                    ID::Channel((channel.read().id, channel.read().guild_id)),
+                    get_dur(dur),
+                )
+            }
         }
     }
 

@@ -39,7 +39,7 @@ impl EventHandler for Handler {
             if let Some(channel) = cache.guild_channel(448224720177856513) {
                 let _ = channel.read().send_message(&ctx.http, |m| {
                     m.content(format!(
-                        "**OKTO Beta** restarted\nServing {} servers with {} members total",
+                        "**OKTO** restarted\nServing {} servers with {} members total",
                         cache.all_guilds().len(),
                         cache.users.len()
                     ))
