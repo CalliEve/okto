@@ -43,7 +43,7 @@ pub struct LaunchInfo {
     pub pad: PadInfo,
     pub rocket: RocketInfo,
     pub mission: Option<MissionInfo>,
-    pub launch_service_provider: AgencyInfo,
+    pub launch_service_provider: Option<AgencyInfo>,
     #[serde(rename = "vidURLs")]
     pub vid_urls: Option<Vec<VidURL>>,
     #[serde(with = "string_option")]

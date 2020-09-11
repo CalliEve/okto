@@ -41,7 +41,11 @@ impl From<LaunchInfo> for LaunchData {
                 .clone()
                 .map(|m| m.description)
                 .unwrap_or(String::from("mission description unknown")),
-            lsp: info.launch_service_provider.name,
+            lsp: info
+                .launch_service_provider
+                .clone()
+                .map(|l| l.name)
+                .unwrap_or(String::from("Unknown launch provider")),
         }
     }
 }
