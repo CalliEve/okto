@@ -85,6 +85,8 @@ fn loaddb(ctx: &mut Context, msg: &Message) -> CommandResult {
     let file = msg.attachments.first().unwrap().download().unwrap();
     let legacy_settings: Legacy = serde_json::from_slice(&file).unwrap();
 
+    println!("{:?}", serde_json::to_string(&legacy_settings));
+
     for setting in &legacy_settings.settings {
         let res = db.collection("general_settings").update_one(
             doc! {"guild": &setting.id},

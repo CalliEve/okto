@@ -1,23 +1,23 @@
 use super::settings::GuildSettings;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serenity::model::id::GuildId;
 use std::str::FromStr;
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Legacy {
     pub settings: Vec<LegacySetting>,
     pub users: Vec<LegacyUser>,
     pub channels: Vec<LegacyChannel>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct LegacySetting {
     pub id: String,
     pub prefix: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct LegacyUser {
     pub id: String,
     #[serde(rename = "24h")]
@@ -49,7 +49,7 @@ pub struct LegacyUser {
     pub t_1m: Option<String>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct LegacyChannel {
     pub id: String,
     #[serde(rename = "24h")]
