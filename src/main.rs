@@ -91,7 +91,7 @@ fn main() {
     client.with_framework(
         StandardFramework::new()
             .configure(|c| {
-                c.prefix("!;")
+                c.prefix(";")
                     .dynamic_prefix(|ctx: &mut Context, msg: &Message| {
                         if msg.guild_id.is_none() {
                             println!("Message not in guild: {}", &msg.content);
