@@ -92,6 +92,7 @@ fn main() {
         StandardFramework::new()
             .configure(|c| {
                 c.prefix(";")
+                    .owners(vec![247745860979392512.into()].into_iter().collect())
                     .dynamic_prefix(|ctx: &mut Context, msg: &Message| {
                         if msg.guild_id.is_none() {
                             println!("Message not in guild: {}", &msg.content);

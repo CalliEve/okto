@@ -82,8 +82,12 @@ fn loaddb(ctx: &mut Context, msg: &Message) -> CommandResult {
         return Err("No database found".into());
     };
 
-    let file = msg.attachments.first().unwrap().download().unwrap();
-    let legacy_settings: Legacy = serde_json::from_slice(&file).unwrap();
+    let file = msg
+        .attachments
+        .first()
+        .ok_or("no attachments")?
+        .download()?;
+    let legacy_settings: Legacy = serde_json::from_slice(&file)?;
 
     println!("{:?}", serde_json::to_string(&legacy_settings));
 
@@ -111,7 +115,7 @@ fn loaddb(ctx: &mut Context, msg: &Message) -> CommandResult {
         for dur in user_reminder.to_vec() {
             add_reminder(
                 &ses,
-                ID::User(u64::from_str(&user_reminder.id).unwrap().into()),
+                ID::User(u64::from_str(&user_reminder.id)?.into()),
                 get_dur(dur),
             )
         }
@@ -121,11 +125,22 @@ fn loaddb(ctx: &mut Context, msg: &Message) -> CommandResult {
         for dur in channel_reminder.to_vec() {
             add_reminder(
                 &ses,
-                ID::User(u64::from_str(&channel_reminder.id).unwrap().into()),
+                ID::User(u64::from_str(&channel_reminder.id)?.into()),
                 get_dur(dur),
             )
         }
     }
+
+    msg.channel_id
+        .send_message(&ctx.http, |m: &mut CreateMessage| {
+            m.embed(|e: &mut CreateEmbed| {
+                default_embed(
+                    e,
+                    &format!("Legacy Database has been loaded from json file"),
+                    true,
+                )
+            })
+        })?;
 
     Ok(())
 }
