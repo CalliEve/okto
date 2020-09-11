@@ -2,6 +2,4 @@
 
 # okto
 
-OKTO discord bot rewrite in rust
-
 OKTO is a discord bot for providing information about upcoming rocket launches, space images and general information about spaceflight.

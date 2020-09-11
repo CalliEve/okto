@@ -4,33 +4,36 @@ on:
   push:
     branches:
       - master
+    paths:
+      - 'src/**'
+      - '.github/workflows/kubernetes.yaml'
+      - 'Cargo.toml'
+      - 'Dockerfile'
 
 jobs:
-
   build:
- 
     runs-on: ubuntu-latest
- 
+
     steps:
-    - uses: actions/checkout@v1
+      - uses: actions/checkout@v1
 
-    - name: login to docker
-      run: docker login docker.pkg.github.com -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+      - name: login to docker
+        run: docker login docker.pkg.github.com -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
-    - name: Build container image
-      run: |
-        docker build . --tag docker.pkg.github.com/baev1/okto/okto-bot:${{ github.sha }}
-        docker image tag docker.pkg.github.com/baev1/okto/okto-bot:${{ github.sha }} docker.pkg.github.com/baev1/okto/okto-bot:latest
-  
-    - name: Push image to Docker Hub
-      run: docker push docker.pkg.github.com/baev1/okto/okto-bot
-    
-    - name: Save DigitalOcean kubeconfig
-      uses: digitalocean/action-doctl@master
-      env:
-        DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-      with:
-        args: kubernetes cluster kubeconfig show k8s-okto > $GITHUB_WORKSPACE/.kubeconfig
-    
-    - name: Deploy to DigitalOcean Kubernetes
-      run: kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig -n discord-bots set image statefulset/stateful-okto okto-bot=docker.pkg.github.com/baev1/okto/okto-bot:${{ github.sha }}
+      - name: Build container image
+        run: |
+          docker build . --tag docker.pkg.github.com/baev1/okto/okto-bot:${{ github.sha }}
+          docker image tag docker.pkg.github.com/baev1/okto/okto-bot:${{ github.sha }} docker.pkg.github.com/baev1/okto/okto-bot:latest
+
+      - name: Push image to Docker Hub
+        run: docker push docker.pkg.github.com/baev1/okto/okto-bot
+
+      - name: Save DigitalOcean kubeconfig
+        uses: digitalocean/action-doctl@master
+        env:
+          DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        with:
+          args: kubernetes cluster kubeconfig show k8s-okto > $GITHUB_WORKSPACE/.kubeconfig
+
+      - name: Deploy to DigitalOcean Kubernetes
+        run: kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig -n discord-bots set image statefulset/stateful-okto okto-bot=docker.pkg.github.com/baev1/okto/okto-bot:${{ github.sha }}

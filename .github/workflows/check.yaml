@@ -1,4 +1,4 @@
-name: build
+name: Check
 
 on: push
 
@@ -8,5 +8,5 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
-      - name: Build
-        run: cargo build --verbose
+      - name: Check
+        run: cargo check --verbose
