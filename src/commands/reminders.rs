@@ -500,7 +500,7 @@ fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<Vec<Rem
     }
 }
 
-pub fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duration) {
+fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duration) {
     let db = if let Some(db) = get_db(&ses) {
         db
     } else {
@@ -680,7 +680,7 @@ fn remove_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
 // ---- utils ----
 
 #[derive(Copy, Clone)]
-pub enum ID {
+enum ID {
     Channel((ChannelId, GuildId)),
     User(UserId),
 }
