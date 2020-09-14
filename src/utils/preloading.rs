@@ -24,20 +24,18 @@ struct HostStarContainer {
     pub pl_hostname: String,
 }
 
-fn hubble_pics() -> Vec<i32> {
+async fn hubble_pics() -> reqwest::Result<Vec<i32>> {
     let hubble_res: Vec<HubbleIDContainer> = DEFAULT_CLIENT
         .get("http://hubblesite.org/api/v3/images?collection=news&page=all")
         .send()
-        .and_then(|r| r.error_for_status())
-        .and_then(|r| r.json())
-        .unwrap_or_else(|e| {
-            dbg!(e);
-            Vec::new()
-        });
-    hubble_res.iter().map(|h| h.id).collect()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    Ok(hubble_res.iter().map(|h| h.id).collect())
 }
 
-fn curiosity_mardi() -> Vec<MarsRoverPicture> {
+async fn curiosity_mardi() -> reqwest::Result<Vec<MarsRoverPicture>> {
     let curiosity_res: CuriosityContainer = DEFAULT_CLIENT
         .get(format!(
             "https://api.nasa.gov/mars-photos/api/v1/rovers/curiosity/photos?camera=mardi&sol=0&api_key={}",
@@ -45,23 +43,19 @@ fn curiosity_mardi() -> Vec<MarsRoverPicture> {
         ).as_str())
         .timeout(Duration::from_secs(40))
         .send()
-        .and_then(|r| r.error_for_status())
-        .and_then(|r| r.json())
-        .unwrap_or_else(|e| {
-            dbg!(e);
-            CuriosityContainer {
-                photos: Vec::new()
-            }
-        });
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
 
-    if curiosity_res.photos.is_empty() {
+    Ok(if curiosity_res.photos.is_empty() {
         Vec::new()
     } else {
         curiosity_res.photos[1000..3659].to_vec()
-    }
+    })
 }
 
-fn exoplanets() -> Vec<String> {
+async fn exoplanets() -> reqwest::Result<Vec<String>> {
     let mut params = HashMap::new();
     params.insert("table", "exoplanets");
     params.insert("format", "json");
@@ -71,17 +65,15 @@ fn exoplanets() -> Vec<String> {
         .get("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI")
         .query(&params)
         .send()
-        .and_then(|r| r.error_for_status())
-        .and_then(|r| r.json())
-        .unwrap_or_else(|e| {
-            dbg!(e);
-            Vec::new()
-        });
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
 
-    exoplanet_res.into_iter().map(|h| h.pl_name).collect()
+    Ok(exoplanet_res.into_iter().map(|h| h.pl_name).collect())
 }
 
-fn host_stars() -> Vec<String> {
+async fn host_stars() -> reqwest::Result<Vec<String>> {
     let mut params = HashMap::new();
     params.insert("table", "exoplanets");
     params.insert("format", "json");
@@ -91,21 +83,31 @@ fn host_stars() -> Vec<String> {
         .get("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI")
         .query(&params)
         .send()
-        .and_then(|r| r.error_for_status())
-        .and_then(|r| r.json())
-        .unwrap_or_else(|e| {
-            dbg!(e);
-            Vec::new()
-        });
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
 
-    host_star_res.into_iter().map(|h| h.pl_hostname).collect()
+    Ok(host_star_res.into_iter().map(|h| h.pl_hostname).collect())
 }
 
-pub fn preload_data() -> PictureDataCache {
+pub async fn preload_data() -> PictureDataCache {
     PictureDataCache {
-        hubble_pics: hubble_pics(),
-        curiosity_mardi: curiosity_mardi(),
-        exoplanets: exoplanets(),
-        host_stars: host_stars(),
+        hubble_pics: hubble_pics().await.unwrap_or_else(|e| {
+            dbg!(e);
+            Vec::new()
+        }),
+        curiosity_mardi: curiosity_mardi().await.unwrap_or_else(|e| {
+            dbg!(e);
+            Vec::new()
+        }),
+        exoplanets: exoplanets().await.unwrap_or_else(|e| {
+            dbg!(e);
+            Vec::new()
+        }),
+        host_stars: host_stars().await.unwrap_or_else(|e| {
+            dbg!(e);
+            Vec::new()
+        }),
     }
 }

@@ -25,9 +25,9 @@ use crate::{
     },
 };
 
-pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, db: Database) {
+pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, db: Database) {
     // wait for client to have started
-    std::thread::sleep(std::time::Duration::from_secs(60));
+    tokio::time::delay_for(std::time::Duration::from_secs(60)).await;
 
     let mut loop_count = 0;
     let mut reminded: HashMap<String, i64> = HashMap::new();
@@ -36,19 +36,20 @@ pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, d
         println!("running loop {}", loop_count);
 
         if loop_count % 5 == 0 {
-            launch_tracking(cache.clone())
+            tokio::spawn(launch_tracking(cache.clone()));
         }
 
         loop_count += 1;
 
         let launches: Vec<LaunchData> = cache
             .read()
+            .await
             .iter()
             .filter(|l| l.status == LaunchStatus::Go)
             .cloned()
             .collect();
         if launches.is_empty() {
-            std::thread::sleep(std::time::Duration::from_secs(55));
+            tokio::time::delay_for(std::time::Duration::from_secs(55)).await;
             continue;
         }
 
@@ -66,12 +67,12 @@ pub fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, d
 
             if let Ok(Some(r)) = get_reminders(&db, difference.num_minutes()) {
                 if let Ok(res) = bson::from_bson(r.into()) {
-                    execute_reminder(&db, &http, res, &l, difference)
+                    execute_reminder(&db, &http, res, &l, difference).await
                 }
             }
         }
 
-        std::thread::sleep(std::time::Duration::from_secs(55));
+        tokio::time::delay_for(std::time::Duration::from_secs(55)).await;
     }
 }
 
@@ -80,7 +81,7 @@ fn get_reminders(db: &Database, minutes: i64) -> MongoResult<Option<Document>> {
         .find_one(doc! { "minutes": minutes }, None)
 }
 
-fn execute_reminder(
+async fn execute_reminder(
     db: &Database,
     http: &Arc<Http>,
     reminder: Reminder,
@@ -130,7 +131,7 @@ fn execute_reminder(
             }
         }
 
-        if let Ok(chan) = u.create_dm_channel(&http) {
+        if let Ok(chan) = u.create_dm_channel(&http).await {
             let _ = chan.send_message(&http, |m: &mut CreateMessage| {
                 m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference))
             });

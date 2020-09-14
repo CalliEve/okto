@@ -3,8 +3,8 @@ use std::{collections::HashMap, env};
 use lazy_static::lazy_static;
 use regex::Regex;
 use reqwest::{
-    blocking::{Client, ClientBuilder},
     header::{HeaderMap, ACCEPT},
+    Client, ClientBuilder,
 };
 use serenity::model::{channel::ReactionType, id::EmojiId};
 
