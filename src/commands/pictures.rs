@@ -6,7 +6,8 @@ use serenity::{
     builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage},
     framework::standard::{
         macros::{command, group},
-        Args, CommandResult,
+        Args,
+        CommandResult,
     },
     model::channel::Message,
     prelude::Context,
@@ -27,14 +28,13 @@ async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
     let image_type = args
         .quoted()
         .current()
-        .map(|t| {
+        .map_or("natural", |t| {
             if ["natural", "enhanced"].contains(&t) {
                 t
             } else {
                 "natural"
             }
         })
-        .unwrap_or("natural")
         .to_lowercase();
 
     let opposite = if image_type == "natural" {
@@ -124,8 +124,10 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 .trim()
                 .to_owned()
         })
-        .map(|e| cutoff_on_last_dot(&e, 2040).to_owned())
-        .unwrap_or("no explanation provided :(".to_owned());
+        .map_or_else(
+            || "no explanation provided :(".to_owned(),
+            |e| cutoff_on_last_dot(&e, 2040).to_owned(),
+        );
 
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
@@ -171,11 +173,12 @@ async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
 
     let pic = biggest_image_url(&hubble_image_data);
 
-    let description = if let Some(d) = &hubble_image_data.description {
-        cutoff_on_last_dot(d, 2040)
-    } else {
-        "no image description provided"
-    };
+    let description = &hubble_image_data
+        .description
+        .as_ref()
+        .map_or("no image description provided", |d: &String| {
+            cutoff_on_last_dot(d, 2040)
+        });
 
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
@@ -220,7 +223,7 @@ async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
         .photos;
 
     let pic = {
-        get_rover_camera_picture(pictures, &mut RNG.write().await.to_owned())
+        get_rover_camera_picture(&pictures, &mut RNG.write().await.to_owned())
             .ok_or(format!("No spirit picture found at sol {}", sol))?
     };
 
@@ -272,7 +275,7 @@ async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
         .await?.photos;
 
     let pic = {
-        get_rover_camera_picture(pictures, &mut RNG.write().await.to_owned())
+        get_rover_camera_picture(&pictures, &mut RNG.write().await.to_owned())
             .ok_or(format!("No opportunity picture found at sol {}", sol))?
     };
 

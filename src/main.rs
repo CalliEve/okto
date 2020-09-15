@@ -2,6 +2,10 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::module_name_repetitions)]
+#![allow(clippy::wildcard_imports)] // the commands/events structure of serenity requires these
+#![allow(clippy::used_underscore_binding)] // the commands/events structure of serenity requires these
+#![allow(clippy::eval_order_dependence)] // messes up due to async, but should look into more
+#![allow(clippy::too_many_lines)] // TODO: refactor some functions to be smaller
 
 mod commands;
 mod event_handling;
@@ -26,7 +30,11 @@ use serenity::{
     framework::standard::{
         help_commands,
         macros::{help, hook},
-        Args, CommandGroup, CommandResult, HelpOptions, StandardFramework,
+        Args,
+        CommandGroup,
+        CommandResult,
+        HelpOptions,
+        StandardFramework,
     },
     model::prelude::{ChannelId, Message, UserId},
     prelude::RwLock,
@@ -147,7 +155,7 @@ async fn main() {
             "mongodb://{}:{}@{}:27017",
             user,
             &env::var("MONGO_PASSWORD").expect("mongo password"),
-            &env::var("MONGO_HOST").unwrap_or("mongodb".to_owned())
+            &env::var("MONGO_HOST").unwrap_or_else(|_| "mongodb".to_owned())
         )
     } else {
         "mongodb://mongo:27017".to_owned()

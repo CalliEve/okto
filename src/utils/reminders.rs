@@ -13,9 +13,7 @@ pub async fn get_user_settings(db: &Database, id: u64) -> MongoResult<UserSettin
         db.collection("user_settings")
             .find_one(doc! { "user": id }, None)
             .await?
-            .ok_or(MongoError::from(MongoErrorKind::Io(
-                IoErrorKind::NotFound.into(),
-            )))?
+            .ok_or_else(|| MongoError::from(MongoErrorKind::Io(IoErrorKind::NotFound.into())))?
             .into(),
     )?)
 }
@@ -25,9 +23,7 @@ pub async fn get_guild_settings(db: &Database, id: u64) -> MongoResult<GuildSett
         db.collection("guild_settings")
             .find_one(doc! { "guild": id }, None)
             .await?
-            .ok_or(MongoError::from(MongoErrorKind::Io(
-                IoErrorKind::NotFound.into(),
-            )))?
+            .ok_or_else(|| MongoError::from(MongoErrorKind::Io(IoErrorKind::NotFound.into())))?
             .into(),
     )?)
 }

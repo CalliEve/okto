@@ -1,6 +1,6 @@
 use reqwest::{header::AUTHORIZATION, Result};
 use serenity::prelude::RwLock;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
 use crate::{
     models::launches::{LaunchContainer, LaunchData},
@@ -15,14 +15,16 @@ pub async fn launch_tracking(cache: Arc<RwLock<Vec<LaunchData>>>) {
         Err(e) => {
             dbg!(e);
             return;
-        }
+        },
     };
     launches.sort_by_key(|l| l.net);
 
-    let mut i = 0;
-    for launch in launches.iter_mut() {
-        launch.id = i;
-        i += 1;
+    for (i, launch) in launches.iter_mut().enumerate() {
+        launch.id = if let Ok(id) = i32::try_from(i) {
+            id
+        } else {
+            return;
+        };
     }
 
     println!("got {} launches", launches.len());

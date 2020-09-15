@@ -26,7 +26,7 @@ pub fn cutoff_on_last_dot(text: &str, length: usize) -> &str {
             if last == 0 {
                 return &text[..length];
             } else {
-                return &text[..(last + 1)];
+                return &text[..=last];
             }
         }
     }
@@ -40,11 +40,13 @@ pub fn default_embed<'a>(
 ) -> &'a mut CreateEmbed {
     embed
         .author(|a: &mut CreateEmbedAuthor| a.name("OKTO").icon_url(DEFAULT_ICON))
-        .color(if success {
-            DEFAULT_COLOR.into()
-        } else {
-            Colour::RED
-        })
+        .color(
+            if success {
+                DEFAULT_COLOR.into()
+            } else {
+                Colour::RED
+            },
+        )
         .description(content)
         .timestamp(&Utc::now())
 }
@@ -60,7 +62,7 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
     match days {
         1 => res.push_str(&format!("{} day", days)),
         x if x > 1 => res.push_str(&format!("{} days", days)),
-        _ => {}
+        _ => {},
     }
 
     if hours > 0 {

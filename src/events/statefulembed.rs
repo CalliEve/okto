@@ -90,7 +90,7 @@ impl StatefulEmbed {
         ))?;
 
         let res = message.delete_reactions(&session.http).await;
-        if let Err(_) = res {
+        if res.is_err() {
             for r in &message.reactions {
                 if r.me {
                     let _ = message

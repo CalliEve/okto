@@ -3,7 +3,8 @@ use serenity::{
     builder::{CreateEmbed, CreateMessage},
     framework::standard::{
         macros::{command, group},
-        Args, CommandResult,
+        Args,
+        CommandResult,
     },
     model::channel::Message,
     prelude::Context,
@@ -19,11 +20,7 @@ struct Settings;
 #[required_permissions(MANAGE_GUILD)]
 #[only_in(guild)]
 async fn setprefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let prefix = if let Some(prefix) = args.current() {
-        prefix
-    } else {
-        ";"
-    };
+    let prefix = args.current().map_or(";", |p| p);
 
     let db = if let Some(db) = ctx.data.read().await.get::<DatabaseKey>() {
         db.clone()

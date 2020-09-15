@@ -7,12 +7,14 @@ use serenity::{
     builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage, EditMessage},
     framework::standard::{
         macros::{command, group},
-        Args, CommandResult,
+        Args,
+        CommandResult,
     },
     model::{channel::Message, ModelError},
     prelude::Context,
     utils::Colour,
-    Error, Result,
+    Error,
+    Result,
 };
 
 use crate::{models::caches::PictureCacheKey, utils::constants::*};
@@ -27,7 +29,7 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     let mut message = msg
         .channel_id
         .send_message(&ctx, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| e.description("🏓 pong..."))
+            m.embed(|e: &mut CreateEmbed| e.description("\u{1f3d3} pong..."))
         })
         .await?;
     let end = Utc::now();
@@ -39,7 +41,7 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
         .edit(ctx, |e: &mut EditMessage| {
             e.embed(|e: &mut CreateEmbed| {
                 e.title("Pong!").description(format!(
-                    "🏓\nws delay: {}ms\napi ping: {}ms",
+                    "\u{1f3d3}\nws delay: {}ms\napi ping: {}ms",
                     ws_delay.num_milliseconds(),
                     round_trip.num_milliseconds()
                 ))
@@ -74,7 +76,7 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
         if perms.embed_links() {
             msg.channel_id
                 .send_message(&ctx.http, |m| {
-                    m.content("❌ You must give this bot embed permissions ❌")
+                    m.content("\u{274c} You must give this bot embed permissions \u{274c}")
                 })
                 .await?;
         }
@@ -186,7 +188,12 @@ async fn peopleinspace(ctx: &Context, msg: &Message) -> CommandResult {
                     "There are currently {} people in space",
                     pis.number
                 ))
-                .description(text_vec.iter().map(|x| x.as_str()).collect::<String>())
+                .description(
+                    text_vec
+                        .iter()
+                        .map(std::string::String::as_str)
+                        .collect::<String>(),
+                )
                 .author(|a: &mut CreateEmbedAuthor| {
                     a.name("People in space").icon_url(DEFAULT_ICON)
                 })
@@ -288,7 +295,7 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         })
         .await?;
 
-    let search_name = args.current().map(|s| s.to_owned());
+    let search_name = args.current().map(std::borrow::ToOwned::to_owned);
 
     match ctx.data.read().await.get::<PictureCacheKey>() {
         None => return Err("can't get picture cache".into()),
@@ -296,12 +303,12 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             if search_name.is_some() && p.host_stars.contains(&search_name.clone().unwrap()) =>
         {
             get_star(&ctx, &mut res_msg, &search_name.clone().unwrap()).await?
-        }
+        },
         Some(p)
             if search_name.is_some() && p.exoplanets.contains(&search_name.clone().unwrap()) =>
         {
             get_planet(&ctx, &mut res_msg, &search_name.clone().unwrap()).await?
-        }
+        },
         Some(_) if search_name.is_some() => {
             res_msg.edit(&ctx.http, |m: &mut EditMessage| {
                 m.embed(|e: &mut CreateEmbed| {
@@ -316,7 +323,7 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 })
             }).await?;
             return Ok(());
-        }
+        },
         Some(p) => {
             let rand_name = {
                 p.exoplanets
@@ -324,7 +331,7 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     .ok_or("something went wrong while picking a planet")
             }?;
             get_planet(&ctx, &mut res_msg, &rand_name).await?
-        }
+        },
     };
 
     Ok(())
@@ -367,7 +374,7 @@ impl StarInfo {
 
     fn get_rad(&self) -> String {
         match &self.st_rad {
-            Some(rad) => format!("{}R☉", rad),
+            Some(rad) => format!("{}R\u{2609}", rad),
             None => "Unknown".to_owned(),
         }
     }
@@ -413,8 +420,7 @@ async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandR
                         planets,
                         star.get_lightyears_dist(),
                         star.st_dist
-                            .map(|n| n.to_string())
-                            .unwrap_or("unknown".to_owned()),
+                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
                     ),
                     false,
                 )
@@ -431,16 +437,15 @@ async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandR
                         star.st_spstr
                             .as_ref()
                             .cloned()
-                            .unwrap_or("unknown".to_owned()),
+                            .unwrap_or_else(|| "unknown".to_owned()),
                         star.hd_name
                             .as_ref()
                             .cloned()
-                            .unwrap_or("unknown".to_owned()),
+                            .unwrap_or_else(|| "unknown".to_owned()),
                         star.get_rad(),
                         star.get_mass(),
                         star.st_dens
-                            .map(|n| n.to_string())
-                            .unwrap_or("unknown".to_owned()),
+                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
                     ),
                     false,
                 )
@@ -506,28 +511,22 @@ async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> Comm
                     **Planet Equilibrium Temperature:** {}",
                     planet
                         .pl_radj
-                        .map(|n| format!("{} times", n))
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
                     planet
                         .pl_rade
-                        .map(|n| format!("{} times", n))
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
                     planet
                         .pl_dens
-                        .map(|n| format!("{}g/cm³", n))
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| format!("{}g/cm\u{b3}", n)),
                     planet
                         .pl_massj
-                        .map(|n| format!("{} times", n))
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
                     planet
                         .pl_masse
-                        .map(|n| format!("{} times", n))
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
                     planet
                         .pl_eqt
-                        .map(|n| format!("{}K", n))
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| format!("{}K", n)),
                 ),
                 false,
             )
@@ -541,25 +540,21 @@ async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> Comm
                     **Host Star:** {}",
                     planet
                         .pl_orbeccen
-                        .map(|n| n.to_string())
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
                     planet
                         .pl_orbincl
-                        .map(|n| format!("{} degrees", n))
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| format!("{} degrees", n)),
                     planet
                         .pl_orbper
-                        .map(|n| format!("{}K", n))
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| format!("{}K", n)),
                     planet
                         .pl_orbsmax
-                        .map(|n| format!("{}AU", n))
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| format!("{}AU", n)),
                     planet
                         .pl_hostname
                         .as_ref()
                         .cloned()
-                        .unwrap_or("unknown".to_owned()),
+                        .unwrap_or_else(|| "unknown".to_owned()),
                 ),
                 false,
             )
@@ -572,23 +567,22 @@ async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> Comm
                     **Name of telescoped used:** {}",
                     planet
                         .pl_disc
-                        .map(|n| n.to_string())
-                        .unwrap_or("unknown".to_owned()),
+                        .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
                     planet
                         .pl_discmethod
                         .as_ref()
                         .cloned()
-                        .unwrap_or("unknown".to_owned()),
+                        .unwrap_or_else(|| "unknown".to_owned()),
                     planet
                         .pl_locale
                         .as_ref()
                         .cloned()
-                        .unwrap_or("unknown".to_owned()),
+                        .unwrap_or_else(|| "unknown".to_owned()),
                     planet
                         .pl_telescope
                         .as_ref()
                         .cloned()
-                        .unwrap_or("unknown".to_owned()),
+                        .unwrap_or_else(|| "unknown".to_owned()),
                 ),
                 false,
             )

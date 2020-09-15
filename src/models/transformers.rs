@@ -23,8 +23,7 @@ impl From<LaunchInfo> for LaunchData {
             payload: info
                 .mission
                 .clone()
-                .map(|m| m.name)
-                .unwrap_or(String::from("payload unknown")),
+                .map_or_else(|| String::from("payload unknown"), |m| m.name),
             vid_urls: info.vid_urls.unwrap_or_default(),
             vehicle: info.rocket.configuration.full_name,
             location: info.pad.name,
@@ -34,18 +33,14 @@ impl From<LaunchInfo> for LaunchData {
             mission_type: info
                 .mission
                 .clone()
-                .map(|m| m.mission_type)
-                .unwrap_or(String::from("mission type unknown")),
-            mission_description: info
-                .mission
-                .clone()
-                .map(|m| m.description)
-                .unwrap_or(String::from("mission description unknown")),
+                .map_or_else(|| String::from("mission type unknown"), |m| m.mission_type),
+            mission_description: info.mission.clone().map_or_else(
+                || String::from("mission description unknown"),
+                |m| m.description,
+            ),
             lsp: info
                 .launch_service_provider
-                .clone()
-                .map(|l| l.name)
-                .unwrap_or(String::from("Unknown launch provider")),
+                .map_or_else(|| String::from("Unknown launch provider"), |l| l.name),
         }
     }
 }

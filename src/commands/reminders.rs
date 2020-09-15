@@ -11,7 +11,8 @@ use serenity::{
     builder::{CreateEmbed, CreateEmbedAuthor},
     framework::standard::{
         macros::{command, group},
-        Args, CommandResult,
+        Args,
+        CommandResult,
     },
     model::{
         channel::Message,
@@ -29,7 +30,9 @@ use crate::{
     models::{caches::DatabaseKey, reminders::Reminder},
     utils::{
         constants::*,
-        format_duration, parse_duration, parse_id,
+        format_duration,
+        parse_duration,
+        parse_id,
         reminders::{get_guild_settings, get_user_settings},
         temp_message,
     },
@@ -46,20 +49,15 @@ async fn notifychannel(ctx: &Context, msg: &Message, args: Args) -> CommandResul
         return Ok(());
     }
 
-    let target_channel = if let Some(channel_id) = args
-        .current()
-        .map(|c| parse_id(c))
-        .flatten()
-        .map(|c| ChannelId(c))
-    {
-        if let Some(channel) = channel_id.to_channel_cached(&ctx).await {
-            channel.id()
+    let target_channel =
+        if let Some(channel_id) = args.current().and_then(|c| parse_id(c)).map(ChannelId) {
+            channel_id
+                .to_channel_cached(&ctx)
+                .await
+                .map_or(msg.channel_id, |channel| channel.id())
         } else {
             msg.channel_id
-        }
-    } else {
-        msg.channel_id
-    };
+        };
 
     let ses = EmbedSession::new_show(&ctx, msg.channel_id, msg.author.id).await?;
 
@@ -173,7 +171,7 @@ fn reminders_page(
                     ))
                 }
                 text
-            }
+            },
             _ => "No reminders have been set yet".to_owned(),
         };
 
@@ -289,10 +287,10 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    }
+                    },
                     _ => "No agency filters have been set yet".to_owned(),
                 }
-            }
+            },
             ID::User(user_id) => {
                 let settings_res = get_user_settings(&db, user_id.into()).await;
                 match settings_res {
@@ -302,10 +300,10 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    }
+                    },
                     _ => "No agency filters have been set yet".to_owned(),
                 }
-            }
+            },
         };
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
@@ -432,10 +430,10 @@ fn mentions_page(
                             }
                         }
                         text
-                    }
+                    },
                     _ => "No role mentions have been set yet".to_owned(),
                 }
-            }
+            },
             _ => return,
         };
 
@@ -821,10 +819,7 @@ enum ID {
 
 impl ID {
     fn guild_specific(&self) -> bool {
-        match self {
-            Self::Channel(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Channel(_))
     }
 }
 

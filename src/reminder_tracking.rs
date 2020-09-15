@@ -95,7 +95,7 @@ async fn execute_reminder(
         if let Ok(settings) = &settings_res {
             for filter in &settings.filters {
                 if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
-                    if *agency == &l.lsp {
+                    if *agency == l.lsp {
                         continue 'channel;
                     }
                 }
@@ -128,7 +128,7 @@ async fn execute_reminder(
         if let Ok(settings) = settings_res {
             for filter in &settings.filters {
                 if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
-                    if *agency == &l.lsp {
+                    if *agency == l.lsp {
                         continue 'user;
                     }
                 }

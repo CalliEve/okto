@@ -10,7 +10,7 @@ pub fn get_date_epic_image(full: &str) -> String {
 }
 
 pub fn get_rover_camera_picture<R>(
-    list: Vec<MarsRoverPicture>,
+    list: &[MarsRoverPicture],
     mut rng: &mut R,
 ) -> Option<MarsRoverPicture>
 where
@@ -21,7 +21,7 @@ where
     ] {
         let pics = list
             .iter()
-            .filter(|p| &p.camera.name == *camera)
+            .filter(|p| p.camera.name == *camera)
             .collect::<Vec<&MarsRoverPicture>>();
         if let Some(pic) = pics.choose(&mut rng) {
             return Some((*pic).clone());
@@ -33,8 +33,7 @@ where
 pub fn biggest_image_url(src: &HubbleImageSource) -> String {
     src.image_files
         .iter()
-        .filter(|i| i.width > 200)
-        .next()
+        .find(|i| i.width > 200)
         .unwrap_or_else(|| src.image_files.first().expect("No hubble image returned"))
         .file_url
         .as_str()

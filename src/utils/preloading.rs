@@ -92,20 +92,23 @@ async fn host_stars() -> reqwest::Result<Vec<String>> {
 }
 
 pub async fn preload_data() -> PictureDataCache {
+    let (hubble_pics, curiosity_mardi, exoplanets, host_stars) =
+        tokio::join!(hubble_pics(), curiosity_mardi(), exoplanets(), host_stars());
+
     PictureDataCache {
-        hubble_pics: hubble_pics().await.unwrap_or_else(|e| {
+        hubble_pics: hubble_pics.unwrap_or_else(|e| {
             dbg!(e);
             Vec::new()
         }),
-        curiosity_mardi: curiosity_mardi().await.unwrap_or_else(|e| {
+        curiosity_mardi: curiosity_mardi.unwrap_or_else(|e| {
             dbg!(e);
             Vec::new()
         }),
-        exoplanets: exoplanets().await.unwrap_or_else(|e| {
+        exoplanets: exoplanets.unwrap_or_else(|e| {
             dbg!(e);
             Vec::new()
         }),
-        host_stars: host_stars().await.unwrap_or_else(|e| {
+        host_stars: host_stars.unwrap_or_else(|e| {
             dbg!(e);
             Vec::new()
         }),

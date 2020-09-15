@@ -31,7 +31,7 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
     }
 }
 
-pub fn filter_launches(launches: Vec<LaunchData>, args: Args) -> Result<Vec<LaunchData>, String> {
+pub fn filter_launches(launches: Vec<LaunchData>, args: &Args) -> Result<Vec<LaunchData>, String> {
     let filter_arg = if let Some(f) = args.remains() {
         f.to_lowercase()
     } else {
