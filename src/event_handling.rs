@@ -35,9 +35,8 @@ impl EventHandler for Handler {
 
         if let Some(channel) = ctx.cache.guild_channel(448224720177856513).await {
             let content = format!(
-                "**OKTO** restarted\nServing {} servers with {} members total",
+                "**OKTO** restarted\nServing {} servers",
                 ctx.cache.guilds().await.len(),
-                ctx.cache.users().await.len()
             );
             let _ = channel
                 .send_message(&ctx.http, |m| m.content(content))
