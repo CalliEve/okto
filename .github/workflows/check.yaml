@@ -8,5 +8,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v1
+      - name: Prepare
+        run: rustup component add clippy
       - name: Check
         run: cargo check --verbose
+      - name: Lint
+        run: cargo clippy -- -D warnings

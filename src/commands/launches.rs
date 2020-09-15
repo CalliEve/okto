@@ -23,11 +23,11 @@ use crate::{
     utils::{constants::*, default_embed, format_duration, launches::*},
 };
 
-const FINAL_PAGE_EMOJI: &str = "⏭";
-const NEXT_PAGE_EMOJI: &str = "▶";
-const LAST_PAGE_EMOJI: &str = "◀";
-const FIRST_PAGE_EMOJI: &str = "⏮";
-const EXIT_EMOJI: &str = "❌";
+const FINAL_PAGE_EMOJI: char = '⏭';
+const NEXT_PAGE_EMOJI: char = '▶';
+const LAST_PAGE_EMOJI: char = '◀';
+const FIRST_PAGE_EMOJI: char = '⏮';
+const EXIT_EMOJI: char = '❌';
 const CERTAIN_EMOJI: u64 = 447805610482728964;
 const UNCERTAIN_EMOJI: u64 = 447805624923717642;
 const LAUNCH_LIBRARY_URL: &str = "https://thespacedevs.com";
@@ -38,10 +38,10 @@ struct Launches;
 
 #[command]
 #[aliases(nl)]
-fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
-        if let Some(launch_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
-            Ok(launch_cache.read().to_vec())
+        if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
+            Ok(launch_cache.read().await.to_vec())
         } else {
             Err("Can't get launch cache")
         }
@@ -60,7 +60,8 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                         false,
                     )
                 })
-            })?;
+            })
+            .await?;
         return Ok(());
     }
 
@@ -70,7 +71,8 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             msg.channel_id
                 .send_message(&ctx.http, |m: &mut CreateMessage| {
                     m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
-                })?;
+                })
+                .await?;
             return Ok(());
         }
     };
@@ -123,7 +125,8 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
                 e
             })
-        })?;
+        })
+        .await?;
 
     Ok(())
 }
@@ -133,48 +136,51 @@ fn list_page(
     list: Vec<LaunchData>,
     page_num: usize,
     all: bool,
-) {
-    let launches = if all {
-        list.clone()
-    } else {
-        list.iter()
-            .filter(|l| l.status == LaunchStatus::Go)
-            .cloned()
-            .collect()
-    };
+) -> futures::future::BoxFuture<'static, ()> {
+    Box::pin(async move {
+        let launches = if all {
+            list.clone()
+        } else {
+            list.iter()
+                .filter(|l| l.status == LaunchStatus::Go)
+                .cloned()
+                .collect()
+        };
 
-    let min = page_num * 10;
-    let max_page = (launches.len() - 1) / 10;
+        let min = page_num * 10;
+        let max_page = (launches.len() - 1) / 10;
 
-    let top = if (page_num * 10 + 10) < launches.len() {
-        page_num * 10 + 10
-    } else {
-        launches.len()
-    };
+        let top = if (page_num * 10 + 10) < launches.len() {
+            page_num * 10 + 10
+        } else {
+            launches.len()
+        };
 
-    let mut em = StatefulEmbed::new_with(session.clone(), |e: &mut CreateEmbed| {
-        e.color(DEFAULT_COLOR)
-            .author(|a: &mut CreateEmbedAuthor| {
-                a.icon_url(DEFAULT_ICON).name("List of upcoming launches")
-            })
-            .timestamp(&Utc::now())
-            .footer(|f: &mut CreateEmbedFooter| f.text(format!("Source: {}", LAUNCH_LIBRARY_URL)));
+        let mut em = StatefulEmbed::new_with(session.clone(), |e: &mut CreateEmbed| {
+            e.color(DEFAULT_COLOR)
+                .author(|a: &mut CreateEmbedAuthor| {
+                    a.icon_url(DEFAULT_ICON).name("List of upcoming launches")
+                })
+                .timestamp(&Utc::now())
+                .footer(|f: &mut CreateEmbedFooter| {
+                    f.text(format!("Source: {}", LAUNCH_LIBRARY_URL))
+                });
 
-        if all {
-            e.description("
+            if all {
+                e.description("
             This list shows the upcoming launches (max 100), both certain and uncertain.\n\
             Use the arrow reactions to get to other pages and the green reaction to filter on only the launches that are certain.
             ");
-        } else {
-            e.description("
+            } else {
+                e.description("
             This list shows upcoming launches that are certain.\n\
             Use the arrow reactions to get to other pages and the red reaction to get all the launches.
             ");
-        }
+            }
 
-        #[allow(clippy::needless_range_loop)]
-        for launch in &launches[min..top] {
-            e.field(
+            #[allow(clippy::needless_range_loop)]
+            for launch in &launches[min..top] {
+                e.field(
                 format!(
                     "{}: {} - {}",
                     launch.id,
@@ -191,118 +197,152 @@ fn list_page(
                 ),
                 false,
             );
+            }
+            e
+        });
+
+        if page_num > 0 {
+            let first_page_launches = list.clone();
+            let first_page_session = session.clone();
+            em.add_option(&ReactionType::from(FIRST_PAGE_EMOJI), move || {
+                let first_page_session = first_page_session.clone();
+                let first_page_launches = first_page_launches.clone();
+                Box::pin(async move {
+                    list_page(
+                        first_page_session.clone(),
+                        first_page_launches.clone(),
+                        0,
+                        true,
+                    )
+                    .await
+                })
+            });
         }
-        e
-    });
 
-    if page_num > 0 {
-        let first_page_launches = list.clone();
-        let first_page_session = session.clone();
-        em.add_option(&ReactionType::from(FIRST_PAGE_EMOJI), move || {
-            list_page(
-                first_page_session.clone(),
-                first_page_launches.clone(),
-                0,
-                true,
-            )
+        if page_num > 0 {
+            let last_page_launches = list.clone();
+            let last_page_session = session.clone();
+            em.add_option(&ReactionType::from(LAST_PAGE_EMOJI), move || {
+                let last_page_launches = last_page_launches.clone();
+                let last_page_session = last_page_session.clone();
+                Box::pin(async move {
+                    list_page(
+                        last_page_session.clone(),
+                        last_page_launches.clone(),
+                        page_num - 1,
+                        true,
+                    )
+                    .await
+                })
+            });
+        }
+
+        if all && launches.iter().any(|l| l.status == LaunchStatus::Go) {
+            let certain_page_launches = list.clone();
+            let certain_page_session = session.clone();
+            em.add_option(
+                &ReactionType::Custom {
+                    animated: false,
+                    name: Some("certain".to_owned()),
+                    id: EmojiId::from(CERTAIN_EMOJI),
+                },
+                move || {
+                    let certain_page_session = certain_page_session.clone();
+                    let certain_page_launches = certain_page_launches.clone();
+                    Box::pin(async move {
+                        list_page(
+                            certain_page_session.clone(),
+                            certain_page_launches.clone(),
+                            0,
+                            false,
+                        )
+                        .await
+                    })
+                },
+            );
+        } else if !all {
+            let uncertain_page_launches = list.clone();
+            let uncertain_page_session = session.clone();
+            em.add_option(
+                &ReactionType::Custom {
+                    animated: false,
+                    name: Some("uncertain".to_owned()),
+                    id: EmojiId::from(UNCERTAIN_EMOJI),
+                },
+                move || {
+                    let uncertain_page_session = uncertain_page_session.clone();
+                    let uncertain_page_launches = uncertain_page_launches.clone();
+                    Box::pin(async move {
+                        list_page(
+                            uncertain_page_session.clone(),
+                            uncertain_page_launches.clone(),
+                            0,
+                            true,
+                        )
+                        .await
+                    })
+                },
+            );
+        }
+
+        if page_num < max_page {
+            let next_page_launches = list.clone();
+            let next_page_session = session.clone();
+            em.add_option(&ReactionType::from(NEXT_PAGE_EMOJI), move || {
+                let next_page_launches = next_page_launches.clone();
+                let next_page_session = next_page_session.clone();
+                Box::pin(async move {
+                    list_page(
+                        next_page_session.clone(),
+                        next_page_launches.clone(),
+                        page_num + 1,
+                        true,
+                    )
+                    .await
+                })
+            });
+        }
+
+        if page_num < max_page {
+            let final_page_launches = list;
+            let final_page_session = session.clone();
+            em.add_option(&ReactionType::from(FINAL_PAGE_EMOJI), move || {
+                let final_page_launches = final_page_launches.clone();
+                let final_page_session = final_page_session.clone();
+                Box::pin(async move {
+                    list_page(
+                        final_page_session.clone(),
+                        final_page_launches.clone(),
+                        final_page_launches.len() / 10 - 1,
+                        true,
+                    )
+                    .await
+                })
+            });
+        }
+
+        em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
+            let session = session.clone();
+            Box::pin(async move {
+                let lock = session.read().await;
+                let http = lock.http.clone();
+                lock.message.as_ref().map(|m| m.delete(&http));
+            })
         });
-    }
 
-    if page_num > 0 {
-        let last_page_launches = list.clone();
-        let last_page_session = session.clone();
-        em.add_option(&ReactionType::from(LAST_PAGE_EMOJI), move || {
-            list_page(
-                last_page_session.clone(),
-                last_page_launches.clone(),
-                page_num - 1,
-                true,
-            )
-        });
-    }
-
-    if all && launches.iter().any(|l| l.status == LaunchStatus::Go) {
-        let certain_page_launches = list.clone();
-        let certain_page_session = session.clone();
-        em.add_option(
-            &ReactionType::Custom {
-                animated: false,
-                name: Some("certain".to_owned()),
-                id: EmojiId::from(CERTAIN_EMOJI),
-            },
-            move || {
-                list_page(
-                    certain_page_session.clone(),
-                    certain_page_launches.clone(),
-                    0,
-                    false,
-                )
-            },
-        );
-    } else if !all {
-        let uncertain_page_launches = list.clone();
-        let uncertain_page_session = session.clone();
-        em.add_option(
-            &ReactionType::Custom {
-                animated: false,
-                name: Some("uncertain".to_owned()),
-                id: EmojiId::from(UNCERTAIN_EMOJI),
-            },
-            move || {
-                list_page(
-                    uncertain_page_session.clone(),
-                    uncertain_page_launches.clone(),
-                    0,
-                    true,
-                )
-            },
-        );
-    }
-
-    if page_num < max_page {
-        let next_page_launches = list.clone();
-        let next_page_session = session.clone();
-        em.add_option(&ReactionType::from(NEXT_PAGE_EMOJI), move || {
-            list_page(
-                next_page_session.clone(),
-                next_page_launches.clone(),
-                page_num + 1,
-                true,
-            )
-        });
-    }
-
-    if page_num < max_page {
-        let final_page_launches = list;
-        let final_page_session = session.clone();
-        em.add_option(&ReactionType::from(FINAL_PAGE_EMOJI), move || {
-            list_page(
-                final_page_session.clone(),
-                final_page_launches.clone(),
-                final_page_launches.len() / 10 - 1,
-                true,
-            )
-        });
-    }
-
-    em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
-        let lock = session.read();
-        let http = lock.http.clone();
-        lock.message.as_ref().map(|m| m.delete(&http));
-    });
-
-    let res = em.show();
-    if res.is_err() {
-        dbg!(res.unwrap_err());
-    }
+        let res = em.show().await;
+        if res.is_err() {
+            dbg!(res.unwrap_err());
+        }
+    })
 }
 
 #[command]
 #[aliases(ll)]
-fn listlaunches(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
-        if let Some(launch_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
-            Ok(launch_cache.read().to_vec())
+        if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
+            Ok(launch_cache.read().await.to_vec())
         } else {
             Err("Can't get launch cache")
         }
@@ -318,24 +358,25 @@ fn listlaunches(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             msg.channel_id
                 .send_message(&ctx.http, |m: &mut CreateMessage| {
                     m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
-                })?;
+                })
+                .await?;
             return Ok(());
         }
     };
 
-    let session = EmbedSession::new_show(&ctx, msg.channel_id, msg.author.id)?;
+    let session = EmbedSession::new_show(&ctx, msg.channel_id, msg.author.id).await?;
 
-    list_page(session, launches, 0, true);
+    list_page(session, launches, 0, true).await;
 
     Ok(())
 }
 
 #[command]
 #[aliases(li)]
-fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let launches: Vec<LaunchData> = {
-        if let Some(launch_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
-            Ok(launch_cache.read().to_vec())
+        if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
+            Ok(launch_cache.read().await.to_vec())
         } else {
             Err("Can't get launch cache")
         }
@@ -355,7 +396,8 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                         m.embed(|e: &mut CreateEmbed| {
                             default_embed(e, "No launch was found with that ID :(", false)
                         })
-                    })?;
+                    })
+                    .await?;
                 return Ok(());
             }
         }
@@ -363,7 +405,9 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             if let Ok(l) = request_launch(
                 args.current()
                     .expect("no arg supplied while it should have been"),
-            ) {
+            )
+            .await
+            {
                 l
             } else {
                 msg.channel_id
@@ -371,7 +415,8 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                         m.embed(|e: &mut CreateEmbed| {
                             default_embed(e, "No launch was found with that ID :(", false)
                         })
-                    })?;
+                    })
+                    .await?;
                 return Ok(());
             }
         }
@@ -441,13 +486,13 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                     false,
                 )
             })
-        })?;
+        }).await?;
 
     Ok(())
 }
 
 #[command]
-fn filtersinfo(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn filtersinfo(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
@@ -476,7 +521,8 @@ fn filtersinfo(ctx: &mut Context, msg: &Message) -> CommandResult {
                         false,
                     )
             })
-        })?;
+        })
+        .await?;
 
     Ok(())
 }

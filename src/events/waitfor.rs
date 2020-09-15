@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use futures::future::BoxFuture;
 use serenity::{
     builder::CreateMessage,
     http::Http,
@@ -7,7 +8,7 @@ use serenity::{
         channel::{Message, Reaction},
         id::{ChannelId, UserId},
     },
-    prelude::{Context, RwLock, ShareMap},
+    prelude::{Context, RwLock, TypeMap},
     Result as SerenityResult,
 };
 
@@ -20,17 +21,17 @@ pub enum WaitPayload {
 }
 
 impl WaitPayload {
-    fn delete(&self, ctx: &Context) -> SerenityResult<()> {
+    async fn delete(&self, ctx: &Context) -> SerenityResult<()> {
         match self {
-            Self::Message(m) => m.delete(ctx),
-            Self::Reaction(r) => r.delete(ctx),
+            Self::Message(m) => m.delete(ctx).await,
+            Self::Reaction(r) => r.delete(ctx).await,
         }
     }
 }
 
-type Handler = Arc<Box<dyn Fn(WaitPayload) + Send + Sync>>;
+type Handler = Arc<Box<dyn Fn(WaitPayload) -> BoxFuture<'static, ()> + Send + Sync>>;
 
-type Filter = Arc<Box<dyn Fn(WaitPayload) -> bool + Send + Sync>>;
+type Filter = Arc<Box<dyn Fn(WaitPayload) -> BoxFuture<'static, bool> + Send + Sync>>;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum WaitType {
@@ -52,7 +53,7 @@ pub struct WaitFor {
 impl WaitFor {
     pub fn message<H>(channel: ChannelId, user: UserId, handler: H) -> Self
     where
-        H: Fn(WaitPayload) + Send + Sync + 'static,
+        H: Fn(WaitPayload) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         Self {
             channel,
@@ -66,7 +67,7 @@ impl WaitFor {
 
     pub fn reaction<H>(channel: ChannelId, user: UserId, handler: H) -> Self
     where
-        H: Fn(WaitPayload) + Send + Sync + 'static,
+        H: Fn(WaitPayload) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         Self {
             channel,
@@ -78,10 +79,11 @@ impl WaitFor {
         }
     }
 
-    pub fn send_explanation(mut self, text: &str, http: impl AsRef<Http>) -> Self {
+    pub async fn send_explanation(mut self, text: &str, http: impl AsRef<Http>) -> Self {
         let res = self
             .channel
-            .send_message(http, |m: &mut CreateMessage| m.content(text));
+            .send_message(http, |m: &mut CreateMessage| m.content(text))
+            .await;
         if let Ok(m) = res {
             self.message = Some(m)
         }
@@ -90,18 +92,18 @@ impl WaitFor {
 
     pub fn set_filter<F>(&mut self, filter: F)
     where
-        F: Fn(WaitPayload) -> bool + Send + Sync + 'static,
+        F: Fn(WaitPayload) -> BoxFuture<'static, bool> + Send + Sync + 'static,
     {
         self.filter = Some(Arc::new(Box::new(filter)));
     }
 
-    pub fn listen(self, data: Arc<RwLock<ShareMap>>) {
-        if let Some(waiting) = data.write().get_mut::<WaitForKey>() {
+    pub async fn listen(self, data: Arc<RwLock<TypeMap>>) {
+        if let Some(waiting) = data.write().await.get_mut::<WaitForKey>() {
             waiting.insert((self.channel, self.user), self);
         }
     }
 
-    fn handle(&self, payload: WaitPayload) -> bool {
+    async fn handle(&self, payload: WaitPayload) -> bool {
         let run = match payload {
             WaitPayload::Message(_) if self.wait_type == WaitType::Message => true,
             WaitPayload::Reaction(_) if self.wait_type == WaitType::Reaction => true,
@@ -110,12 +112,12 @@ impl WaitFor {
 
         if run {
             match &self.filter {
-                Some(filter) if filter(payload.clone()) => {
-                    (self.handler)(payload);
+                Some(filter) if filter(payload.clone()).await => {
+                    (self.handler)(payload).await;
                     true
                 }
                 None => {
-                    (self.handler)(payload);
+                    (self.handler)(payload).await;
                     true
                 }
                 _ => false,
@@ -126,18 +128,20 @@ impl WaitFor {
     }
 }
 
-pub fn waitfor_message(ctx: &Context, message: Message) {
+pub async fn waitfor_message(ctx: &Context, message: Message) {
     let filter = (message.channel_id, message.author.id);
-    handle_waitfor(ctx, filter, WaitPayload::Message(message))
+    handle_waitfor(ctx, filter, WaitPayload::Message(message)).await
 }
 
-pub fn waitfor_reaction(ctx: &Context, reaction: Reaction) {
-    let filter = (reaction.channel_id, reaction.user_id);
-    handle_waitfor(ctx, filter, WaitPayload::Reaction(reaction))
+pub async fn waitfor_reaction(ctx: &Context, reaction: Reaction) {
+    if let Some(user_id) = reaction.user_id {
+        let filter = (reaction.channel_id, user_id);
+        handle_waitfor(ctx, filter, WaitPayload::Reaction(reaction)).await
+    }
 }
 
-fn handle_waitfor(ctx: &Context, filter: (ChannelId, UserId), payload: WaitPayload) {
-    let waiter = if let Some(waiting) = ctx.data.read().get::<WaitForKey>() {
+async fn handle_waitfor(ctx: &Context, filter: (ChannelId, UserId), payload: WaitPayload) {
+    let waiter = if let Some(waiting) = ctx.data.read().await.get::<WaitForKey>() {
         if let Some(waiter) = waiting.get(&filter) {
             waiter.clone()
         } else {
@@ -147,12 +151,12 @@ fn handle_waitfor(ctx: &Context, filter: (ChannelId, UserId), payload: WaitPaylo
         return;
     };
 
-    if waiter.handle(payload.clone()) {
-        if let Some(waiting) = ctx.data.write().get_mut::<WaitForKey>() {
+    if waiter.handle(payload.clone()).await {
+        if let Some(waiting) = ctx.data.write().await.get_mut::<WaitForKey>() {
             waiting.remove(&filter);
         }
         if let Some(message) = waiter.message {
-            let _ = message.delete(ctx);
+            let _ = message.delete(ctx).await;
         }
         let _ = payload.delete(ctx);
     }

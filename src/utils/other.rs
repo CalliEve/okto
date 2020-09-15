@@ -148,9 +148,9 @@ pub fn parse_id(text: &str) -> Option<u64> {
     None
 }
 
-pub fn temp_message(channel: ChannelId, http: impl AsRef<Http>, text: &str, delay: Duration) {
-    if let Ok(message) = channel.send_message(&http, |m| m.content(text)) {
-        std::thread::sleep(delay.to_std().unwrap());
+pub async fn temp_message(channel: ChannelId, http: impl AsRef<Http>, text: &str, delay: Duration) {
+    if let Ok(message) = channel.send_message(&http, |m| m.content(text)).await {
+        tokio::time::delay_for(delay.to_std().unwrap()).await;
         let _ = channel.delete_message(http, message.id);
     }
 }

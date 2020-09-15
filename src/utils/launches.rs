@@ -63,7 +63,7 @@ pub fn filter_launches(launches: Vec<LaunchData>, args: Args) -> Result<Vec<Laun
     Ok(launches)
 }
 
-pub fn request_launch(id: &str) -> Result<LaunchData, CommandError> {
+pub async fn request_launch(id: &str) -> Result<LaunchData, CommandError> {
     let mut params = HashMap::new();
     params.insert("mode", "detailed");
 
@@ -71,8 +71,10 @@ pub fn request_launch(id: &str) -> Result<LaunchData, CommandError> {
         .get(&format!("https://ll.thespacedevs.com/2.0.0/launch/{}", id))
         .header(AUTHORIZATION, LL_KEY.as_str())
         .query(&params)
-        .send()?
+        .send()
+        .await?
         .error_for_status()?
-        .json()?;
+        .json()
+        .await?;
     Ok(res.into())
 }
