@@ -40,7 +40,7 @@ async fn get_new_launches() -> Result<LaunchContainer> {
     params.insert("mode", "detailed");
 
     Ok(DEFAULT_CLIENT
-        .get("https://ll.thespacedevs.com/2.0.0/launch/upcoming")
+        .get("https://ll.thespacedevs.com/2.0.0/launch/upcoming/")
         .header(AUTHORIZATION, LL_KEY.as_str())
         .query(&params)
         .send()

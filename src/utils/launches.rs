@@ -68,7 +68,7 @@ pub async fn request_launch(id: &str) -> Result<LaunchData, CommandError> {
     params.insert("mode", "detailed");
 
     let res: LaunchInfo = DEFAULT_CLIENT
-        .get(&format!("https://ll.thespacedevs.com/2.0.0/launch/{}", id))
+        .get(&format!("https://ll.thespacedevs.com/2.0.0/launch/{}/", id))
         .header(AUTHORIZATION, LL_KEY.as_str())
         .query(&params)
         .send()

@@ -691,7 +691,7 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) {
             Some(UpdateOptions::builder().upsert(true).build()),
         ),
         ID::Channel((_, guild_id)) => collection.update_one(
-            doc! {"user": guild_id.0},
+            doc! {"guild": guild_id.0},
             doc! {
                 "$addToSet": {
                     "filters": filter
@@ -731,7 +731,7 @@ async fn remove_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) 
             None,
         ),
         ID::Channel((_, guild_id)) => collection.update_one(
-            doc! {"user": guild_id.0},
+            doc! {"guild": guild_id.0},
             doc! {
                 "$pull": {
                     "filters": filter

@@ -66,13 +66,13 @@ async fn help_cmd(
 #[hook]
 async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
     if msg.guild_id.is_none() {
-        println!("Message not in guild: {}", &msg.content);
         return None;
     }
 
     let db = if let Some(db) = ctx.data.read().await.get::<DatabaseKey>() {
         db.clone()
     } else {
+        println!("No database found");
         return None;
     };
 
@@ -93,7 +93,8 @@ async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
                 println!("Error in getting prefix: {:?}", settings.unwrap_err());
                 return None;
             }
-            Some(settings.unwrap())
+            let settings = settings.unwrap();
+            Some(settings)
         })
         .map(|s| s.prefix)
 }
@@ -102,7 +103,7 @@ async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
 async fn main() {
     let framework = StandardFramework::new()
         .configure(|c| {
-            c.prefix(";")
+            c.prefix("!;")
                 .owners(vec![247745860979392512.into()].into_iter().collect())
                 .dynamic_prefix(calc_prefix)
         })

@@ -33,7 +33,9 @@ async fn setprefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .update_one(
             doc! {"guild": msg.guild_id.unwrap().0},
             doc! {
-                "prefix": &prefix
+                "$set": {
+                    "prefix": prefix,
+                },
             },
             Some(UpdateOptions::builder().upsert(true).build()),
         )
