@@ -23,11 +23,11 @@ use crate::{
     utils::{constants::*, default_embed, format_duration, launches::*},
 };
 
-const FINAL_PAGE_EMOJI: &str = "⏭";
-const NEXT_PAGE_EMOJI: &str = "▶";
-const LAST_PAGE_EMOJI: &str = "◀";
-const FIRST_PAGE_EMOJI: &str = "⏮";
-const EXIT_EMOJI: &str = "❌";
+const FINAL_PAGE_EMOJI: char = '⏭';
+const NEXT_PAGE_EMOJI: char = '▶';
+const LAST_PAGE_EMOJI: char = '◀';
+const FIRST_PAGE_EMOJI: char = '⏮';
+const EXIT_EMOJI: char = '❌';
 const CERTAIN_EMOJI: u64 = 447805610482728964;
 const UNCERTAIN_EMOJI: u64 = 447805624923717642;
 const LAUNCH_LIBRARY_URL: &str = "https://thespacedevs.com";
@@ -38,10 +38,10 @@ struct Launches;
 
 #[command]
 #[aliases(nl)]
-fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
-        if let Some(launch_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
-            Ok(launch_cache.read().to_vec())
+        if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
+            Ok(launch_cache.read().await.to_vec())
         } else {
             Err("Can't get launch cache")
         }
@@ -60,7 +60,8 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                         false,
                     )
                 })
-            })?;
+            })
+            .await?;
         return Ok(());
     }
 
@@ -70,7 +71,8 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             msg.channel_id
                 .send_message(&ctx.http, |m: &mut CreateMessage| {
                     m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
-                })?;
+                })
+                .await?;
             return Ok(());
         }
     };
@@ -123,12 +125,13 @@ fn nextlaunch(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
 
                 e
             })
-        })?;
+        })
+        .await?;
 
     Ok(())
 }
 
-fn list_page(
+async fn list_page(
     session: Arc<RwLock<EmbedSession>>,
     list: Vec<LaunchData>,
     page_num: usize,
@@ -199,12 +202,15 @@ fn list_page(
         let first_page_launches = list.clone();
         let first_page_session = session.clone();
         em.add_option(&ReactionType::from(FIRST_PAGE_EMOJI), move || {
-            list_page(
-                first_page_session.clone(),
-                first_page_launches.clone(),
-                0,
-                true,
-            )
+            Box::pin(async {
+                list_page(
+                    first_page_session.clone(),
+                    first_page_launches.clone(),
+                    0,
+                    true,
+                )
+                .await
+            })
         });
     }
 
@@ -212,12 +218,15 @@ fn list_page(
         let last_page_launches = list.clone();
         let last_page_session = session.clone();
         em.add_option(&ReactionType::from(LAST_PAGE_EMOJI), move || {
-            list_page(
-                last_page_session.clone(),
-                last_page_launches.clone(),
-                page_num - 1,
-                true,
-            )
+            Box::pin(async {
+                list_page(
+                    last_page_session.clone(),
+                    last_page_launches.clone(),
+                    page_num - 1,
+                    true,
+                )
+                .await
+            })
         });
     }
 
@@ -231,12 +240,15 @@ fn list_page(
                 id: EmojiId::from(CERTAIN_EMOJI),
             },
             move || {
-                list_page(
-                    certain_page_session.clone(),
-                    certain_page_launches.clone(),
-                    0,
-                    false,
-                )
+                Box::pin(async {
+                    list_page(
+                        certain_page_session.clone(),
+                        certain_page_launches.clone(),
+                        0,
+                        false,
+                    )
+                    .await
+                })
             },
         );
     } else if !all {
@@ -249,12 +261,15 @@ fn list_page(
                 id: EmojiId::from(UNCERTAIN_EMOJI),
             },
             move || {
-                list_page(
-                    uncertain_page_session.clone(),
-                    uncertain_page_launches.clone(),
-                    0,
-                    true,
-                )
+                Box::pin(async {
+                    list_page(
+                        uncertain_page_session.clone(),
+                        uncertain_page_launches.clone(),
+                        0,
+                        true,
+                    )
+                    .await
+                })
             },
         );
     }
@@ -263,12 +278,15 @@ fn list_page(
         let next_page_launches = list.clone();
         let next_page_session = session.clone();
         em.add_option(&ReactionType::from(NEXT_PAGE_EMOJI), move || {
-            list_page(
-                next_page_session.clone(),
-                next_page_launches.clone(),
-                page_num + 1,
-                true,
-            )
+            Box::pin(async {
+                list_page(
+                    next_page_session.clone(),
+                    next_page_launches.clone(),
+                    page_num + 1,
+                    true,
+                )
+                .await
+            })
         });
     }
 
@@ -276,22 +294,27 @@ fn list_page(
         let final_page_launches = list;
         let final_page_session = session.clone();
         em.add_option(&ReactionType::from(FINAL_PAGE_EMOJI), move || {
-            list_page(
-                final_page_session.clone(),
-                final_page_launches.clone(),
-                final_page_launches.len() / 10 - 1,
-                true,
-            )
+            Box::pin(async {
+                list_page(
+                    final_page_session.clone(),
+                    final_page_launches.clone(),
+                    final_page_launches.len() / 10 - 1,
+                    true,
+                )
+                .await
+            })
         });
     }
 
     em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
-        let lock = session.read();
-        let http = lock.http.clone();
-        lock.message.as_ref().map(|m| m.delete(&http));
+        Box::pin(async {
+            let lock = session.read().await;
+            let http = lock.http.clone();
+            lock.message.as_ref().map(|m| m.delete(&http));
+        })
     });
 
-    let res = em.show();
+    let res = em.show().await;
     if res.is_err() {
         dbg!(res.unwrap_err());
     }
@@ -299,10 +322,10 @@ fn list_page(
 
 #[command]
 #[aliases(ll)]
-fn listlaunches(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
-        if let Some(launch_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
-            Ok(launch_cache.read().to_vec())
+        if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
+            Ok(launch_cache.read().await.to_vec())
         } else {
             Err("Can't get launch cache")
         }
@@ -318,24 +341,25 @@ fn listlaunches(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             msg.channel_id
                 .send_message(&ctx.http, |m: &mut CreateMessage| {
                     m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
-                })?;
+                })
+                .await?;
             return Ok(());
         }
     };
 
-    let session = EmbedSession::new_show(&ctx, msg.channel_id, msg.author.id)?;
+    let session = EmbedSession::new_show(&ctx, msg.channel_id, msg.author.id).await?;
 
-    list_page(session, launches, 0, true);
+    list_page(session, launches, 0, true).await;
 
     Ok(())
 }
 
 #[command]
 #[aliases(li)]
-fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let launches: Vec<LaunchData> = {
-        if let Some(launch_cache) = ctx.data.read().get::<LaunchesCacheKey>() {
-            Ok(launch_cache.read().to_vec())
+        if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
+            Ok(launch_cache.read().await.to_vec())
         } else {
             Err("Can't get launch cache")
         }
@@ -355,7 +379,8 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                         m.embed(|e: &mut CreateEmbed| {
                             default_embed(e, "No launch was found with that ID :(", false)
                         })
-                    })?;
+                    })
+                    .await?;
                 return Ok(());
             }
         }
@@ -363,7 +388,9 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
             if let Ok(l) = request_launch(
                 args.current()
                     .expect("no arg supplied while it should have been"),
-            ) {
+            )
+            .await
+            {
                 l
             } else {
                 msg.channel_id
@@ -371,7 +398,8 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                         m.embed(|e: &mut CreateEmbed| {
                             default_embed(e, "No launch was found with that ID :(", false)
                         })
-                    })?;
+                    })
+                    .await?;
                 return Ok(());
             }
         }
@@ -441,13 +469,13 @@ fn launchinfo(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                     false,
                 )
             })
-        })?;
+        }).await?;
 
     Ok(())
 }
 
 #[command]
-fn filtersinfo(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn filtersinfo(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
@@ -476,7 +504,8 @@ fn filtersinfo(ctx: &mut Context, msg: &Message) -> CommandResult {
                         false,
                     )
             })
-        })?;
+        })
+        .await?;
 
     Ok(())
 }

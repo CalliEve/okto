@@ -18,26 +18,29 @@ struct Settings;
 #[command]
 #[required_permissions(MANAGE_GUILD)]
 #[only_in(guild)]
-fn setprefix(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
+async fn setprefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let prefix = if let Some(prefix) = args.current() {
         prefix
     } else {
         ";"
     };
 
-    let db = if let Some(db) = ctx.data.read().get::<DatabaseKey>() {
+    let db = if let Some(db) = ctx.data.read().await.get::<DatabaseKey>() {
         db.clone()
     } else {
         return Err("No database found".into());
     };
 
-    let res = db.collection("general_settings").update_one(
-        doc! {"guild": msg.guild_id.unwrap().0},
-        doc! {
-            "prefix": &prefix
-        },
-        Some(UpdateOptions::builder().upsert(true).build()),
-    );
+    let res = db
+        .collection("general_settings")
+        .update_one(
+            doc! {"guild": msg.guild_id.unwrap().0},
+            doc! {
+                "prefix": &prefix
+            },
+            Some(UpdateOptions::builder().upsert(true).build()),
+        )
+        .await;
 
     if res.is_ok() {
         let res = res.unwrap();
@@ -54,7 +57,8 @@ fn setprefix(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                         true,
                     )
                 })
-            })?;
+            })
+            .await?;
     } else {
         res?;
     }

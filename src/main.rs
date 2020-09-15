@@ -1,3 +1,5 @@
+#![recursion_limit = "128"]
+
 mod commands;
 mod event_handling;
 mod events;
@@ -14,7 +16,7 @@ use std::{
 
 use mongodb::{
     bson::{self, doc},
-    sync::Client as MongoClient,
+    Client as MongoClient,
 };
 use serenity::{
     client::{bridge::gateway::GatewayIntents, Client, Context},
@@ -64,7 +66,8 @@ async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
 
     let res = db
         .collection("general_settings")
-        .find_one(doc! { "guild": msg.guild_id.unwrap().0 }, None);
+        .find_one(doc! { "guild": msg.guild_id.unwrap().0 }, None)
+        .await;
 
     if res.is_err() {
         println!("Error in getting prefix: {:?}", res.unwrap_err());
@@ -146,6 +149,7 @@ async fn main() {
         data.insert::<LaunchesCacheKey>(Arc::new(RwLock::new(Vec::new())));
         data.insert::<DatabaseKey>(
             MongoClient::with_uri_str(&mongo_uri)
+                .await
                 .unwrap()
                 .database("okto"),
         );

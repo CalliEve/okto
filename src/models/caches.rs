@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use mongodb::sync::Database;
+use mongodb::Database;
 use serenity::{
     model::id::{ChannelId, MessageId, UserId},
     prelude::{RwLock, TypeMapKey},

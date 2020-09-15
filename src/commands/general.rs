@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, FixedOffset, Utc};
+use chrono::Utc;
 use rand::{seq::SliceRandom, thread_rng};
 use serde::{Deserialize, Serialize};
 use serenity::{
@@ -22,31 +22,37 @@ use crate::{models::caches::PictureCacheKey, utils::constants::*};
 struct General;
 
 #[command]
-fn ping(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     let start = Utc::now();
-    let mut message = msg.channel_id.send_message(&ctx, |m: &mut CreateMessage| {
-        m.embed(|e: &mut CreateEmbed| e.description("🏓 pong..."))
-    })?;
+    let mut message = msg
+        .channel_id
+        .send_message(&ctx, |m: &mut CreateMessage| {
+            m.embed(|e: &mut CreateEmbed| e.description("🏓 pong..."))
+        })
+        .await?;
     let end = Utc::now();
 
     let round_trip = end - start;
-    let ws_delay = DateTime::<FixedOffset>::from(start) - msg.id.created_at();
+    let ws_delay = start - msg.id.created_at();
 
-    message.edit(ctx, |e: &mut EditMessage| {
-        e.embed(|e: &mut CreateEmbed| {
-            e.title("Pong!").description(format!(
-                "🏓\nws delay: {}ms\napi ping: {}ms",
-                ws_delay.num_milliseconds(),
-                round_trip.num_milliseconds()
-            ))
+    message
+        .edit(ctx, |e: &mut EditMessage| {
+            e.embed(|e: &mut CreateEmbed| {
+                e.title("Pong!").description(format!(
+                    "🏓\nws delay: {}ms\napi ping: {}ms",
+                    ws_delay.num_milliseconds(),
+                    round_trip.num_milliseconds()
+                ))
+            })
         })
-    })?;
+        .await?;
 
     Ok(())
 }
 
 #[command]
-fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
+    let user_id = ctx.cache.current_user().await.id;
     let msg_res: Result<Message> = msg.channel_id.send_message(&ctx.http, |m: &mut CreateMessage| {
         m.content(format!(
             "**OKTO** | `3.0`\n{}, I hope you enjoy using me on your server!",
@@ -58,17 +64,19 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
                 format!(
                     "**__[Bot Invite](https://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=289856)__**\n\
                     **__[OKTO server](https://discord.gg/dXPHfPJ)__**",
-                    ctx.cache.read().user.id
+                    user_id
                 )
             )
         })
-    });
+    }).await;
 
     if let Err(Error::Model(ModelError::InvalidPermissions(perms))) = msg_res {
         if perms.embed_links() {
-            let _ = msg.channel_id.send_message(&ctx.http, |m| {
-                m.content("❌ You must give this bot embed permissions ❌")
-            });
+            msg.channel_id
+                .send_message(&ctx.http, |m| {
+                    m.content("❌ You must give this bot embed permissions ❌")
+                })
+                .await?;
         }
     }
 
@@ -76,7 +84,8 @@ fn invite(ctx: &mut Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn info(ctx: &Context, msg: &Message) -> CommandResult {
+    let user_id = ctx.cache.current_user().await.id;
     msg.channel_id.send_message(&ctx.http, |m: &mut CreateMessage| {
         m.embed(|e: &mut CreateEmbed| {
             e.title("OKTO")
@@ -94,7 +103,7 @@ fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
                     \n<:botTag:230105988211015680>\n\
                     If you want OKTO on your server, click [**here**](https://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=289856)\n\
                     If you like OKTO, please [**vote**](https://discordbots.org/bot/429306620439166977/vote) ^-^",
-                    ctx.cache.read().user.id
+                    user_id
                 )
             )
             .author(|a: &mut CreateEmbedAuthor| {
@@ -104,12 +113,12 @@ fn info(ctx: &mut Context, msg: &Message) -> CommandResult {
             .thumbnail(TRANSPARENT_ICON)
             .color(DEFAULT_COLOR)
         })
-    })?;
+    }).await?;
     Ok(())
 }
 
 #[command]
-fn websites(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn websites(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
@@ -138,7 +147,8 @@ fn websites(ctx: &mut Context, msg: &Message) -> CommandResult {
                 })
                 .color(DEFAULT_COLOR)
             })
-        })?;
+        })
+        .await?;
     Ok(())
 }
 
@@ -155,12 +165,14 @@ struct PeopleInSpaceResp {
 }
 
 #[command]
-fn peopleinspace(ctx: &mut Context, msg: &Message) -> CommandResult {
+async fn peopleinspace(ctx: &Context, msg: &Message) -> CommandResult {
     let pis: PeopleInSpaceResp = DEFAULT_CLIENT
         .get("http://api.open-notify.org/astros.json")
-        .send()?
+        .send()
+        .await?
         .error_for_status()?
-        .json()?;
+        .json()
+        .await?;
 
     let mut text_vec: Vec<String> = Vec::with_capacity(pis.people.len());
     for person in &pis.people {
@@ -181,7 +193,8 @@ fn peopleinspace(ctx: &mut Context, msg: &Message) -> CommandResult {
                 .timestamp(&Utc::now())
                 .color(DEFAULT_COLOR)
             })
-        })?;
+        })
+        .await?;
 
     Ok(())
 }
@@ -195,24 +208,25 @@ struct ISSLocation {
 }
 
 #[command]
-fn iss(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let mut res_msg: Message =
-        msg.channel_id
-            .send_message(&ctx.http, |m: &mut CreateMessage| {
-                m.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Position ISS").icon_url(DEFAULT_ICON)
-                    })
+async fn iss(ctx: &Context, msg: &Message) -> CommandResult {
+    let mut res_msg: Message = msg
+        .channel_id
+        .send_message(&ctx.http, |m: &mut CreateMessage| {
+            m.embed(|e: &mut CreateEmbed| {
+                e.author(|a: &mut CreateEmbedAuthor| a.name("Position ISS").icon_url(DEFAULT_ICON))
                     .color(DEFAULT_COLOR)
                     .description("<a:typing:393848431413559296> loading position...")
-                })
-            })?;
+            })
+        })
+        .await?;
 
     let iss_pos: ISSLocation = DEFAULT_CLIENT
         .get("https://api.wheretheiss.at/v1/satellites/25544")
-        .send()?
+        .send()
+        .await?
         .error_for_status()?
-        .json()?;
+        .json()
+        .await?;
 
     let detail_url = format!(
         "https://maps.googleapis.com/maps/api/staticmap?\
@@ -253,38 +267,40 @@ fn iss(ctx: &mut Context, msg: &Message) -> CommandResult {
             .timestamp(&Utc::now())
             .color(DEFAULT_COLOR)
         })
-    })?;
+    })
+    .await?;
 
     Ok(())
 }
 
 #[command]
-fn exoplanet(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let mut res_msg: Message =
-        msg.channel_id
-            .send_message(&ctx.http, |m: &mut CreateMessage| {
-                m.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Exoplanet/Star Information").icon_url(DEFAULT_ICON)
-                    })
-                    .color(DEFAULT_COLOR)
-                    .description("<a:typing:393848431413559296> loading data...")
+async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let mut res_msg: Message = msg
+        .channel_id
+        .send_message(&ctx.http, |m: &mut CreateMessage| {
+            m.embed(|e: &mut CreateEmbed| {
+                e.author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Exoplanet/Star Information").icon_url(DEFAULT_ICON)
                 })
-            })?;
+                .color(DEFAULT_COLOR)
+                .description("<a:typing:393848431413559296> loading data...")
+            })
+        })
+        .await?;
 
     let search_name = args.current().map(|s| s.to_owned());
 
-    match ctx.data.read().get::<PictureCacheKey>() {
+    match ctx.data.read().await.get::<PictureCacheKey>() {
         None => return Err("can't get picture cache".into()),
         Some(p)
             if search_name.is_some() && p.host_stars.contains(&search_name.clone().unwrap()) =>
         {
-            get_star(&ctx, &mut res_msg, &search_name.clone().unwrap())?
+            get_star(&ctx, &mut res_msg, &search_name.clone().unwrap()).await?
         }
         Some(p)
             if search_name.is_some() && p.exoplanets.contains(&search_name.clone().unwrap()) =>
         {
-            get_planet(&ctx, &mut res_msg, &search_name.clone().unwrap())?
+            get_planet(&ctx, &mut res_msg, &search_name.clone().unwrap()).await?
         }
         Some(_) if search_name.is_some() => {
             res_msg.edit(&ctx.http, |m: &mut EditMessage| {
@@ -298,16 +314,17 @@ fn exoplanet(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                     .title("planet/star not found!")
                     .color(Colour::RED)
                 })
-            })?;
+            }).await?;
             return Ok(());
         }
-        Some(p) => get_planet(
-            &ctx,
-            &mut res_msg,
-            p.exoplanets
-                .choose(&mut thread_rng())
-                .ok_or("something went wrong while picking a planet")?,
-        )?,
+        Some(p) => {
+            let rand_name = {
+                p.exoplanets
+                    .choose(&mut thread_rng())
+                    .ok_or("something went wrong while picking a planet")
+            }?;
+            get_planet(&ctx, &mut res_msg, &rand_name).await?
+        }
     };
 
     Ok(())
@@ -356,7 +373,7 @@ impl StarInfo {
     }
 }
 
-fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandResult {
+async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandResult {
     let mut params = HashMap::new();
     params.insert("table", "exoplanets".to_owned());
     params.insert("format", "json".to_owned());
@@ -367,8 +384,10 @@ fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandResult 
         .get("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI")
         .query(&params)
         .send()
-        .and_then(|r| r.error_for_status())
-        .and_then(|r| r.json())?;
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
 
     let planets = res
         .iter()
@@ -426,7 +445,8 @@ fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandResult 
                     false,
                 )
         })
-    })?;
+    })
+    .await?;
 
     Ok(())
 }
@@ -450,7 +470,7 @@ struct PlanetInfo {
     pub pl_discmethod: Option<String>,
 }
 
-fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> CommandResult {
+async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> CommandResult {
     let mut params = HashMap::new();
     params.insert("table", "exoplanets".to_owned());
     params.insert("format", "json".to_owned());
@@ -461,9 +481,11 @@ fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> CommandRes
         .get("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI")
         .query(&params)
         .send()
-        .and_then(|r| r.error_for_status())
-        .and_then(|r| r.json::<Vec<PlanetInfo>>())
-        .map(|r| r[0].clone())?;
+        .await?
+        .error_for_status()?
+        .json::<Vec<PlanetInfo>>()
+        .await?[0]
+        .clone();
 
     msg.edit(&ctx.http, |m: &mut EditMessage| {
         m.embed(|e: &mut CreateEmbed| {
@@ -571,7 +593,8 @@ fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> CommandRes
                 false,
             )
         })
-    })?;
+    })
+    .await?;
 
     Ok(())
 }

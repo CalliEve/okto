@@ -6,8 +6,7 @@ use serenity::{
     builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage},
     framework::standard::{
         macros::{command, group},
-        Args,
-        CommandResult,
+        Args, CommandResult,
     },
     model::channel::Message,
     prelude::Context,
@@ -23,8 +22,8 @@ use crate::{
 struct Pictures;
 
 #[command]
-fn earthpic(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http);
+async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
     let image_type = args
         .quoted()
         .current()
@@ -46,9 +45,11 @@ fn earthpic(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
 
     let epic_image_data: EPICImage = DEFAULT_CLIENT
         .get(format!("https://epic.gsfc.nasa.gov/api/{}", image_type).as_str())
-        .send()?
+        .send()
+        .await?
         .error_for_status()?
-        .json::<Vec<EPICImage>>()?
+        .json::<Vec<EPICImage>>()
+        .await?
         .first()
         .cloned()
         .ok_or("No image received from the EPIC image api")?;
@@ -76,14 +77,14 @@ fn earthpic(ctx: &mut Context, msg: &Message, mut args: Args) -> CommandResult {
                     ))
                     .timestamp(&Utc::now())
             })
-        })?;
+        }).await?;
 
     Ok(())
 }
 
 #[command]
-fn spacepic(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http);
+async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
     let now = Utc::today();
 
@@ -104,9 +105,11 @@ fn spacepic(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
     let apod_image: APODImage = DEFAULT_CLIENT
         .get("https://api.nasa.gov/planetary/apod")
         .query(&params)
-        .send()?
+        .send()
+        .await?
         .error_for_status()?
-        .json()?;
+        .json()
+        .await?;
 
     let explanation = apod_image
         .explanation
@@ -139,16 +142,17 @@ fn spacepic(ctx: &mut Context, msg: &Message, args: Args) -> CommandResult {
                 .image(apod_image.url)
                 .timestamp(&Utc::now())
             })
-        })?;
+        })
+        .await?;
 
     Ok(())
 }
 
 #[command]
-fn hubble(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http);
+async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
+    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
-    let picn: i32 = if let Some(pic_cache) = ctx.data.read().get::<PictureCacheKey>() {
+    let picn: i32 = if let Some(pic_cache) = ctx.data.read().await.get::<PictureCacheKey>() {
         *pic_cache
             .hubble_pics
             .choose(&mut thread_rng())
@@ -159,9 +163,11 @@ fn hubble(ctx: &mut Context, msg: &Message) -> CommandResult {
 
     let hubble_image_data: HubbleImageSource = DEFAULT_CLIENT
         .get(format!("http://hubblesite.org/api/v3/image/{}", picn).as_str())
-        .send()?
+        .send()
+        .await?
         .error_for_status()?
-        .json()?;
+        .json()
+        .await?;
 
     let pic = biggest_image_url(&hubble_image_data);
 
@@ -185,17 +191,17 @@ fn hubble(ctx: &mut Context, msg: &Message) -> CommandResult {
                 .image(pic)
                 .timestamp(&Utc::now())
             })
-        })?;
+        })
+        .await?;
 
     Ok(())
 }
 
 #[command]
-fn spirit(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http);
+async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
+    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
-    let mut rng = thread_rng();
-    let sol: u16 = rng.gen_range(1, 2191);
+    let sol: u16 = { thread_rng().gen_range(1, 5112) };
 
     let pictures: Vec<MarsRoverPicture> = DEFAULT_CLIENT
         .get(
@@ -206,13 +212,18 @@ fn spirit(ctx: &mut Context, msg: &Message) -> CommandResult {
             )
             .as_str(),
         )
-        .send()?
+        .send()
+        .await?
         .error_for_status()?
-        .json::<MarsRoverPictureRes>()?
+        .json::<MarsRoverPictureRes>()
+        .await?
         .photos;
 
-    let pic = get_rover_camera_picture(pictures, &mut rng)
-        .ok_or(format!("No spirit picture found at sol {}", sol))?;
+    let pic = {
+        let rng = thread_rng();
+        get_rover_camera_picture(pictures, &mut rng)
+            .ok_or(format!("No spirit picture found at sol {}", sol))?
+    };
 
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
@@ -234,17 +245,17 @@ fn spirit(ctx: &mut Context, msg: &Message) -> CommandResult {
                 .image(pic.img_src)
                 .timestamp(&Utc::now())
             })
-        })?;
+        })
+        .await?;
 
     Ok(())
 }
 
 #[command]
-fn opportunity(ctx: &mut Context, msg: &Message) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http);
+async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
+    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
-    let mut rng = thread_rng();
-    let sol: u16 = rng.gen_range(1, 5112);
+    let sol: u16 = { thread_rng().gen_range(1, 5112) };
 
     let pictures: Vec<MarsRoverPicture> = DEFAULT_CLIENT
         .get(
@@ -255,12 +266,17 @@ fn opportunity(ctx: &mut Context, msg: &Message) -> CommandResult {
             )
             .as_str(),
         )
-        .send()?
+        .send()
+        .await?
         .error_for_status()?
-        .json::<MarsRoverPictureRes>()?.photos;
+        .json::<MarsRoverPictureRes>()
+        .await?.photos;
 
-    let pic = get_rover_camera_picture(pictures, &mut rng)
-        .ok_or(format!("No opportunity picture found at sol {}", sol))?;
+    let pic = {
+        let rng = thread_rng();
+        get_rover_camera_picture(pictures, &mut rng)
+            .ok_or(format!("No opportunity picture found at sol {}", sol))?
+    };
 
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
@@ -282,7 +298,8 @@ fn opportunity(ctx: &mut Context, msg: &Message) -> CommandResult {
                 .image(pic.img_src)
                 .timestamp(&Utc::now())
             })
-        })?;
+        })
+        .await?;
 
     Ok(())
 }
