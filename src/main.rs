@@ -1,4 +1,5 @@
 #![recursion_limit = "128"]
+#![warn(clippy::pedantic)]
 
 mod commands;
 mod event_handling;
