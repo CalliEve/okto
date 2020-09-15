@@ -1,4 +1,3 @@
-use std::thread;
 use std::time::Duration;
 
 use num_cpus;
@@ -49,7 +48,7 @@ impl EventHandler for Handler {
                     let status = format!("{} servers", ctx.cache.guilds().await.len());
                     ctx.shard.set_activity(Some(Activity::listening(&status)));
                 }
-                thread::sleep(Duration::from_secs(300));
+                tokio::time::delay_for(Duration::from_secs(300)).await;
             }
         });
     }

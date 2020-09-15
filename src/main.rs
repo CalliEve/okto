@@ -143,6 +143,7 @@ async fn main() {
     };
 
     {
+        println!("Preparing caches");
         let mut data = client.data.write().await;
         data.insert::<EmbedSessionsKey>(HashMap::new());
         data.insert::<WaitForKey>(HashMap::new());
@@ -161,11 +162,15 @@ async fn main() {
             let launches_cache_clone = launches_cache.clone();
             let http_clone = client.cache_and_http.http.clone();
             let db_clone = db.clone();
-            std::thread::spawn(|| reminder_tracking(http_clone, launches_cache_clone, db_clone));
+            tokio::spawn(reminder_tracking(
+                http_clone,
+                launches_cache_clone,
+                db_clone,
+            ));
         }
     }
 
-    // start listening for events by starting a single shard
+    println!("Starting the bot");
     if let Err(why) = client.start().await {
         println!("An error occurred while running the client: {:?}", why);
     }
