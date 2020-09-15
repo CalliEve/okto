@@ -325,8 +325,9 @@ fn list_page(
             let session = session.clone();
             Box::pin(async move {
                 let lock = session.read().await;
-                let http = lock.http.clone();
-                lock.message.as_ref().map(|m| m.delete(&http));
+                if let Some(m) = lock.message.as_ref() {
+                    let _ = m.delete(&lock.http).await;
+                };
             })
         });
 

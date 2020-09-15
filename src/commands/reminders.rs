@@ -142,16 +142,9 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             move || {
                 let close_ses = close_ses.clone();
                 Box::pin(async move {
-                    let local_ses = close_ses.read().await.clone();
-                    if let Some(m) = close_ses
-                        .clone()
-                        .read()
-                        .await
-                        .message
-                        .as_ref()
-                        .map(|m| m.delete(&local_ses.http))
-                    {
-                        let _ = m.await;
+                    let lock = close_ses.read().await;
+                    if let Some(m) = lock.message.as_ref() {
+                        let _ = m.delete(&lock.http).await;
                     };
                 })
             },
