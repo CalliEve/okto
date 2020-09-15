@@ -23,10 +23,10 @@ pub fn cutoff_on_last_dot(text: &str, length: usize) -> &str {
         if character == '.' {
             last = index
         } else if index >= length - 1 {
-            if last != 0 {
-                return &text[..(last + 1)];
-            } else {
+            if last == 0 {
                 return &text[..length];
+            } else {
+                return &text[..(last + 1)];
             }
         }
     }

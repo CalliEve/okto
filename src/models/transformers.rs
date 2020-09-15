@@ -11,7 +11,7 @@ impl From<LaunchInfo> for LaunchData {
                         return domain.to_owned();
                     };
                 };
-                return u.title.clone();
+                u.title.clone()
             });
         };
 

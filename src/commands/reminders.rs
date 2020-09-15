@@ -157,9 +157,9 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             },
         );
 
-        let res = em.show().await;
-        if res.is_err() {
-            dbg!(res.unwrap_err());
+        let result = em.show().await;
+        if result.is_err() {
+            dbg!(result.unwrap_err());
         }
     })
 }
@@ -271,9 +271,9 @@ fn reminders_page(
             },
         );
 
-        let res = em.show().await;
-        if res.is_err() {
-            dbg!(res.unwrap_err());
+        let result = em.show().await;
+        if result.is_err() {
+            dbg!(result.unwrap_err());
         }
     })
 }
@@ -404,9 +404,9 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
             },
         );
 
-        let res = em.show().await;
-        if res.is_err() {
-            dbg!(res.unwrap_err());
+        let result = em.show().await;
+        if result.is_err() {
+            dbg!(result.unwrap_err());
         }
     })
 }
@@ -552,9 +552,9 @@ fn mentions_page(
             },
         );
 
-        let res = em.show().await;
-        if res.is_err() {
-            dbg!(res.unwrap_err());
+        let result = em.show().await;
+        if result.is_err() {
+            dbg!(result.unwrap_err());
         }
     })
 }
@@ -604,7 +604,7 @@ async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duratio
         db.collection("user_settings")
     };
 
-    let res = match id {
+    let result = match id {
         ID::User(user_id) => collection.update_one(
             doc! {"minutes": duration.num_minutes()},
             doc! {
@@ -626,7 +626,7 @@ async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duratio
     }
     .await;
 
-    if let Err(e) = res {
+    if let Err(e) = result {
         dbg!(e);
     }
 }
@@ -644,7 +644,7 @@ async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dura
         db.collection("user_settings")
     };
 
-    let res = match id {
+    let result = match id {
         ID::User(user_id) => collection.update_one(
             doc! {"minutes": duration.num_minutes()},
             doc! {
@@ -666,7 +666,7 @@ async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dura
     }
     .await;
 
-    if let Err(e) = res {
+    if let Err(e) = result {
         dbg!(e);
     }
 }
@@ -689,7 +689,7 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) {
         db.collection("user_settings")
     };
 
-    let res = match id {
+    let result = match id {
         ID::User(user_id) => collection.update_one(
             doc! {"user": user_id.0},
             doc! {
@@ -711,7 +711,7 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) {
     }
     .await;
 
-    if let Err(e) = res {
+    if let Err(e) = result {
         dbg!(e);
     }
 }
@@ -729,7 +729,7 @@ async fn remove_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) 
         db.collection("user_settings")
     };
 
-    let res = match id {
+    let result = match id {
         ID::User(user_id) => collection.update_one(
             doc! {"user": user_id.0},
             doc! {
@@ -751,7 +751,7 @@ async fn remove_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) 
     }
     .await;
 
-    if let Err(e) = res {
+    if let Err(e) = result {
         dbg!(e);
     }
 }
@@ -769,7 +769,7 @@ async fn add_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
         return;
     };
 
-    let res = db
+    let result = db
         .collection("guild_settings")
         .update_one(
             doc! {"guild": guild_id.0},
@@ -782,7 +782,7 @@ async fn add_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
         )
         .await;
 
-    if let Err(e) = res {
+    if let Err(e) = result {
         dbg!(e);
     }
 }
@@ -800,7 +800,7 @@ async fn remove_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
         return;
     };
 
-    let res = db
+    let result = db
         .collection("guild_settings")
         .update_one(
             doc! {"guild": guild_id.0},
@@ -813,7 +813,7 @@ async fn remove_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
         )
         .await;
 
-    if let Err(e) = res {
+    if let Err(e) = result {
         dbg!(e);
     }
 }

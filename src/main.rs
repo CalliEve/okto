@@ -1,5 +1,7 @@
 #![recursion_limit = "128"]
 #![warn(clippy::pedantic)]
+#![allow(clippy::unreadable_literal)]
+#![allow(clippy::module_name_repetitions)]
 
 mod commands;
 mod event_handling;
@@ -31,6 +33,7 @@ use serenity::{
 };
 
 use commands::{general::*, launches::*, pictures::*, reminders::*, settings::*};
+use event_handling::Handler;
 use launch_tracking::launch_tracking;
 use models::{
     caches::{DatabaseKey, EmbedSessionsKey, LaunchesCacheKey, PictureCacheKey, WaitForKey},
@@ -82,7 +85,7 @@ async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
                 println!("Error in getting prefix: {:?}", settings.unwrap_err());
                 return None;
             }
-            return Some(settings.unwrap());
+            Some(settings.unwrap())
         })
         .map(|s| s.prefix)
 }
@@ -91,7 +94,7 @@ async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
 async fn main() {
     let framework = StandardFramework::new()
         .configure(|c| {
-            c.prefix(";")
+            c.prefix("!;")
                 .owners(vec![247745860979392512.into()].into_iter().collect())
                 .dynamic_prefix(calc_prefix)
         })
@@ -128,11 +131,14 @@ async fn main() {
     let mut intents = GatewayIntents::all();
     intents.remove(GatewayIntents::GUILD_MEMBERS);
     intents.remove(GatewayIntents::GUILD_PRESENCES);
+    intents.remove(GatewayIntents::GUILD_VOICE_STATES);
+    intents.remove(GatewayIntents::GUILD_BANS);
 
     // Login with a bot token from the environment
     let mut client = Client::new(&env::var("DISCORD_TOKEN").expect("no bot token"))
         .framework(framework)
         .intents(intents)
+        .event_handler(Handler)
         .await
         .expect("Error creating client");
 

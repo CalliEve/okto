@@ -28,10 +28,10 @@ async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
         .quoted()
         .current()
         .map(|t| {
-            if !["natural", "enhanced"].contains(&t) {
-                "natural"
-            } else {
+            if ["natural", "enhanced"].contains(&t) {
                 t
+            } else {
+                "natural"
             }
         })
         .unwrap_or("natural")
