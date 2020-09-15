@@ -207,7 +207,7 @@ pub async fn on_reaction_add(ctx: &Context, add_reaction: Reaction) {
                     return;
                 }
 
-                if let Some(embed) = &session.current_state {
+                session.current_state.as_ref().and_then(|embed| {
                     let mut handler: Option<Arc<Box<Handler>>> = None;
 
                     for opt in &embed.options {
@@ -216,21 +216,18 @@ pub async fn on_reaction_add(ctx: &Context, add_reaction: Reaction) {
                         }
                     }
 
-                    if let Some(h) = handler {
-                        h
-                    } else {
-                        return;
-                    }
-                } else {
-                    return;
-                }
+                    handler
+                })
             } else {
-                return;
+                None
             }
         } else {
-            return;
+            None
         };
-        handler().await;
+
+        if let Some(handler) = handler {
+            handler().await;
+        }
     }
 }
 
