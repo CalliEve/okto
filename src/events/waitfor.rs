@@ -158,6 +158,6 @@ async fn handle_waitfor(ctx: &Context, filter: (ChannelId, UserId), payload: Wai
         if let Some(message) = waiter.message {
             let _ = message.delete(ctx).await;
         }
-        let _ = payload.delete(ctx);
+        let _ = payload.delete(ctx).await;
     }
 }

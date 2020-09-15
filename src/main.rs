@@ -48,7 +48,7 @@ async fn help_cmd(
     groups: &[&'static CommandGroup],
     owners: HashSet<UserId>,
 ) -> CommandResult {
-    let _ = help_commands::with_embeds(context, msg, args, help_options, groups, owners);
+    let _ = help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
     Ok(())
 }
 
@@ -106,15 +106,20 @@ async fn main() {
                 //  Print out an error if it happened
                 if let Err(why) = error {
                     println!("Error in {}: {:?}", cmd_name, &why);
-                    let _ = msg.channel_id.send_message(&ctx.http, |m| {
-                        m.content("Oh no, an error happened.\nPlease try again at a later time")
-                    });
-                    let _ = ChannelId(447876053109702668).send_message(&ctx.http, |m| {
-                        m.content(format!(
-                            "An error happened in {}:\n```{:?}```",
-                            cmd_name, why
-                        ))
-                    });
+                    let _ = msg
+                        .channel_id
+                        .send_message(&ctx.http, |m| {
+                            m.content("Oh no, an error happened.\nPlease try again at a later time")
+                        })
+                        .await;
+                    let _ = ChannelId(447876053109702668)
+                        .send_message(&ctx.http, |m| {
+                            m.content(format!(
+                                "An error happened in {}:\n```{:?}```",
+                                cmd_name, why
+                            ))
+                        })
+                        .await;
                 }
             })
         });
