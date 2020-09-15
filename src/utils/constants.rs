@@ -1,12 +1,14 @@
 use std::{collections::HashMap, env};
 
 use lazy_static::lazy_static;
+use rand::{rngs::StdRng, thread_rng, SeedableRng};
 use regex::Regex;
 use reqwest::{
     header::{HeaderMap, ACCEPT},
     Client, ClientBuilder,
 };
 use serenity::model::{channel::ReactionType, id::EmojiId};
+use serenity::prelude::RwLock;
 
 pub const DEFAULT_COLOR: u32 = 16750899;
 pub const DEFAULT_ICON: &str = "https://i.imgur.com/ruFc9fc.png";
@@ -181,4 +183,5 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
 lazy_static! {
     pub static ref LAUNCH_AGENCIES: HashMap<&'static str, &'static str> = agency_map();
     pub static ref LAUNCH_VEHICLES: HashMap<&'static str, Vec<&'static str>> = vehicle_map();
+    pub static ref RNG: RwLock<StdRng> = RwLock::new(StdRng::from_rng(thread_rng()).unwrap());
 }

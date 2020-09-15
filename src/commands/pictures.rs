@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::{Duration, TimeZone, Utc};
-use rand::{seq::SliceRandom, thread_rng, Rng};
+use rand::{seq::SliceRandom, Rng};
 use serenity::{
     builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage},
     framework::standard::{
@@ -93,7 +93,7 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     } else {
         let start = Utc.ymd(2000, 1, 1);
         let days = (now - start).num_days();
-        let day = thread_rng().gen_range(0, days);
+        let day = RNG.write().await.gen_range(0, days);
         start + Duration::days(day)
     };
 
@@ -155,7 +155,7 @@ async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
     let picn: i32 = if let Some(pic_cache) = ctx.data.read().await.get::<PictureCacheKey>() {
         *pic_cache
             .hubble_pics
-            .choose(&mut thread_rng())
+            .choose(&mut RNG.write().await.to_owned())
             .ok_or("Could not retrieve a hubble picture from the picture cache")?
     } else {
         return Err("Could not retrieve the picture cache".into());
@@ -201,7 +201,7 @@ async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
 async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
-    let sol: u16 = { thread_rng().gen_range(1, 5112) };
+    let sol: u16 = RNG.write().await.gen_range(1, 5112);
 
     let pictures: Vec<MarsRoverPicture> = DEFAULT_CLIENT
         .get(
@@ -220,8 +220,7 @@ async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
         .photos;
 
     let pic = {
-        let rng = thread_rng();
-        get_rover_camera_picture(pictures, &mut rng)
+        get_rover_camera_picture(pictures, &mut RNG.write().await.to_owned())
             .ok_or(format!("No spirit picture found at sol {}", sol))?
     };
 
@@ -255,7 +254,7 @@ async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
 async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
-    let sol: u16 = { thread_rng().gen_range(1, 5112) };
+    let sol: u16 = { RNG.write().await.gen_range(1, 5112) };
 
     let pictures: Vec<MarsRoverPicture> = DEFAULT_CLIENT
         .get(
@@ -273,8 +272,7 @@ async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
         .await?.photos;
 
     let pic = {
-        let rng = thread_rng();
-        get_rover_camera_picture(pictures, &mut rng)
+        get_rover_camera_picture(pictures, &mut RNG.write().await.to_owned())
             .ok_or(format!("No opportunity picture found at sol {}", sol))?
     };
 

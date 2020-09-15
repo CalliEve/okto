@@ -55,8 +55,8 @@ impl EventHandler for Handler {
     }
 
     async fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
-        waitfor_reaction(&ctx, add_reaction.clone());
-        embed_reactions(&ctx, add_reaction.clone());
+        waitfor_reaction(&ctx, add_reaction.clone()).await;
+        embed_reactions(&ctx, add_reaction.clone()).await;
     }
 
     async fn message_delete(

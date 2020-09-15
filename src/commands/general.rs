@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use chrono::Utc;
-use rand::{seq::SliceRandom, thread_rng};
+use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use serenity::{
     builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage, EditMessage},
@@ -320,7 +320,7 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         Some(p) => {
             let rand_name = {
                 p.exoplanets
-                    .choose(&mut thread_rng())
+                    .choose(&mut RNG.write().await.to_owned())
                     .ok_or("something went wrong while picking a planet")
             }?;
             get_planet(&ctx, &mut res_msg, &rand_name).await?

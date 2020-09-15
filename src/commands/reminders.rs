@@ -85,413 +85,478 @@ async fn notifyme(ctx: &Context, msg: &Message) -> CommandResult {
 
 // ---- pages functions ----
 
-async fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) {
-    let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-        e.color(DEFAULT_COLOR)
-            .timestamp(&Utc::now())
-            .author(|a: &mut CreateEmbedAuthor| {
-                a.name("Launch Reminder Settings").icon_url(DEFAULT_ICON)
-            })
-    });
+fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFuture<'static, ()> {
+    Box::pin(async move {
+        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
+            e.color(DEFAULT_COLOR)
+                .timestamp(&Utc::now())
+                .author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Launch Reminder Settings").icon_url(DEFAULT_ICON)
+                })
+        });
 
-    let reminder_ses = ses.clone();
-    em.add_field(
-        "Reminders",
-        "Set at which times you want to get launch reminders",
-        false,
-        &'⏰'.into(),
-        move || Box::pin(async { reminders_page(reminder_ses.clone(), id).await }),
-    );
-
-    let filters_ses = ses.clone();
-    em.add_field(
-        "Filters",
-        "Set which agencies to filter out of launch reminders",
-        false,
-        &'📝'.into(),
-        move || Box::pin(async { filters_page(filters_ses.clone(), id).await }),
-    );
-
-    if id.guild_specific() {
-        let mention_ses = ses.clone();
+        let reminder_ses = ses.clone();
         em.add_field(
-            "Mentions",
-            "Set which roles should be mentioned when posting reminders",
+            "Reminders",
+            "Set at which times you want to get launch reminders",
             false,
-            &'🔔'.into(),
-            move || Box::pin(async { mentions_page(mention_ses.clone(), id).await }),
+            &'⏰'.into(),
+            move || {
+                let reminder_ses = reminder_ses.clone();
+                Box::pin(async move { reminders_page(reminder_ses.clone(), id).await })
+            },
         );
-    }
 
-    let close_ses = ses.clone();
-    em.add_field(
-        "Close",
-        "Close this menu",
-        false,
-        &'❌'.into(),
-        move || {
-            Box::pin(async {
-                let local_ses = close_ses.clone().read().await;
-                if let Some(m) = close_ses
-                    .clone()
-                    .read()
-                    .await
-                    .message
-                    .as_ref()
-                    .map(|m| m.delete(&local_ses.http))
-                {
-                    m.await;
-                }
-            })
-        },
-    );
+        let filters_ses = ses.clone();
+        em.add_field(
+            "Filters",
+            "Set which agencies to filter out of launch reminders",
+            false,
+            &'📝'.into(),
+            move || {
+                let filters_ses = filters_ses.clone();
+                Box::pin(async move { filters_page(filters_ses.clone(), id).await })
+            },
+        );
 
-    let res = em.show().await;
-    if res.is_err() {
-        dbg!(res.unwrap_err());
-    }
+        if id.guild_specific() {
+            let mention_ses = ses.clone();
+            em.add_field(
+                "Mentions",
+                "Set which roles should be mentioned when posting reminders",
+                false,
+                &'🔔'.into(),
+                move || {
+                    let mention_ses = mention_ses.clone();
+                    Box::pin(async move { mentions_page(mention_ses.clone(), id).await })
+                },
+            );
+        }
+
+        let close_ses = ses.clone();
+        em.add_field(
+            "Close",
+            "Close this menu",
+            false,
+            &'❌'.into(),
+            move || {
+                let close_ses = close_ses.clone();
+                Box::pin(async move {
+                    let local_ses = close_ses.read().await.clone();
+                    if let Some(m) = close_ses
+                        .clone()
+                        .read()
+                        .await
+                        .message
+                        .as_ref()
+                        .map(|m| m.delete(&local_ses.http))
+                    {
+                        let _ = m.await;
+                    };
+                })
+            },
+        );
+
+        let res = em.show().await;
+        if res.is_err() {
+            dbg!(res.unwrap_err());
+        }
+    })
 }
 
-async fn reminders_page(ses: Arc<RwLock<EmbedSession>>, id: ID) {
-    let reminders_res = get_reminders(&ses, id).await;
-    let description = match reminders_res {
-        Ok(reminders) if !reminders.is_empty() => {
-            let mut text = "The following reminders have been set:".to_owned();
-            for reminder in &reminders {
-                text.push_str(&format!(
-                    "\n- {}",
-                    format_duration(reminder.get_duration(), false)
-                ))
+fn reminders_page(
+    ses: Arc<RwLock<EmbedSession>>,
+    id: ID,
+) -> futures::future::BoxFuture<'static, ()> {
+    Box::pin(async move {
+        let reminders_res = get_reminders(&ses, id).await;
+        let description = match reminders_res {
+            Ok(reminders) if !reminders.is_empty() => {
+                let mut text = "The following reminders have been set:".to_owned();
+                for reminder in &reminders {
+                    text.push_str(&format!(
+                        "\n- {}",
+                        format_duration(reminder.get_duration(), false)
+                    ))
+                }
+                text
             }
-            text
-        }
-        _ => "No reminders have been set yet".to_owned(),
-    };
+            _ => "No reminders have been set yet".to_owned(),
+        };
 
-    let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-        e.color(DEFAULT_COLOR)
-            .timestamp(&Utc::now())
-            .author(|a: &mut CreateEmbedAuthor| a.name("Launch Reminders").icon_url(DEFAULT_ICON))
-            .description(description)
-    });
+        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
+            e.color(DEFAULT_COLOR)
+                .timestamp(&Utc::now())
+                .author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Launch Reminders").icon_url(DEFAULT_ICON)
+                })
+                .description(description)
+        });
 
-    let add_ses = ses.clone();
-    em.add_field(
+        let add_ses = ses.clone();
+        em.add_field(
         "Add Reminder",
         "Add a new reminder",
         false,
         &PROGRADE,
-        move || Box::pin(async {
-            let inner_ses = add_ses.clone();
-            let channel_id = inner_ses.read().await.channel;
-            let user_id = inner_ses.read().await.author;
-            let wait_ses = add_ses.clone();
+        move || Box::pin({
+                let add_ses = add_ses.clone();
+                async move {
+                    let inner_ses = add_ses.clone();
+                    let channel_id = inner_ses.read().await.channel;
+                    let user_id = inner_ses.read().await.author;
+                    let wait_ses = add_ses.clone();
 
-            WaitFor::message(channel_id, user_id, move |payload: WaitPayload| Box::pin(async {
-                if let WaitPayload::Message(message) = payload {
-                    let dur = parse_duration(&message.content);
-                    if !dur.is_zero() {
-                        add_reminder(&wait_ses.clone(), id, dur).await;
-                    }
-                    reminders_page(wait_ses.clone(), id).await
+                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                        let wait_ses = wait_ses.clone();
+                            Box::pin(async move {
+                            if let WaitPayload::Message(message) = payload {
+                                let dur = parse_duration(&message.content);
+                                if !dur.is_zero() {
+                                    add_reminder(&wait_ses.clone(), id, dur).await;
+                                }
+                                reminders_page(wait_ses.clone(), id).await
+                            }
+                        })
+                    })
+                    .send_explanation(
+                        "Send how long before the launch you want the reminder.\nPlease give the time in the format of `1w 2d 3h 4m`",
+                        &inner_ses.read().await.http,
+                    ).await
+                    .listen(inner_ses.read().await.data.clone())
+                    .await;
                 }
-            }))
-            .send_explanation(
-                "Send how long before the launch you want the reminder.\nPlease give the time in the format of `1w 2d 3h 4m`",
-                &inner_ses.read().await.http,
-            ).await
-            .listen(inner_ses.read().await.data.clone());
-        }),
-    );
+            }),
+        );
 
-    let remove_ses = ses.clone();
-    em.add_field(
+        let remove_ses = ses.clone();
+        em.add_field(
         "Remove Reminder",
         "Remove a reminder",
         false,
         &RETROGRADE,
-        move || Box::pin(async {
+        move || {
+            let remove_ses = remove_ses.clone();
+            Box::pin(async move {
             let inner_ses = remove_ses.clone();
             let channel_id = inner_ses.read().await.channel;
             let user_id = inner_ses.read().await.author;
             let wait_ses = remove_ses.clone();
 
-            WaitFor::message(channel_id, user_id, move |payload: WaitPayload| Box::pin(async {
+            WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                let wait_ses = wait_ses.clone();
+                Box::pin(async move {
                 if let WaitPayload::Message(message) = payload {
                     remove_reminder(&wait_ses.clone(), id, parse_duration(&message.content)).await;
                     reminders_page(wait_ses.clone(), id).await
                 }
-            }))
+            })})
             .send_explanation(
                 "Send the time of the reminder you want to remove.\nPlease give the time in the format of `1w 2d 3h 4m`",
                 &inner_ses.read().await.http,
             ).await
-            .listen(inner_ses.read().await.data.clone());
-        }),
+            .listen(inner_ses.read().await.data.clone())
+            .await;
+        })},
     );
 
-    em.add_field(
-        "Back",
-        "Go back to main menu",
-        false,
-        &'❌'.into(),
-        move || Box::pin(async { main_menu(ses.clone(), id).await }),
-    );
+        em.add_field(
+            "Back",
+            "Go back to main menu",
+            false,
+            &'❌'.into(),
+            move || {
+                let ses = ses.clone();
+                Box::pin(async move { main_menu(ses.clone(), id).await })
+            },
+        );
 
-    let res = em.show().await;
-    if res.is_err() {
-        dbg!(res.unwrap_err());
-    }
+        let res = em.show().await;
+        if res.is_err() {
+            dbg!(res.unwrap_err());
+        }
+    })
 }
 
-async fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) {
-    let db = if let Some(db_res) = get_db(&ses).await {
-        db_res
-    } else {
-        return;
-    };
+fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFuture<'static, ()> {
+    Box::pin(async move {
+        let db = if let Some(db_res) = get_db(&ses).await {
+            db_res
+        } else {
+            return;
+        };
 
-    let description = match id {
-        ID::Channel(channel_id) => {
-            let settings_res = get_guild_settings(&db, channel_id.1.into()).await;
-            match settings_res {
-                Ok(settings) if !settings.filters.is_empty() => {
-                    let mut text = "The following agency filters have been set:".to_owned();
-                    for filter in &settings.filters {
-                        text.push_str(&format!("\n`{}`", filter))
-                    }
-                    text
-                }
-                _ => "No agency filters have been set yet".to_owned(),
-            }
-        }
-        ID::User(user_id) => {
-            let settings_res = get_user_settings(&db, user_id.into()).await;
-            match settings_res {
-                Ok(settings) if !settings.filters.is_empty() => {
-                    let mut text = "The following agency filters have been set:".to_owned();
-                    for filter in &settings.filters {
-                        text.push_str(&format!("\n`{}`", filter))
-                    }
-                    text
-                }
-                _ => "No agency filters have been set yet".to_owned(),
-            }
-        }
-    };
-
-    let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-        e.color(DEFAULT_COLOR)
-            .timestamp(&Utc::now())
-            .author(|a: &mut CreateEmbedAuthor| {
-                a.name("Launch Agency Filters").icon_url(DEFAULT_ICON)
-            })
-            .description(description)
-    });
-
-    let add_ses = ses.clone();
-    em.add_field(
-        "Add Filter",
-        "Add a new filter",
-        false,
-        &PROGRADE,
-        move || {
-            Box::pin(async {
-                let inner_ses = add_ses.clone();
-                let channel_id = inner_ses.read().await.channel;
-                let user_id = inner_ses.read().await.author;
-                let wait_ses = add_ses.clone();
-
-                WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                    Box::pin(async {
-                        println!("triggered add filter payload handler");
-                        if let WaitPayload::Message(message) = payload {
-                            add_filter(&wait_ses.clone(), id, message.content).await;
-                            filters_page(wait_ses.clone(), id).await
+        let description = match id {
+            ID::Channel(channel_id) => {
+                let settings_res = get_guild_settings(&db, channel_id.1.into()).await;
+                match settings_res {
+                    Ok(settings) if !settings.filters.is_empty() => {
+                        let mut text = "The following agency filters have been set:".to_owned();
+                        for filter in &settings.filters {
+                            text.push_str(&format!("\n`{}`", filter))
                         }
-                    })
-                })
-                .send_explanation(
-                    "Send the filter name of the agency you do not want to receive reminders for",
-                    &inner_ses.read().await.http,
-                )
-                .await
-                .listen(inner_ses.read().await.data.clone());
-            })
-        },
-    );
+                        text
+                    }
+                    _ => "No agency filters have been set yet".to_owned(),
+                }
+            }
+            ID::User(user_id) => {
+                let settings_res = get_user_settings(&db, user_id.into()).await;
+                match settings_res {
+                    Ok(settings) if !settings.filters.is_empty() => {
+                        let mut text = "The following agency filters have been set:".to_owned();
+                        for filter in &settings.filters {
+                            text.push_str(&format!("\n`{}`", filter))
+                        }
+                        text
+                    }
+                    _ => "No agency filters have been set yet".to_owned(),
+                }
+            }
+        };
 
-    let remove_ses = ses.clone();
-    em.add_field(
-        "Remove Filter",
-        "Remove a filter",
+        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
+            e.color(DEFAULT_COLOR)
+                .timestamp(&Utc::now())
+                .author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Launch Agency Filters").icon_url(DEFAULT_ICON)
+                })
+                .description(description)
+        });
+
+        let add_ses = ses.clone();
+        em.add_field(
+            "Add Filter",
+            "Add a new filter",
+            false,
+            &PROGRADE,
+            move || {
+                let add_ses = add_ses.clone();
+                Box::pin(async move {
+                    let inner_ses = add_ses.clone();
+                    let channel_id = inner_ses.read().await.channel;
+                    let user_id = inner_ses.read().await.author;
+                    let wait_ses = add_ses.clone();
+
+                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                        let wait_ses = wait_ses.clone();
+                        Box::pin(async move {
+                            println!("triggered add filter payload handler");
+                            if let WaitPayload::Message(message) = payload {
+                                add_filter(&wait_ses.clone(), id, message.content).await;
+                                filters_page(wait_ses.clone(), id).await
+                            }
+                        })
+                    })
+                    .send_explanation(
+                        "Send the filter name of the agency you do not want to receive reminders for",
+                        &inner_ses.read().await.http,
+                    )
+                    .await
+                    .listen(inner_ses.read().await.data.clone())
+                    .await;
+                })
+            },
+        );
+
+        let remove_ses = ses.clone();
+        em.add_field(
+            "Remove Filter",
+            "Remove a filter",
+            false,
+            &RETROGRADE,
+            move || {
+                let remove_ses = remove_ses.clone();
+                Box::pin(async move {
+                    let inner_ses = remove_ses.clone();
+                    let channel_id = inner_ses.read().await.channel;
+                    let user_id = inner_ses.read().await.author;
+                    let wait_ses = remove_ses.clone();
+
+                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                        let wait_ses = wait_ses.clone();
+                        Box::pin(async move {
+                            if let WaitPayload::Message(message) = payload {
+                                remove_filter(&wait_ses.clone(), id, message.content).await;
+                                filters_page(wait_ses.clone(), id).await
+                            }
+                        })
+                    })
+                    .send_explanation(
+                        "Send the filter name of the agency you want to receive reminders for again",
+                        &inner_ses.read().await.http,
+                    )
+                    .await
+                    .listen(inner_ses.read().await.data.clone())
+                    .await;
+                })
+            },
+        );
+
+        em.add_field(
+            "Back",
+            "Go back to main menu",
+            false,
+            &'❌'.into(),
+            move || {
+                let ses = ses.clone();
+                Box::pin(async move { main_menu(ses.clone(), id).await })
+            },
+        );
+
+        let res = em.show().await;
+        if res.is_err() {
+            dbg!(res.unwrap_err());
+        }
+    })
+}
+
+fn mentions_page(
+    ses: Arc<RwLock<EmbedSession>>,
+    id: ID,
+) -> futures::future::BoxFuture<'static, ()> {
+    Box::pin(async move {
+        let db = if let Some(db_res) = get_db(&ses).await {
+            db_res
+        } else {
+            return;
+        };
+
+        let description = match id {
+            ID::Channel((_, guild_id)) => {
+                let settings_res = get_guild_settings(&db, guild_id.into()).await;
+                match settings_res {
+                    Ok(settings) if !settings.mentions.is_empty() => {
+                        let mut text =
+                            "The following roles have been set to be mentioned:".to_owned();
+                        for role_id in &settings.mentions {
+                            let role_opt =
+                                role_id.to_role_cached(ses.read().await.cache.clone()).await;
+                            if let Some(role) = role_opt {
+                                text.push_str(&format!("\n`{}`", role.name))
+                            } else {
+                                remove_mention(&ses, id, *role_id).await
+                            }
+                        }
+                        text
+                    }
+                    _ => "No role mentions have been set yet".to_owned(),
+                }
+            }
+            _ => return,
+        };
+
+        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
+            e.color(DEFAULT_COLOR)
+                .timestamp(&Utc::now())
+                .author(|a: &mut CreateEmbedAuthor| a.name("Role Mentions").icon_url(DEFAULT_ICON))
+                .description(description)
+        });
+
+        let add_ses = ses.clone();
+        em.add_field(
+            "Add Mention",
+            "Add a new role to mention",
+            false,
+            &PROGRADE,
+            move || {
+                let add_ses = add_ses.clone();
+                Box::pin(async move {
+                    let inner_ses = add_ses.clone();
+                    let channel_id = inner_ses.read().await.channel;
+                    let user_id = inner_ses.read().await.author;
+                    let wait_ses = add_ses.clone();
+
+                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                        let wait_ses = wait_ses.clone();
+                        Box::pin(async move {
+                            if let WaitPayload::Message(message) = payload {
+                                if let Some(role_id) = parse_id(&message.content) {
+                                    add_mention(&wait_ses.clone(), id, role_id.into()).await;
+                                    mentions_page(wait_ses.clone(), id).await;
+                                } else {
+                                    mentions_page(wait_ses.clone(), id).await;
+                                    temp_message(
+                                        channel_id,
+                                        wait_ses.read().await.http.clone(),
+                                        "Sorry, I can't find that role, please try again later",
+                                        Duration::seconds(5),
+                                    )
+                                    .await
+                                }
+                            }
+                        })
+                    })
+                    .send_explanation(
+                        "Mention the role you want to have mentioned during launch reminders",
+                        &inner_ses.read().await.http,
+                    )
+                    .await
+                    .listen(inner_ses.read().await.data.clone())
+                    .await;
+                })
+            },
+        );
+
+        let remove_ses = ses.clone();
+        em.add_field(
+        "Remove Mention",
+        "Remove a role to mention",
         false,
         &RETROGRADE,
         move || {
-            Box::pin(async {
+            let remove_ses = remove_ses.clone();
+            Box::pin(async move {
                 let inner_ses = remove_ses.clone();
                 let channel_id = inner_ses.read().await.channel;
                 let user_id = inner_ses.read().await.author;
                 let wait_ses = remove_ses.clone();
 
                 WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                    Box::pin(async {
-                        if let WaitPayload::Message(message) = payload {
-                            remove_filter(&wait_ses.clone(), id, message.content).await;
-                            filters_page(wait_ses.clone(), id).await
-                        }
-                    })
-                })
-                .send_explanation(
-                    "Send the filter name of the agency you want to receive reminders for again",
-                    &inner_ses.read().await.http,
-                )
-                .await
-                .listen(inner_ses.read().await.data.clone());
-            })
-        },
-    );
-
-    em.add_field(
-        "Back",
-        "Go back to main menu",
-        false,
-        &'❌'.into(),
-        move || Box::pin(async { main_menu(ses.clone(), id).await }),
-    );
-
-    let res = em.show().await;
-    if res.is_err() {
-        dbg!(res.unwrap_err());
-    }
-}
-
-async fn mentions_page(ses: Arc<RwLock<EmbedSession>>, id: ID) {
-    let db = if let Some(db_res) = get_db(&ses).await {
-        db_res
-    } else {
-        return;
-    };
-
-    let description = match id {
-        ID::Channel((_, guild_id)) => {
-            let settings_res = get_guild_settings(&db, guild_id.into()).await;
-            match settings_res {
-                Ok(settings) if !settings.mentions.is_empty() => {
-                    let mut text = "The following roles have been set to be mentioned:".to_owned();
-                    for role_id in &settings.mentions {
-                        let role_opt = role_id.to_role_cached(ses.read().await.cache.clone()).await;
-                        if let Some(role) = role_opt {
-                            text.push_str(&format!("\n`{}`", role.name))
+                    let wait_ses = wait_ses.clone();
+                    Box::pin(async move {
+                    if let WaitPayload::Message(message) = payload {
+                        if let Some(role_id) = parse_id(&message.content) {
+                            remove_mention(&wait_ses.clone(), id, role_id.into()).await;
+                            mentions_page(wait_ses.clone(), id).await;
                         } else {
-                            remove_mention(&ses, id, *role_id).await
+                            mentions_page(wait_ses.clone(), id).await;
+                            temp_message(
+                                channel_id,
+                                wait_ses.read().await.http.clone(),
+                                "Sorry, I can't find that role, please try again later",
+                                Duration::seconds(5),
+                            ).await
                         }
                     }
-                    text
-                }
-                _ => "No role mentions have been set yet".to_owned(),
-            }
-        }
-        _ => return,
-    };
-
-    let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-        e.color(DEFAULT_COLOR)
-            .timestamp(&Utc::now())
-            .author(|a: &mut CreateEmbedAuthor| a.name("Role Mentions").icon_url(DEFAULT_ICON))
-            .description(description)
-    });
-
-    let add_ses = ses.clone();
-    em.add_field(
-        "Add Mention",
-        "Add a new role to mention",
-        false,
-        &PROGRADE,
-        move || {
-            Box::pin(async {
-                let inner_ses = add_ses.clone();
-                let channel_id = inner_ses.read().await.channel;
-                let user_id = inner_ses.read().await.author;
-                let wait_ses = add_ses.clone();
-
-                WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                    Box::pin(async {
-                        if let WaitPayload::Message(message) = payload {
-                            if let Some(role_id) = parse_id(&message.content) {
-                                add_mention(&wait_ses.clone(), id, role_id.into()).await;
-                                mentions_page(wait_ses.clone(), id).await;
-                            } else {
-                                mentions_page(wait_ses.clone(), id).await;
-                                temp_message(
-                                    channel_id,
-                                    wait_ses.read().await.http.clone(),
-                                    "Sorry, I can't find that role, please try again later",
-                                    Duration::seconds(5),
-                                )
-                                .await
-                            }
-                        }
-                    })
+                })
                 })
                 .send_explanation(
-                    "Mention the role you want to have mentioned during launch reminders",
-                    &inner_ses.read().await.http,
-                )
-                .await
-                .listen(inner_ses.read().await.data.clone());
+                    "Mention the role you want to have removed from being mentioned during launch reminders", 
+                    &inner_ses.read().await.http
+                ).await
+                .listen(inner_ses.read().await.data.clone())
+                .await;
             })
         },
     );
 
-    let remove_ses = ses.clone();
-    em.add_field(
-        "Remove Mention",
-        "Remove a role to mention",
-        false,
-        &RETROGRADE,
-        move || Box::pin(async {
-            let inner_ses = remove_ses.clone();
-            let channel_id = inner_ses.read().await.channel;
-            let user_id = inner_ses.read().await.author;
-            let wait_ses = remove_ses.clone();
+        em.add_field(
+            "Back",
+            "Go back to main menu",
+            false,
+            &'❌'.into(),
+            move || {
+                let ses = ses.clone();
+                Box::pin(async move { main_menu(ses.clone(), id).await })
+            },
+        );
 
-            WaitFor::message(channel_id, user_id, move |payload: WaitPayload| Box::pin(async {
-                if let WaitPayload::Message(message) = payload {
-                    if let Some(role_id) = parse_id(&message.content) {
-                        remove_mention(&wait_ses.clone(), id, role_id.into()).await;
-                        mentions_page(wait_ses.clone(), id).await;
-                    } else {
-                        mentions_page(wait_ses.clone(), id).await;
-                        temp_message(
-                            channel_id,
-                            wait_ses.read().await.http.clone(),
-                            "Sorry, I can't find that role, please try again later",
-                            Duration::seconds(5),
-                        ).await
-                    }
-                }
-            }))
-            .send_explanation(
-                "Mention the role you want to have removed from being mentioned during launch reminders", 
-                &inner_ses.read().await.http
-            ).await
-            .listen(inner_ses.read().await.data.clone());
-        }),
-    );
-
-    em.add_field(
-        "Back",
-        "Go back to main menu",
-        false,
-        &'❌'.into(),
-        move || Box::pin(async { main_menu(ses.clone(), id).await }),
-    );
-
-    let res = em.show().await;
-    if res.is_err() {
-        dbg!(res.unwrap_err());
-    }
+        let res = em.show().await;
+        if res.is_err() {
+            dbg!(res.unwrap_err());
+        }
+    })
 }
 
 // ---- db functions ----

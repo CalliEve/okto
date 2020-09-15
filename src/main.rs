@@ -101,7 +101,7 @@ async fn main() {
         .group(&SETTINGS_GROUP)
         .help(&HELP_CMD)
         .after(|ctx, msg, cmd_name, error| {
-            Box::pin(async {
+            Box::pin(async move {
                 //  Print out an error if it happened
                 if let Err(why) = error {
                     println!("Error in {}: {:?}", cmd_name, &why);
@@ -119,7 +119,7 @@ async fn main() {
         });
 
     // create the intents for the gateway
-    let intents = GatewayIntents::all();
+    let mut intents = GatewayIntents::all();
     intents.remove(GatewayIntents::GUILD_MEMBERS);
     intents.remove(GatewayIntents::GUILD_PRESENCES);
 

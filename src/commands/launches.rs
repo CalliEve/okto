@@ -131,53 +131,56 @@ async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     Ok(())
 }
 
-async fn list_page(
+fn list_page(
     session: Arc<RwLock<EmbedSession>>,
     list: Vec<LaunchData>,
     page_num: usize,
     all: bool,
-) {
-    let launches = if all {
-        list.clone()
-    } else {
-        list.iter()
-            .filter(|l| l.status == LaunchStatus::Go)
-            .cloned()
-            .collect()
-    };
+) -> futures::future::BoxFuture<'static, ()> {
+    Box::pin(async move {
+        let launches = if all {
+            list.clone()
+        } else {
+            list.iter()
+                .filter(|l| l.status == LaunchStatus::Go)
+                .cloned()
+                .collect()
+        };
 
-    let min = page_num * 10;
-    let max_page = (launches.len() - 1) / 10;
+        let min = page_num * 10;
+        let max_page = (launches.len() - 1) / 10;
 
-    let top = if (page_num * 10 + 10) < launches.len() {
-        page_num * 10 + 10
-    } else {
-        launches.len()
-    };
+        let top = if (page_num * 10 + 10) < launches.len() {
+            page_num * 10 + 10
+        } else {
+            launches.len()
+        };
 
-    let mut em = StatefulEmbed::new_with(session.clone(), |e: &mut CreateEmbed| {
-        e.color(DEFAULT_COLOR)
-            .author(|a: &mut CreateEmbedAuthor| {
-                a.icon_url(DEFAULT_ICON).name("List of upcoming launches")
-            })
-            .timestamp(&Utc::now())
-            .footer(|f: &mut CreateEmbedFooter| f.text(format!("Source: {}", LAUNCH_LIBRARY_URL)));
+        let mut em = StatefulEmbed::new_with(session.clone(), |e: &mut CreateEmbed| {
+            e.color(DEFAULT_COLOR)
+                .author(|a: &mut CreateEmbedAuthor| {
+                    a.icon_url(DEFAULT_ICON).name("List of upcoming launches")
+                })
+                .timestamp(&Utc::now())
+                .footer(|f: &mut CreateEmbedFooter| {
+                    f.text(format!("Source: {}", LAUNCH_LIBRARY_URL))
+                });
 
-        if all {
-            e.description("
+            if all {
+                e.description("
             This list shows the upcoming launches (max 100), both certain and uncertain.\n\
             Use the arrow reactions to get to other pages and the green reaction to filter on only the launches that are certain.
             ");
-        } else {
-            e.description("
+            } else {
+                e.description("
             This list shows upcoming launches that are certain.\n\
             Use the arrow reactions to get to other pages and the red reaction to get all the launches.
             ");
-        }
+            }
 
-        #[allow(clippy::needless_range_loop)]
-        for launch in &launches[min..top] {
-            e.field(
+            #[allow(clippy::needless_range_loop)]
+            for launch in &launches[min..top] {
+                e.field(
                 format!(
                     "{}: {} - {}",
                     launch.id,
@@ -194,130 +197,144 @@ async fn list_page(
                 ),
                 false,
             );
-        }
-        e
-    });
-
-    if page_num > 0 {
-        let first_page_launches = list.clone();
-        let first_page_session = session.clone();
-        em.add_option(&ReactionType::from(FIRST_PAGE_EMOJI), move || {
-            Box::pin(async {
-                list_page(
-                    first_page_session.clone(),
-                    first_page_launches.clone(),
-                    0,
-                    true,
-                )
-                .await
-            })
+            }
+            e
         });
-    }
 
-    if page_num > 0 {
-        let last_page_launches = list.clone();
-        let last_page_session = session.clone();
-        em.add_option(&ReactionType::from(LAST_PAGE_EMOJI), move || {
-            Box::pin(async {
-                list_page(
-                    last_page_session.clone(),
-                    last_page_launches.clone(),
-                    page_num - 1,
-                    true,
-                )
-                .await
-            })
-        });
-    }
-
-    if all && launches.iter().any(|l| l.status == LaunchStatus::Go) {
-        let certain_page_launches = list.clone();
-        let certain_page_session = session.clone();
-        em.add_option(
-            &ReactionType::Custom {
-                animated: false,
-                name: Some("certain".to_owned()),
-                id: EmojiId::from(CERTAIN_EMOJI),
-            },
-            move || {
-                Box::pin(async {
+        if page_num > 0 {
+            let first_page_launches = list.clone();
+            let first_page_session = session.clone();
+            em.add_option(&ReactionType::from(FIRST_PAGE_EMOJI), move || {
+                let first_page_session = first_page_session.clone();
+                let first_page_launches = first_page_launches.clone();
+                Box::pin(async move {
                     list_page(
-                        certain_page_session.clone(),
-                        certain_page_launches.clone(),
-                        0,
-                        false,
-                    )
-                    .await
-                })
-            },
-        );
-    } else if !all {
-        let uncertain_page_launches = list.clone();
-        let uncertain_page_session = session.clone();
-        em.add_option(
-            &ReactionType::Custom {
-                animated: false,
-                name: Some("uncertain".to_owned()),
-                id: EmojiId::from(UNCERTAIN_EMOJI),
-            },
-            move || {
-                Box::pin(async {
-                    list_page(
-                        uncertain_page_session.clone(),
-                        uncertain_page_launches.clone(),
+                        first_page_session.clone(),
+                        first_page_launches.clone(),
                         0,
                         true,
                     )
                     .await
                 })
-            },
-        );
-    }
+            });
+        }
 
-    if page_num < max_page {
-        let next_page_launches = list.clone();
-        let next_page_session = session.clone();
-        em.add_option(&ReactionType::from(NEXT_PAGE_EMOJI), move || {
-            Box::pin(async {
-                list_page(
-                    next_page_session.clone(),
-                    next_page_launches.clone(),
-                    page_num + 1,
-                    true,
-                )
-                .await
+        if page_num > 0 {
+            let last_page_launches = list.clone();
+            let last_page_session = session.clone();
+            em.add_option(&ReactionType::from(LAST_PAGE_EMOJI), move || {
+                let last_page_launches = last_page_launches.clone();
+                let last_page_session = last_page_session.clone();
+                Box::pin(async move {
+                    list_page(
+                        last_page_session.clone(),
+                        last_page_launches.clone(),
+                        page_num - 1,
+                        true,
+                    )
+                    .await
+                })
+            });
+        }
+
+        if all && launches.iter().any(|l| l.status == LaunchStatus::Go) {
+            let certain_page_launches = list.clone();
+            let certain_page_session = session.clone();
+            em.add_option(
+                &ReactionType::Custom {
+                    animated: false,
+                    name: Some("certain".to_owned()),
+                    id: EmojiId::from(CERTAIN_EMOJI),
+                },
+                move || {
+                    let certain_page_session = certain_page_session.clone();
+                    let certain_page_launches = certain_page_launches.clone();
+                    Box::pin(async move {
+                        list_page(
+                            certain_page_session.clone(),
+                            certain_page_launches.clone(),
+                            0,
+                            false,
+                        )
+                        .await
+                    })
+                },
+            );
+        } else if !all {
+            let uncertain_page_launches = list.clone();
+            let uncertain_page_session = session.clone();
+            em.add_option(
+                &ReactionType::Custom {
+                    animated: false,
+                    name: Some("uncertain".to_owned()),
+                    id: EmojiId::from(UNCERTAIN_EMOJI),
+                },
+                move || {
+                    let uncertain_page_session = uncertain_page_session.clone();
+                    let uncertain_page_launches = uncertain_page_launches.clone();
+                    Box::pin(async move {
+                        list_page(
+                            uncertain_page_session.clone(),
+                            uncertain_page_launches.clone(),
+                            0,
+                            true,
+                        )
+                        .await
+                    })
+                },
+            );
+        }
+
+        if page_num < max_page {
+            let next_page_launches = list.clone();
+            let next_page_session = session.clone();
+            em.add_option(&ReactionType::from(NEXT_PAGE_EMOJI), move || {
+                let next_page_launches = next_page_launches.clone();
+                let next_page_session = next_page_session.clone();
+                Box::pin(async move {
+                    list_page(
+                        next_page_session.clone(),
+                        next_page_launches.clone(),
+                        page_num + 1,
+                        true,
+                    )
+                    .await
+                })
+            });
+        }
+
+        if page_num < max_page {
+            let final_page_launches = list;
+            let final_page_session = session.clone();
+            em.add_option(&ReactionType::from(FINAL_PAGE_EMOJI), move || {
+                let final_page_launches = final_page_launches.clone();
+                let final_page_session = final_page_session.clone();
+                Box::pin(async move {
+                    list_page(
+                        final_page_session.clone(),
+                        final_page_launches.clone(),
+                        final_page_launches.len() / 10 - 1,
+                        true,
+                    )
+                    .await
+                })
+            });
+        }
+
+        em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
+            let session = session.clone();
+            Box::pin(async move {
+                let lock = session.read().await;
+                let http = lock.http.clone();
+                lock.message.as_ref().map(|m| m.delete(&http));
             })
         });
-    }
 
-    if page_num < max_page {
-        let final_page_launches = list;
-        let final_page_session = session.clone();
-        em.add_option(&ReactionType::from(FINAL_PAGE_EMOJI), move || {
-            Box::pin(async {
-                list_page(
-                    final_page_session.clone(),
-                    final_page_launches.clone(),
-                    final_page_launches.len() / 10 - 1,
-                    true,
-                )
-                .await
-            })
-        });
-    }
-
-    em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
-        Box::pin(async {
-            let lock = session.read().await;
-            let http = lock.http.clone();
-            lock.message.as_ref().map(|m| m.delete(&http));
-        })
-    });
-
-    let res = em.show().await;
-    if res.is_err() {
-        dbg!(res.unwrap_err());
-    }
+        let res = em.show().await;
+        if res.is_err() {
+            dbg!(res.unwrap_err());
+        }
+    })
 }
 
 #[command]
