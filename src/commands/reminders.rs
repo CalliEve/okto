@@ -191,34 +191,33 @@ fn reminders_page(
         false,
         &PROGRADE,
         move || Box::pin({
-                let add_ses = add_ses.clone();
-                async move {
-                    let inner_ses = add_ses.clone();
-                    let channel_id = inner_ses.read().await.channel;
-                    let user_id = inner_ses.read().await.author;
-                    let wait_ses = add_ses.clone();
+            let add_ses = add_ses.clone();
+            async move {
+                let inner_ses = add_ses.clone();
+                let channel_id = inner_ses.read().await.channel;
+                let user_id = inner_ses.read().await.author;
+                let wait_ses = add_ses.clone();
 
-                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                        let wait_ses = wait_ses.clone();
-                            Box::pin(async move {
-                            if let WaitPayload::Message(message) = payload {
-                                let dur = parse_duration(&message.content);
-                                if !dur.is_zero() {
-                                    add_reminder(&wait_ses.clone(), id, dur).await;
-                                }
-                                reminders_page(wait_ses.clone(), id).await
+                WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                    let wait_ses = wait_ses.clone();
+                        Box::pin(async move {
+                        if let WaitPayload::Message(message) = payload {
+                            let dur = parse_duration(&message.content);
+                            if !dur.is_zero() {
+                                add_reminder(&wait_ses.clone(), id, dur).await;
                             }
-                        })
+                            reminders_page(wait_ses.clone(), id).await;
+                        }
                     })
-                    .send_explanation(
-                        "Send how long before the launch you want the reminder.\nPlease give the time in the format of `1w 2d 3h 4m`",
-                        &inner_ses.read().await.http,
-                    ).await
-                    .listen(inner_ses.read().await.data.clone())
-                    .await;
-                }
-            }),
-        );
+                })
+                .send_explanation(
+                    "Send how long before the launch you want the reminder.\nPlease give the time in the format of `1w 2d 3h 4m`",
+                    &inner_ses.read().await.http,
+                ).await
+                .listen(inner_ses.read().await.data.clone())
+                .await;
+            }
+        }));
 
         let remove_ses = ses.clone();
         em.add_field(
@@ -229,27 +228,28 @@ fn reminders_page(
         move || {
             let remove_ses = remove_ses.clone();
             Box::pin(async move {
-            let inner_ses = remove_ses.clone();
-            let channel_id = inner_ses.read().await.channel;
-            let user_id = inner_ses.read().await.author;
-            let wait_ses = remove_ses.clone();
+                let inner_ses = remove_ses.clone();
+                let channel_id = inner_ses.read().await.channel;
+                let user_id = inner_ses.read().await.author;
+                let wait_ses = remove_ses.clone();
 
-            WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                let wait_ses = wait_ses.clone();
-                Box::pin(async move {
-                if let WaitPayload::Message(message) = payload {
-                    remove_reminder(&wait_ses.clone(), id, parse_duration(&message.content)).await;
-                    reminders_page(wait_ses.clone(), id).await
-                }
-            })})
-            .send_explanation(
-                "Send the time of the reminder you want to remove.\nPlease give the time in the format of `1w 2d 3h 4m`",
-                &inner_ses.read().await.http,
-            ).await
-            .listen(inner_ses.read().await.data.clone())
-            .await;
-        })},
-    );
+                WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                    let wait_ses = wait_ses.clone();
+                    Box::pin(async move {
+                        if let WaitPayload::Message(message) = payload {
+                            remove_reminder(&wait_ses.clone(), id, parse_duration(&message.content)).await;
+                            reminders_page(wait_ses.clone(), id).await;
+                        }
+                    })
+                })
+                .send_explanation(
+                    "Send the time of the reminder you want to remove.\nPlease give the time in the format of `1w 2d 3h 4m`",
+                    &inner_ses.read().await.http,
+                ).await
+                .listen(inner_ses.read().await.data.clone())
+                .await;
+            })
+        });
 
         em.add_field(
             "Back",
@@ -589,11 +589,7 @@ async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duratio
         return;
     };
 
-    let collection = if id.guild_specific() {
-        db.collection("guild_settings")
-    } else {
-        db.collection("user_settings")
-    };
+    let collection = db.collection("reminders");
 
     let result = match id {
         ID::User(user_id) => collection.update_one(
@@ -629,11 +625,7 @@ async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dura
         return;
     };
 
-    let collection = if id.guild_specific() {
-        db.collection("guild_settings")
-    } else {
-        db.collection("user_settings")
-    };
+    let collection = db.collection("reminders");
 
     let result = match id {
         ID::User(user_id) => collection.update_one(
