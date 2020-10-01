@@ -65,9 +65,7 @@ async fn help_cmd(
 
 #[hook]
 async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
-    if msg.guild_id.is_none() {
-        return None;
-    }
+    msg.guild_id?;
 
     let db = if let Some(db) = ctx.data.read().await.get::<DatabaseKey>() {
         db.clone()

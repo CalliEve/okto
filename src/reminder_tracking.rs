@@ -29,14 +29,14 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
     // wait for client to have started
     tokio::time::delay_for(std::time::Duration::from_secs(60)).await;
 
-    let mut loop_count = 0;
+    let mut loop_count: i64 = 0;
     let mut reminded: HashMap<String, i64> = HashMap::new();
 
     loop {
         println!("running loop {}", loop_count);
 
         if loop_count % 5 == 0 {
-            tokio::spawn(launch_tracking(cache.clone()));
+            tokio::spawn(launch_tracking(http.clone(), db.clone(), cache.clone()));
         }
 
         loop_count += 1;

@@ -1,13 +1,15 @@
+use mongodb::Database;
 use reqwest::{header::AUTHORIZATION, Result};
-use serenity::prelude::RwLock;
+use serenity::{http::Http, prelude::RwLock};
 use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
 use crate::{
+    events::change_notifications::notify_scrub,
     models::launches::{LaunchContainer, LaunchData},
     utils::constants::{DEFAULT_CLIENT, LL_KEY},
 };
 
-pub async fn launch_tracking(cache: Arc<RwLock<Vec<LaunchData>>>) {
+pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Vec<LaunchData>>>) {
     println!("getting launch information");
 
     let mut launches: Vec<LaunchData> = match get_new_launches().await {
@@ -30,6 +32,20 @@ pub async fn launch_tracking(cache: Arc<RwLock<Vec<LaunchData>>>) {
     println!("got {} launches", launches.len());
 
     let mut launch_cache = cache.write().await;
+
+    let scrubbed: Vec<&LaunchData> = launches
+        .iter()
+        .filter(|nl| {
+            launches
+                .iter()
+                .find(|ol| nl.ll_id == ol.ll_id)
+                .map_or(false, |ol| nl.net > ol.net)
+        })
+        .collect();
+    for scrub in &scrubbed {
+        tokio::spawn(notify_scrub(http.clone(), db.clone(), (*scrub).clone()));
+    }
+
     launch_cache.clear();
     launch_cache.append(&mut launches);
 }
