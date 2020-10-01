@@ -39,28 +39,23 @@ async fn setprefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             },
             Some(UpdateOptions::builder().upsert(true).build()),
         )
-        .await;
+        .await?;
 
-    if res.is_ok() {
-        let res = res.unwrap();
-        if res.modified_count == 0 && res.upserted_id.is_none() {
-            return Err("No document got updated when changing the guild prefix".into());
-        }
-
-        msg.channel_id
-            .send_message(&ctx.http, |m: &mut CreateMessage| {
-                m.embed(|e: &mut CreateEmbed| {
-                    default_embed(
-                        e,
-                        &format!("My prefix in this guild has been updated to {}", prefix),
-                        true,
-                    )
-                })
-            })
-            .await?;
-    } else {
-        res?;
+    if res.modified_count == 0 && res.upserted_id.is_none() {
+        return Err("No document got updated when changing the guild prefix".into());
     }
+
+    msg.channel_id
+        .send_message(&ctx.http, |m: &mut CreateMessage| {
+            m.embed(|e: &mut CreateEmbed| {
+                default_embed(
+                    e,
+                    &format!("My prefix in this guild has been updated to {}", prefix),
+                    true,
+                )
+            })
+        })
+        .await?;
 
     Ok(())
 }

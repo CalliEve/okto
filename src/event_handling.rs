@@ -86,14 +86,15 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn guild_delete(&self, ctx: Context, _incomplete: PartialGuild, full: Option<Guild>) {
-        if let Some(guild) = full {
-            if let Some(channel) = ctx.cache.guild_channel(755401788294955070).await {
-                let content = format!("Left the following guild: {} ({})", guild.name, guild.id);
-                let _ = channel
-                    .send_message(&ctx.http, |m| m.content(content))
-                    .await;
-            }
+    async fn guild_delete(&self, ctx: Context, incomplete: PartialGuild, _full: Option<Guild>) {
+        if let Some(channel) = ctx.cache.guild_channel(755401788294955070).await {
+            let content = format!(
+                "Left the following guild: {} ({})",
+                incomplete.name, incomplete.id
+            );
+            let _ = channel
+                .send_message(&ctx.http, |m| m.content(content))
+                .await;
         }
     }
 }
