@@ -3,7 +3,7 @@ name: deploy to kubernetes
 on:
   push:
     branches:
-      - master
+      - stable
     paths:
       - 'src/**'
       - '.github/workflows/kubernetes.yaml'

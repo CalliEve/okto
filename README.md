@@ -1,4 +1,4 @@
-[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FBaev1%2Fokto%2Fbadge%3Fref%3Dmaster&style=flat-square)](https://actions-badge.atrox.dev/Baev1/okto/goto?ref=master)
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FBaev1%2Fokto%2Fbadge%3Fref%3Dstable&style=flat-square)](https://actions-badge.atrox.dev/Baev1/okto/goto?ref=stable)
 
 # okto
 
