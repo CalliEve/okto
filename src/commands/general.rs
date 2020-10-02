@@ -24,6 +24,7 @@ use crate::{models::caches::PictureCacheKey, utils::constants::*};
 struct General;
 
 #[command]
+#[description("Get the ping of the bot")]
 async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     let start = Utc::now();
     let mut message = msg
@@ -53,6 +54,7 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+#[description("Invite the bot to your server!")]
 async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
     let user_id = ctx.cache.current_user().await.id;
     let msg_res: Result<Message> = msg.channel_id.send_message(&ctx.http, |m: &mut CreateMessage| {
@@ -86,6 +88,7 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+#[description("Get some general information about the bot")]
 async fn info(ctx: &Context, msg: &Message) -> CommandResult {
     let user_id = ctx.cache.current_user().await.id;
     msg.channel_id.send_message(&ctx.http, |m: &mut CreateMessage| {
@@ -120,6 +123,7 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+#[description("Have some helpful websites")]
 async fn websites(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
@@ -167,6 +171,7 @@ struct PeopleInSpaceResp {
 }
 
 #[command]
+#[description("Get a list of all humans currently in space")]
 async fn peopleinspace(ctx: &Context, msg: &Message) -> CommandResult {
     let pis: PeopleInSpaceResp = DEFAULT_CLIENT
         .get("http://api.open-notify.org/astros.json")
@@ -215,6 +220,7 @@ struct ISSLocation {
 }
 
 #[command]
+#[description("Get the current location of the ISS")]
 async fn iss(ctx: &Context, msg: &Message) -> CommandResult {
     let mut res_msg: Message = msg
         .channel_id
@@ -281,6 +287,8 @@ async fn iss(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+#[description("Get information about an exoplanet or star")]
+#[usage("Provide the official name of an exoplanet or star, or leave blank to get a random exoplanet")]
 async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut res_msg: Message = msg
         .channel_id

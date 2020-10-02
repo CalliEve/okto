@@ -24,21 +24,14 @@ use crate::{
     utils::{constants::*, default_embed, format_duration, launches::*},
 };
 
-const FINAL_PAGE_EMOJI: char = '⏭';
-const NEXT_PAGE_EMOJI: char = '▶';
-const LAST_PAGE_EMOJI: char = '◀';
-const FIRST_PAGE_EMOJI: char = '⏮';
-const EXIT_EMOJI: char = '❌';
-const CERTAIN_EMOJI: u64 = 447805610482728964;
-const UNCERTAIN_EMOJI: u64 = 447805624923717642;
-const LAUNCH_LIBRARY_URL: &str = "https://thespacedevs.com";
-
 #[group]
 #[commands(nextlaunch, listlaunches, launchinfo, filtersinfo)]
 struct Launches;
 
 #[command]
 #[aliases(nl)]
+#[description("Get information about the next launch that has been marked as certain")]
+#[usage("Provide the name of a rocket or lsp to filter the launches on, see filtersinfo for more information")]
 async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
@@ -341,6 +334,8 @@ fn list_page(
 
 #[command]
 #[aliases(ll)]
+#[description("Get a list of the next 100 upcoming launches")]
+#[usage("Provide the name of a rocket or lsp to filter the launches on, see filtersinfo for more information")]
 async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
@@ -375,6 +370,8 @@ async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 
 #[command]
 #[aliases(li)]
+#[description("Get more detailed information about a launch")]
+#[usage("Provide the number of the launch, or the LaunchLibrary ID")]
 async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
@@ -494,6 +491,7 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 }
 
 #[command]
+#[description("Get a list of all things you can filter launches on")]
 async fn filtersinfo(ctx: &Context, msg: &Message) -> CommandResult {
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
