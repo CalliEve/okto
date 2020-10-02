@@ -15,93 +15,34 @@ mod models;
 mod reminder_tracking;
 mod utils;
 
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    sync::Arc,
-};
+use std::{collections::HashMap, env, sync::Arc};
 
-use mongodb::{
-    bson::{self, doc},
-    Client as MongoClient,
-};
+use mongodb::Client as MongoClient;
 use serenity::{
-    client::{bridge::gateway::GatewayIntents, Client, Context},
-    framework::standard::{
-        help_commands,
-        macros::{help, hook},
-        Args,
-        CommandGroup,
-        CommandResult,
-        HelpOptions,
-        StandardFramework,
-    },
-    model::prelude::{ChannelId, Message, UserId},
+    client::{bridge::gateway::GatewayIntents, Client},
+    framework::standard::StandardFramework,
+    model::prelude::ChannelId,
     prelude::RwLock,
 };
 
-use commands::{general::*, launches::*, pictures::*, reminders::*, settings::*};
+use commands::{general::*, help::*, launches::*, pictures::*, reminders::*, settings::*};
 use event_handling::Handler;
 use launch_tracking::launch_tracking;
-use models::{
-    caches::{DatabaseKey, EmbedSessionsKey, LaunchesCacheKey, PictureCacheKey, WaitForKey},
-    settings::GuildSettings,
+use models::caches::{
+    DatabaseKey,
+    EmbedSessionsKey,
+    LaunchesCacheKey,
+    PictureCacheKey,
+    WaitForKey,
 };
 use reminder_tracking::reminder_tracking;
 use utils::preloading::preload_data;
-
-#[help]
-async fn help_cmd(
-    context: &Context,
-    msg: &Message,
-    args: Args,
-    help_options: &'static HelpOptions,
-    groups: &[&'static CommandGroup],
-    owners: HashSet<UserId>,
-) -> CommandResult {
-    let _ = help_commands::with_embeds(context, msg, args, help_options, groups, owners).await;
-    Ok(())
-}
-
-#[hook]
-async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
-    msg.guild_id?;
-
-    let db = if let Some(db) = ctx.data.read().await.get::<DatabaseKey>() {
-        db.clone()
-    } else {
-        println!("No database found");
-        return None;
-    };
-
-    let res = db
-        .collection("general_settings")
-        .find_one(doc! { "guild": msg.guild_id.unwrap().0 }, None)
-        .await;
-
-    if res.is_err() {
-        println!("Error in getting prefix: {:?}", res.unwrap_err());
-        return None;
-    }
-
-    res.unwrap()
-        .and_then(|c| {
-            let settings = bson::from_bson::<GuildSettings>(c.into());
-            if settings.is_err() {
-                println!("Error in getting prefix: {:?}", settings.unwrap_err());
-                return None;
-            }
-            let settings = settings.unwrap();
-            Some(settings)
-        })
-        .map(|s| s.prefix)
-}
 
 #[tokio::main]
 async fn main() {
     let framework = StandardFramework::new()
         .configure(|c| {
-            c.prefix(";")
+            c.prefix("!;")
                 .owners(vec![247745860979392512.into()].into_iter().collect())
                 .dynamic_prefix(calc_prefix)
         })

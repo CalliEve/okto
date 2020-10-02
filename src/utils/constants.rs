@@ -5,14 +5,25 @@ use rand::{rngs::StdRng, thread_rng, SeedableRng};
 use regex::Regex;
 use reqwest::{
     header::{HeaderMap, ACCEPT},
-    Client, ClientBuilder,
+    Client,
+    ClientBuilder,
 };
-use serenity::model::{channel::ReactionType, id::EmojiId};
-use serenity::prelude::RwLock;
+use serenity::{
+    model::{channel::ReactionType, id::EmojiId},
+    prelude::RwLock,
+};
 
 pub const DEFAULT_COLOR: u32 = 16750899;
 pub const DEFAULT_ICON: &str = "https://i.imgur.com/ruFc9fc.png";
 pub const TRANSPARENT_ICON: &str = "https://i.imgur.com/L2FoV6P.png";
+pub const FINAL_PAGE_EMOJI: char = '⏭';
+pub const NEXT_PAGE_EMOJI: char = '▶';
+pub const LAST_PAGE_EMOJI: char = '◀';
+pub const FIRST_PAGE_EMOJI: char = '⏮';
+pub const EXIT_EMOJI: char = '❌';
+pub const CERTAIN_EMOJI: u64 = 447805610482728964;
+pub const UNCERTAIN_EMOJI: u64 = 447805624923717642;
+pub const LAUNCH_LIBRARY_URL: &str = "https://thespacedevs.com";
 
 fn default_headers() -> HeaderMap {
     let mut headers = HeaderMap::new();
@@ -46,6 +57,11 @@ lazy_static! {
     };
     pub static ref MENTION_REGEX: Regex = Regex::new("<[@#][!&]?([0-9]{17,18})>").unwrap();
     pub static ref ID_REGEX: Regex = Regex::new("^[0-9]{17,18}$").unwrap();
+    pub static ref NUMBER_EMOJIS: Vec<ReactionType> =
+        ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
+            .iter()
+            .map(|e| ReactionType::Unicode(e.to_string()))
+            .collect();
 }
 
 fn agency_map() -> HashMap<&'static str, &'static str> {

@@ -44,6 +44,9 @@ struct Reminders;
 
 #[command]
 #[only_in(guild)]
+#[required_permissions(MANAGE_GUILD)]
+#[usage("Run with channel mention as argument to have the bot post reminders to that channel, defaults to current channel")]
+#[description("Manage the reminders and notifications posted by the bot in this server")]
 async fn notifychannel(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     if msg.guild_id.is_none() {
         return Ok(());
@@ -67,6 +70,7 @@ async fn notifychannel(ctx: &Context, msg: &Message, args: Args) -> CommandResul
 }
 
 #[command]
+#[description("Setup reminders and notifications from the bot in your DMs")]
 async fn notifyme(ctx: &Context, msg: &Message) -> CommandResult {
     let dm = if msg.guild_id.is_some() {
         msg.author.create_dm_channel(&ctx).await?.id
