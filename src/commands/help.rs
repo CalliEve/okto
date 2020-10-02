@@ -19,7 +19,7 @@ use serenity::{
 use crate::{
     events::statefulembed::{EmbedSession, StatefulEmbed},
     models::{caches::DatabaseKey, settings::GuildSettings},
-    utils::constants::{DEFAULT_COLOR, DEFAULT_ICON, NUMBER_EMOJIS, EXIT_EMOJI},
+    utils::constants::{DEFAULT_COLOR, DEFAULT_ICON, EXIT_EMOJI, NUMBER_EMOJIS},
 };
 
 #[help]
@@ -124,11 +124,11 @@ fn command_details(
 
         for command in selected_group.options.commands {
             if allowed(&ctx, &command.options, &msg, &owners).await {
-                let aliases: Vec<&str> = command.options.names.iter().skip(1).map(|s| *s).collect();
-                let aliases = if !aliases.is_empty() {
-                    Some(aliases)
-                } else {
+                let aliases: Vec<&str> = command.options.names.iter().skip(1).copied().collect();
+                let aliases = if aliases.is_empty() {
                     None
+                } else {
+                    Some(aliases)
                 };
 
                 em.inner.field(
@@ -197,7 +197,7 @@ async fn allowed(
                 .permissions_for_user(&ctx.cache, msg.author.id)
                 .await
             {
-                if !perms.contains(req_perms.clone()) {
+                if !perms.contains(*req_perms) {
                     return false;
                 }
             } else {
@@ -213,9 +213,7 @@ async fn allowed(
 
 #[hook]
 pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
-    if msg.guild_id.is_none() {
-        return None;
-    }
+    msg.guild_id?;
 
     let db = if let Some(db) = ctx.data.read().await.get::<DatabaseKey>() {
         db.clone()

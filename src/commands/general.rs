@@ -288,7 +288,9 @@ async fn iss(ctx: &Context, msg: &Message) -> CommandResult {
 
 #[command]
 #[description("Get information about an exoplanet or star")]
-#[usage("Provide the official name of an exoplanet or star, or leave blank to get a random exoplanet")]
+#[usage(
+    "Provide the official name of an exoplanet or star, or leave blank to get a random exoplanet"
+)]
 async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut res_msg: Message = msg
         .channel_id

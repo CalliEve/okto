@@ -60,7 +60,7 @@ lazy_static! {
     pub static ref NUMBER_EMOJIS: Vec<ReactionType> =
         ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
             .iter()
-            .map(|e| ReactionType::Unicode(e.to_string()))
+            .map(|e| ReactionType::Unicode((*e).to_string()))
             .collect();
 }
 

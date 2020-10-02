@@ -6,6 +6,7 @@
 #![allow(clippy::used_underscore_binding)] // the commands/events structure of serenity requires these
 #![allow(clippy::eval_order_dependence)] // messes up due to async, but should look into more
 #![allow(clippy::too_many_lines)] // TODO: refactor some functions to be smaller
+#![allow(clippy::non_ascii_literal)] // I want to use emojis uwu
 
 mod commands;
 mod event_handling;
