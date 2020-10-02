@@ -19,6 +19,8 @@ struct Settings;
 #[command]
 #[required_permissions(MANAGE_GUILD)]
 #[only_in(guild)]
+#[usage("Provide new prefix to use or no arguments to have it reset to ;")]
+#[description("Sets prefix to be listened to in this guild")]
 async fn setprefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let prefix = args.current().map_or(";", |p| p);
 

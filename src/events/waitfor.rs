@@ -115,11 +115,11 @@ impl WaitFor {
                 Some(filter) if filter(payload.clone()).await => {
                     (self.handler)(payload).await;
                     true
-                }
+                },
                 None => {
                     (self.handler)(payload).await;
                     true
-                }
+                },
                 _ => false,
             }
         } else {

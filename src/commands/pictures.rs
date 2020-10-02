@@ -23,13 +23,15 @@ use crate::{
 struct Pictures;
 
 #[command]
+#[description("Get a picture of Earth from the NOAA DSCOVR spacecraft")]
+#[usage("Tell the command to provide the natural or enhanced version of the image, defaults to natural")]
 async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
     let image_type = args
         .quoted()
         .current()
         .map_or("natural", |t| {
-            if ["natural", "enhanced"].contains(&t) {
+            if ["natural", "enhanced"].contains(&t.to_lowercase().as_str()) {
                 t
             } else {
                 "natural"
@@ -83,6 +85,8 @@ async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
 }
 
 #[command]
+#[description("Get an Astronomy Picture Of the Day")]
+#[usage("Picks a random picture, but can be told to get the one from today by giving the \"today\" argument")]
 async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
@@ -151,6 +155,7 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 }
 
 #[command]
+#[description("Picks a random picture from the hubblesite api")]
 async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
@@ -201,6 +206,7 @@ async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+#[description("Picks a random sol number and then grabs a random picture made by the Spirit rover on that sol (can error if Spirit didn't make a picture then)")]
 async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
@@ -254,6 +260,7 @@ async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
+#[description("Picks a random sol number and then grabs a random picture made by the Opportunity rover on that sol (can error if Opportunity didn't make a picture then)")]
 async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
