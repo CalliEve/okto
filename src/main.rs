@@ -43,7 +43,7 @@ use utils::preloading::preload_data;
 async fn main() {
     let framework = StandardFramework::new()
         .configure(|c| {
-            c.prefix("!;")
+            c.prefix(";")
                 .owners(vec![247745860979392512.into()].into_iter().collect())
                 .dynamic_prefix(calc_prefix)
         })
