@@ -1,3 +1,4 @@
+use chrono::Duration;
 use mongodb::Database;
 use reqwest::{header::AUTHORIZATION, Result};
 use serenity::{http::Http, prelude::RwLock};
@@ -33,13 +34,15 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
 
     let mut launch_cache = cache.write().await;
 
+    let five_minutes = Duration::minutes(5);
+
     let scrubbed: Vec<&LaunchData> = launches
         .iter()
         .filter(|nl| {
             launches
                 .iter()
                 .find(|ol| nl.ll_id == ol.ll_id)
-                .map_or(false, |ol| nl.net > ol.net)
+                .map_or(false, |ol| nl.net > (ol.net + five_minutes))
         })
         .collect();
     for scrub in &scrubbed {
