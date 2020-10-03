@@ -135,6 +135,18 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             );
         }
 
+        let other_ses = ses.clone();
+        em.add_field(
+            "Other",
+            "Enable other notifications",
+            false,
+            &'🛎'.into(),
+            move || {
+                let other_ses = other_ses.clone();
+                Box::pin(async move { other_page(other_ses.clone(), id).await })
+            },
+        );
+
         let close_ses = ses.clone();
         em.add_field(
             "Close",
@@ -554,6 +566,149 @@ fn mentions_page(
     })
 }
 
+fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFuture<'static, ()> {
+    Box::pin(async move {
+        let db = if let Some(db_res) = get_db(&ses).await {
+            db_res
+        } else {
+            return;
+        };
+
+        let mut scrub_notifications = false;
+
+        let description = match id {
+            ID::Channel((_, guild_id)) => {
+                let settings_res = get_guild_settings(&db, guild_id.into()).await;
+                match settings_res {
+                    Ok(settings) => {
+                        let mut text = "The following options have been enabled:".to_owned();
+
+                        if settings.scrub_notifications {
+                            scrub_notifications = settings.scrub_notifications;
+                            text.push_str("\nScrub notifications");
+                        }
+
+                        if let Some(chan) = settings.notifications_channel {
+                            text.push_str(&format!(
+                                "\nNotifications will be posted in: <#{}>",
+                                chan
+                            ));
+                        } else {
+                            text.push_str(
+                                "\n**warning:** no notifications channel has been set yet!",
+                            )
+                        }
+
+                        text
+                    },
+                    Err(_) => "No settings found".to_owned(),
+                }
+            },
+            ID::User(user_id) => {
+                let settings_res = get_user_settings(&db, user_id.into()).await;
+                match settings_res {
+                    Ok(settings) => {
+                        let mut text = "The following options have been enabled:".to_owned();
+
+                        if settings.scrub_notifications {
+                            scrub_notifications = settings.scrub_notifications;
+                            text.push_str("\nScrub notifications");
+                        }
+
+                        text
+                    },
+                    Err(_) => "No settings have been found".to_owned(),
+                }
+            },
+        };
+
+        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
+            e.color(DEFAULT_COLOR)
+                .timestamp(&Utc::now())
+                .author(|a: &mut CreateEmbedAuthor| a.name("Other Options").icon_url(DEFAULT_ICON))
+                .description(description)
+        });
+
+        let scrub_ses = ses.clone();
+        em.add_field(
+            "Toggle Scrub Notifications",
+            "Toggle scrub notifications on and off",
+            false,
+            &'🛑'.into(),
+            move || {
+                let scrub_ses = scrub_ses.clone();
+                Box::pin(async move {
+                    let scrub_ses = scrub_ses.clone();
+                    toggle_setting(&scrub_ses, id, "scrub_notifications", !scrub_notifications)
+                        .await;
+                    other_page(scrub_ses, id).await
+                })
+            },
+        );
+
+        if id.guild_specific() {
+            let chan_ses = ses.clone();
+            em.add_field(
+                "Set Notification Channel",
+                "Set the channel to receive general notifications in, this can only be one per server",
+                false,
+                &'📩'.into(),
+                move || {
+                    let chan_ses = chan_ses.clone();
+                    Box::pin(async move {
+                        let inner_ses = chan_ses.clone();
+                        let channel_id = inner_ses.read().await.channel;
+                        let user_id = inner_ses.read().await.author;
+                        let wait_ses = chan_ses.clone();
+
+                        WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                            let wait_ses = wait_ses.clone();
+                            Box::pin(async move {
+                            if let WaitPayload::Message(message) = payload {
+                                if let Some(channel_id) = parse_id(&message.content) {
+                                    set_notification_channel(&wait_ses.clone(), id, channel_id.into()).await;
+                                    other_page(wait_ses.clone(), id).await;
+                                } else {
+                                    other_page(wait_ses.clone(), id).await;
+                                    temp_message(
+                                        channel_id,
+                                        wait_ses.read().await.http.clone(),
+                                        "Sorry, I can't find that channel, please try again later",
+                                        Duration::seconds(5),
+                                    ).await
+                                }
+                            }
+                        })
+                        })
+                        .send_explanation(
+                            "Mention the channel you want to set as the server's notification channel", 
+                            &inner_ses.read().await.http
+                        ).await
+                        .listen(inner_ses.read().await.data.clone())
+                        .await;
+                    })
+                },
+            );
+        }
+
+        em.add_field(
+            "Back",
+            "Go back to main menu",
+            false,
+            &'❌'.into(),
+            move || {
+                let ses = ses.clone();
+                Box::pin(async move { main_menu(ses.clone(), id).await })
+            },
+        );
+
+        let result = em.show().await;
+        if result.is_err() {
+            dbg!(result.unwrap_err());
+        }
+    })
+}
+
 // ---- db functions ----
 
 async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<Vec<Reminder>> {
@@ -735,6 +890,74 @@ async fn remove_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) 
             },
             None,
         ),
+    }
+    .await;
+
+    if let Err(e) = result {
+        dbg!(e);
+    }
+}
+
+async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &str, val: bool) {
+    let db = if let Some(db) = get_db(&ses).await {
+        db
+    } else {
+        return;
+    };
+
+    let collection = if id.guild_specific() {
+        db.collection("guild_settings")
+    } else {
+        db.collection("user_settings")
+    };
+
+    let result = match id {
+        ID::User(user_id) => collection.update_one(
+            doc! {"user": user_id.0},
+            doc! {
+                "$set": {
+                    setting: val
+                }
+            },
+            Some(UpdateOptions::builder().upsert(true).build()),
+        ),
+        ID::Channel((_, guild_id)) => collection.update_one(
+            doc! {"guild": guild_id.0},
+            doc! {
+                "$set": {
+                    setting: val
+                }
+            },
+            Some(UpdateOptions::builder().upsert(true).build()),
+        ),
+    }
+    .await;
+
+    if let Err(e) = result {
+        dbg!(e);
+    }
+}
+
+async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, channel: ChannelId) {
+    let db = if let Some(db) = get_db(&ses).await {
+        db
+    } else {
+        return;
+    };
+
+    let collection = db.collection("guild_settings");
+
+    let result = match id {
+        ID::Channel((_, guild_id)) => collection.update_one(
+            doc! {"guild": guild_id.0},
+            doc! {
+                "$set": {
+                    "notifications_channel": channel.0
+                }
+            },
+            Some(UpdateOptions::builder().upsert(true).build()),
+        ),
+        _ => return,
     }
     .await;
 

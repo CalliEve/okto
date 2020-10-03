@@ -24,7 +24,9 @@ struct Pictures;
 
 #[command]
 #[description("Get a picture of Earth from the NOAA DSCOVR spacecraft")]
-#[usage("Tell the command to provide the natural or enhanced version of the image, defaults to natural")]
+#[usage(
+    "Tell the command to provide the natural or enhanced version of the image, defaults to natural"
+)]
 async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
     let image_type = args

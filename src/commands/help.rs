@@ -19,7 +19,7 @@ use serenity::{
 use crate::{
     events::statefulembed::{EmbedSession, StatefulEmbed},
     models::{caches::DatabaseKey, settings::GuildSettings},
-    utils::constants::{DEFAULT_COLOR, DEFAULT_ICON, NUMBER_EMOJIS, EXIT_EMOJI},
+    utils::constants::{DEFAULT_COLOR, DEFAULT_ICON, EXIT_EMOJI, NUMBER_EMOJIS},
 };
 
 #[help]
@@ -46,6 +46,8 @@ fn help_menu(
     owners: HashSet<UserId>,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
+        let prefix = calc_prefix(&ctx, &msg).await.unwrap_or_else(|| ";".to_owned());
+
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
             .author(
@@ -59,7 +61,7 @@ fn help_menu(
 
                 for command in group.options.commands {
                     if allowed(&ctx, &command.options, &msg, &owners).await {
-                        cmds.push_str(&format!("\n- **{}**", command.options.names.join(", ")));
+                        cmds.push_str(&format!("\n- **{}{}**", &prefix, command.options.names.first().expect("no command name")));
                     }
                 }
 
@@ -113,6 +115,8 @@ fn command_details(
     selected_group: &'static CommandGroup,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
+        let prefix = calc_prefix(&ctx, &msg).await.unwrap_or_else(|| ";".to_owned());
+
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
                 .author(|a: &mut CreateEmbedAuthor| {
@@ -124,15 +128,15 @@ fn command_details(
 
         for command in selected_group.options.commands {
             if allowed(&ctx, &command.options, &msg, &owners).await {
-                let aliases: Vec<&str> = command.options.names.iter().skip(1).map(|s| *s).collect();
-                let aliases = if !aliases.is_empty() {
-                    Some(aliases)
-                } else {
+                let aliases: Vec<&str> = command.options.names.iter().skip(1).copied().collect();
+                let aliases = if aliases.is_empty() {
                     None
+                } else {
+                    Some(aliases)
                 };
 
                 em.inner.field(
-                    command.options.names.first().map_or("no name", |s| *s),
+                    command.options.names.first().map(|s| format!("{}{}", &prefix, s)).expect("no command name"),
                     format!(
                         "{}{}{}",
                         aliases.map_or("".to_owned(), |a| format!("**Aliases**: {}", a.join(", "))),
@@ -197,7 +201,7 @@ async fn allowed(
                 .permissions_for_user(&ctx.cache, msg.author.id)
                 .await
             {
-                if !perms.contains(req_perms.clone()) {
+                if !perms.contains(*req_perms) {
                     return false;
                 }
             } else {
@@ -213,9 +217,7 @@ async fn allowed(
 
 #[hook]
 pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
-    if msg.guild_id.is_none() {
-        return None;
-    }
+    msg.guild_id?;
 
     let db = if let Some(db) = ctx.data.read().await.get::<DatabaseKey>() {
         db.clone()
