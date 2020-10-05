@@ -40,14 +40,14 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
         if let Ok(settings) = get_toggled(&db, "user_settings", "scrub_notifications").await {
             settings
         } else {
-            return;
+            Vec::new()
         };
 
     let guild_settings: Vec<GuildSettings> =
         if let Ok(settings) = get_toggled(&db, "guild_settings", "scrub_notifications").await {
             settings
         } else {
-            return;
+            Vec::new()
         };
 
     for user in user_settings {
