@@ -62,10 +62,10 @@ impl EventHandler for Handler {
     async fn message_delete(
         &self,
         ctx: Context,
-        channel_id: ChannelId,
-        _deleted_message_id: MessageId,
+        _channel_id: ChannelId,
+        deleted_message_id: MessageId,
     ) {
-        embed_delete(&ctx, channel_id).await
+        embed_delete(&ctx, deleted_message_id).await
     }
 
     async fn message(&self, ctx: Context, message: Message) {

@@ -7,7 +7,7 @@ use serenity::{
     http::Http,
     model::{
         channel::{Message, Reaction, ReactionType},
-        id::{ChannelId, UserId},
+        id::{ChannelId, MessageId, UserId},
     },
     prelude::{Context, RwLock, TypeMap},
     Error,
@@ -84,9 +84,10 @@ impl StatefulEmbed {
 
     async fn add_reactions(&self) -> serenity::Result<()> {
         let session = self.session.read().await;
-        let message: &Message = session.message.as_ref().ok_or(Error::Other(
-            "No message in session",
-        ))?;
+        let message: &Message = session
+            .message
+            .as_ref()
+            .ok_or(Error::Other("No message in session"))?;
 
         let res = message.delete_reactions(&session.http).await;
         if res.is_err() {
@@ -128,17 +129,21 @@ impl StatefulEmbed {
                     })
                     .await?;
             } else {
-                session.message = Some(
-                    session
-                        .channel
-                        .send_message(&http, |m| {
-                            m.embed(|e: &mut CreateEmbed| {
-                                e.0 = self.inner.0.clone();
-                                e
-                            })
+                let msg = session
+                    .channel
+                    .send_message(&http, |m| {
+                        m.embed(|e: &mut CreateEmbed| {
+                            e.0 = self.inner.0.clone();
+                            e
                         })
-                        .await?,
-                );
+                    })
+                    .await?;
+
+                if let Some(embeds) = session.data.write().await.get_mut::<EmbedSessionsKey>() {
+                    embeds.insert(msg.id, self.session.clone());
+                }
+
+                session.message = Some(msg);
             }
         }
 
@@ -161,7 +166,7 @@ pub struct EmbedSession {
 
 impl EmbedSession {
     pub async fn new(ctx: &Context, channel: ChannelId, author: UserId) -> Arc<RwLock<Self>> {
-        let ses = Arc::new(RwLock::new( Self {
+        Arc::new(RwLock::new(Self {
             channel,
             author,
             http: ctx.http.clone(),
@@ -169,13 +174,7 @@ impl EmbedSession {
             message: None,
             data: ctx.data.clone(),
             cache: ctx.cache.clone(),
-        }));
-
-        if let Some(embeds) = ctx.data.write().await.get_mut::<EmbedSessionsKey>() {
-            embeds.insert(channel, ses.clone());
-        }
-
-        ses
+        }))
     }
 
     fn set_embed(&mut self, em: StatefulEmbed) {
@@ -186,9 +185,9 @@ impl EmbedSession {
 pub async fn on_reaction_add(ctx: &Context, add_reaction: Reaction) {
     if let Some(user_id) = add_reaction.user_id {
         let handler = if let Some(cache) = ctx.data.read().await.get::<EmbedSessionsKey>() {
-            if let Some(session_lock) = cache.get(&add_reaction.channel_id) {
+            if let Some(session_lock) = cache.get(&add_reaction.message_id) {
                 let session = session_lock.read().await;
-                if session.author != user_id || !session.message.iter().any(|m| m.id == add_reaction.message_id) {
+                if session.author != user_id || session.channel != add_reaction.channel_id {
                     return;
                 }
 
@@ -216,8 +215,8 @@ pub async fn on_reaction_add(ctx: &Context, add_reaction: Reaction) {
     }
 }
 
-pub async fn on_message_delete(ctx: &Context, channel_id: ChannelId) {
+pub async fn on_message_delete(ctx: &Context, message_id: MessageId) {
     if let Some(cache) = ctx.data.write().await.get_mut::<EmbedSessionsKey>() {
-        cache.remove(&channel_id);
+        cache.remove(&message_id);
     }
 }
