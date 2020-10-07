@@ -31,7 +31,7 @@ async fn help_cmd(
     groups: &[&'static CommandGroup],
     owners: HashSet<UserId>,
 ) -> CommandResult {
-    let ses = EmbedSession::new_show(&ctx, msg.channel_id, msg.author.id).await?;
+    let ses = EmbedSession::new(&ctx, msg.channel_id, msg.author.id).await;
 
     help_menu(ses, ctx.clone(), msg.clone(), groups.to_vec(), owners).await;
 
@@ -46,7 +46,9 @@ fn help_menu(
     owners: HashSet<UserId>,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let prefix = calc_prefix(&ctx, &msg).await.unwrap_or_else(|| ";".to_owned());
+        let prefix = calc_prefix(&ctx, &msg)
+            .await
+            .unwrap_or_else(|| ";".to_owned());
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
@@ -61,7 +63,11 @@ fn help_menu(
 
                 for command in group.options.commands {
                     if allowed(&ctx, &command.options, &msg, &owners).await {
-                        cmds.push_str(&format!("\n- **{}{}**", &prefix, command.options.names.first().expect("no command name")));
+                        cmds.push_str(&format!(
+                            "\n- **{}{}**",
+                            &prefix,
+                            command.options.names.first().expect("no command name")
+                        ));
                     }
                 }
 
@@ -115,7 +121,9 @@ fn command_details(
     selected_group: &'static CommandGroup,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let prefix = calc_prefix(&ctx, &msg).await.unwrap_or_else(|| ";".to_owned());
+        let prefix = calc_prefix(&ctx, &msg)
+            .await
+            .unwrap_or_else(|| ";".to_owned());
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
@@ -136,7 +144,12 @@ fn command_details(
                 };
 
                 em.inner.field(
-                    command.options.names.first().map(|s| format!("{}{}", &prefix, s)).expect("no command name"),
+                    command
+                        .options
+                        .names
+                        .first()
+                        .map(|s| format!("{}{}", &prefix, s))
+                        .expect("no command name"),
                     format!(
                         "{}{}{}",
                         aliases.map_or("".to_owned(), |a| format!("**Aliases**: {}", a.join(", "))),

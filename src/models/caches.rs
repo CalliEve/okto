@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use mongodb::Database;
 use serenity::{
-    model::id::{ChannelId, MessageId, UserId},
+    model::id::{ChannelId, UserId},
     prelude::{RwLock, TypeMapKey},
 };
 
@@ -32,7 +32,7 @@ impl TypeMapKey for LaunchesCacheKey {
 pub struct EmbedSessionsKey;
 
 impl TypeMapKey for EmbedSessionsKey {
-    type Value = HashMap<MessageId, Arc<RwLock<EmbedSession>>>;
+    type Value = HashMap<ChannelId, Arc<RwLock<EmbedSession>>>;
 }
 
 pub struct WaitForKey;
