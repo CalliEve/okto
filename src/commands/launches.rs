@@ -361,7 +361,7 @@ async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         },
     };
 
-    let session = EmbedSession::new(&ctx, msg.channel_id, msg.author.id).await;
+    let session = EmbedSession::new(&ctx, msg.channel_id, msg.author.id);
 
     list_page(session, launches, 0, true).await;
 

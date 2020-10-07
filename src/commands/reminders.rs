@@ -62,7 +62,7 @@ async fn notifychannel(ctx: &Context, msg: &Message, args: Args) -> CommandResul
             msg.channel_id
         };
 
-    let ses = EmbedSession::new(&ctx, msg.channel_id, msg.author.id).await;
+    let ses = EmbedSession::new(&ctx, msg.channel_id, msg.author.id);
 
     main_menu(ses, ID::Channel((target_channel, msg.guild_id.unwrap()))).await;
 
@@ -78,7 +78,7 @@ async fn notifyme(ctx: &Context, msg: &Message) -> CommandResult {
         msg.channel_id
     };
 
-    let ses = EmbedSession::new(&ctx, dm, msg.author.id).await;
+    let ses = EmbedSession::new(&ctx, dm, msg.author.id);
 
     main_menu(ses, ID::User(msg.author.id)).await;
 

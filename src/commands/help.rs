@@ -31,7 +31,7 @@ async fn help_cmd(
     groups: &[&'static CommandGroup],
     owners: HashSet<UserId>,
 ) -> CommandResult {
-    let ses = EmbedSession::new(&ctx, msg.channel_id, msg.author.id).await;
+    let ses = EmbedSession::new(&ctx, msg.channel_id, msg.author.id);
 
     help_menu(ses, ctx.clone(), msg.clone(), groups.to_vec(), owners).await;
 

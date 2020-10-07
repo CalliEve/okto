@@ -165,7 +165,7 @@ pub struct EmbedSession {
 }
 
 impl EmbedSession {
-    pub async fn new(ctx: &Context, channel: ChannelId, author: UserId) -> Arc<RwLock<Self>> {
+    pub fn new(ctx: &Context, channel: ChannelId, author: UserId) -> Arc<RwLock<Self>> {
         Arc::new(RwLock::new(Self {
             channel,
             author,
