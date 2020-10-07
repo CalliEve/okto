@@ -71,6 +71,10 @@ fn help_menu(
                     }
                 }
 
+                if cmds.is_empty() {
+                    continue;
+                }
+
                 let details_ses = ses.clone();
                 let details_ctx = ctx.clone();
                 let details_msg = msg.clone();
@@ -108,8 +112,8 @@ fn help_menu(
             })
         });
 
-        let res = em.show().await;
-        if let Err(e) = res {
+        let show_res = em.show().await;
+        if let Err(e) = show_res {
             println!("Error in help: {}", e);
         }
     })
@@ -187,8 +191,8 @@ fn command_details(
             },
         );
 
-        let res = em.show().await;
-        if let Err(e) = res {
+        let show_res = em.show().await;
+        if let Err(e) = show_res {
             println!("Error in help: {}", e);
         }
     })
@@ -236,13 +240,15 @@ async fn allowed(
 
 #[hook]
 pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
-    msg.guild_id?;
+    if msg.guild_id.is_none() {
+        return Some(";".to_owned());
+    }
 
     let db = if let Some(db) = ctx.data.read().await.get::<DatabaseKey>() {
         db.clone()
     } else {
         println!("No database found");
-        return None;
+        return Some(";".to_owned());
     };
 
     let res = db
@@ -252,7 +258,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
 
     if res.is_err() {
         println!("Error in getting prefix: {:?}", res.unwrap_err());
-        return None;
+        return Some(";".to_owned());
     }
 
     res.unwrap()
@@ -265,5 +271,5 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
             let settings = settings.unwrap();
             Some(settings)
         })
-        .map(|s| s.prefix)
+        .map_or_else(|| Some(";".to_owned()), |s| Some(s.prefix))
 }
