@@ -197,6 +197,7 @@ pub async fn on_reaction_add(ctx: &Context, add_reaction: Reaction) {
                     for opt in &embed.options {
                         if opt.emoji == add_reaction.emoji {
                             handler = Some(opt.handler.clone());
+                            break;
                         }
                     }
 

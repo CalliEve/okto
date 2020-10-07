@@ -108,7 +108,10 @@ fn help_menu(
             })
         });
 
-        let _ = em.show().await;
+        let res = em.show().await;
+        if let Err(e) = res {
+            println!("Error in help: {}", e);
+        }
     })
 }
 
@@ -184,7 +187,10 @@ fn command_details(
             },
         );
 
-        let _ = em.show().await;
+        let res = em.show().await;
+        if let Err(e) = res {
+            println!("Error in help: {}", e);
+        }
     })
 }
 
