@@ -50,6 +50,8 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
             Vec::new()
         };
 
+    println!("sending srub notification off to subscribers");
+
     for user in user_settings {
         if let Ok(dm) = user.user.create_dm_channel(&http).await {
             let _ = dm

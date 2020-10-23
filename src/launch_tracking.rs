@@ -46,6 +46,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
         })
         .collect();
     for scrub in &scrubbed {
+        println!("notifying of scrub of {}", &scrub.payload);
         tokio::spawn(notify_scrub(http.clone(), db.clone(), (*scrub).clone()));
     }
 
