@@ -7,7 +7,10 @@ use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 use crate::{
     events::change_notifications::notify_scrub,
     models::launches::{LaunchContainer, LaunchData},
-    utils::constants::{DEFAULT_CLIENT, LL_KEY},
+    utils::{
+        constants::{DEFAULT_CLIENT, LL_KEY},
+        debug_log,
+    },
 };
 
 pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Vec<LaunchData>>>) {
@@ -46,7 +49,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
         })
         .collect();
     for scrub in &scrubbed {
-        println!("notifying of scrub of {}", &scrub.payload);
+        debug_log(&http, &format!("notifying of scrub of {}", &scrub.payload)).await;
         tokio::spawn(notify_scrub(http.clone(), db.clone(), (*scrub).clone()));
     }
 

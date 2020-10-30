@@ -156,3 +156,9 @@ pub async fn temp_message(channel: ChannelId, http: impl AsRef<Http>, text: &str
         let _ = channel.delete_message(http, message.id).await;
     }
 }
+
+const DEBUG_CHANNEL: ChannelId = ChannelId(771669392399532063);
+
+pub async fn debug_log(http: impl AsRef<Http>, text: &str) {
+    let _ = DEBUG_CHANNEL.send_message(&http, |m| m.content(text)).await;
+}

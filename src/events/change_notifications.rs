@@ -16,7 +16,7 @@ use crate::{
         launches::LaunchData,
         reminders::{GuildSettings, UserSettings},
     },
-    utils::default_embed,
+    utils::{debug_log, default_embed},
 };
 
 async fn get_toggled<T>(db: &Database, collection: &str, toggled: &str) -> MongoResult<Vec<T>>
@@ -50,7 +50,16 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
             Vec::new()
         };
 
-    println!("sending srub notification off to subscribers");
+    debug_log(
+        &http,
+        &format!(
+            "sending srub notification for {} off to subscribers\nusers: {}\nchannels: {}",
+            scrub.payload,
+            user_settings.len(),
+            guild_settings.len()
+        ),
+    )
+    .await;
 
     for user in user_settings {
         if let Ok(dm) = user.user.create_dm_channel(&http).await {
