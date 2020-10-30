@@ -85,7 +85,7 @@ async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     .author(|a: &mut CreateEmbedAuthor| {
                         a.name("Next Launch").icon_url(DEFAULT_ICON)
                     })
-                    .timestamp(&Utc::now())
+                    .timestamp(launch.net.format("%+").to_string())
                     .title(format!(
                         "{}\nStatus: {}",
                         &launch.vehicle,
@@ -434,13 +434,13 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     .author(|a: &mut CreateEmbedAuthor| {
                         a.name("Detailed info").icon_url(DEFAULT_ICON)
                     })
-                    .timestamp(&Utc::now())
+                    .timestamp(launch.net.format("%+").to_string())
                     .title(format!(
                         "{}\nStatus: {}",
                         &launch.vehicle,
                         launch.status.as_str()
                     ))
-                    .field("Date:", &launch.net.format("%d %B, %Y; %H:%m:%S UTC").to_string(), false)
+                    .field("Date:", launch.net.format("%d %B, %Y; %H:%m:%S UTC").to_string(), false)
                     .field(
                         "General information",
                         format!(

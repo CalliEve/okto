@@ -168,9 +168,9 @@ fn reminder_embed<'a>(
             {}",
             &l.payload,
             &l.vehicle,
-            &l.net.format("%d %B, %Y; %H:%m:%S UTC").to_string(),
+            l.net.format("%d %B, %Y; %H:%m:%S UTC").to_string(),
             live
-        ));
+        )).timestamp(l.net.format("%+").to_string());
 
     if let Some(img) = &l.rocket_img {
         e.thumbnail(img);
