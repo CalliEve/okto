@@ -115,7 +115,7 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
                 a.name("Bot Information")
                 .icon_url(DEFAULT_ICON)
             })
-            .thumbnail(TRANSPARENT_ICON)
+            .thumbnail(DEFAULT_ICON)
             .color(DEFAULT_COLOR)
         })
     }).await?;

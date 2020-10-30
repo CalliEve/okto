@@ -4,7 +4,7 @@ use serenity::{
     async_trait,
     model::{
         channel::{Message, Reaction},
-        guild::{Guild, PartialGuild},
+        guild::{Guild, GuildUnavailable},
         id::{ChannelId, GuildId, MessageId},
         prelude::Activity,
     },
@@ -86,11 +86,11 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn guild_delete(&self, ctx: Context, incomplete: PartialGuild, _full: Option<Guild>) {
+    async fn guild_delete(&self, ctx: Context, incomplete: GuildUnavailable, _full: Option<Guild>) {
         if let Some(channel) = ctx.cache.guild_channel(755401788294955070).await {
             let content = format!(
-                "Left the following guild: {} ({})",
-                incomplete.name, incomplete.id
+                "Left the following guild: {}",
+                incomplete.id
             );
             let _ = channel
                 .send_message(&ctx.http, |m| m.content(content))

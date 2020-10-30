@@ -83,7 +83,7 @@ async fn main() {
     intents.remove(GatewayIntents::GUILD_BANS);
 
     // Login with a bot token from the environment
-    let mut client = Client::new(&env::var("DISCORD_TOKEN").expect("no bot token"))
+    let mut client = Client::builder(&env::var("DISCORD_TOKEN").expect("no bot token"))
         .framework(framework)
         .intents(intents)
         .event_handler(Handler)

@@ -14,8 +14,7 @@ use serenity::{
 };
 
 pub const DEFAULT_COLOR: u32 = 16750899;
-pub const DEFAULT_ICON: &str = "https://i.imgur.com/ruFc9fc.png";
-pub const TRANSPARENT_ICON: &str = "https://i.imgur.com/L2FoV6P.png";
+pub const DEFAULT_ICON: &str = "https://i.imgur.com/L2FoV6P.png";
 pub const FINAL_PAGE_EMOJI: char = '⏭';
 pub const NEXT_PAGE_EMOJI: char = '▶';
 pub const LAST_PAGE_EMOJI: char = '◀';
