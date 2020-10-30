@@ -170,7 +170,7 @@ fn reminder_embed<'a>(
             &l.vehicle,
             l.net.format("%d %B, %Y; %H:%m:%S UTC").to_string(),
             live
-        ));//.timestamp(l.net.format("%+").to_string());
+        )).timestamp(l.net.format("%Y-%m-%dT%H:%M:%S").to_string());
 
     if let Some(img) = &l.rocket_img {
         e.thumbnail(img);
