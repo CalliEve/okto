@@ -11,7 +11,9 @@ impl From<LaunchInfo> for LaunchData {
                         return domain.to_owned();
                     };
                 };
-                u.title.clone()
+                u.title
+                    .clone()
+                    .unwrap_or_else(|| "Title Unknown".to_owned())
             });
         };
 

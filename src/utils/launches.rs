@@ -18,7 +18,9 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
 
                 res.push_str(&format!(
                     "\"{}\"\n[{}]({})\n\n",
-                    &link_obj.title, domain, &link_obj.url
+                    link_obj.title.as_ref().map_or("unknown url", |l| &l),
+                    domain,
+                    &link_obj.url
                 ));
             }
         }

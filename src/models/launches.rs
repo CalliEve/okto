@@ -152,8 +152,8 @@ pub struct LauncherConfigDetail {
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct VidURL {
     pub priority: i32,
-    pub title: String,
-    pub description: String,
+    pub title: Option<String>,
+    pub description: Option<String>,
     pub url: String,
 }
 
