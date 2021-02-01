@@ -67,7 +67,7 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
 
             if let Ok(Some(r)) = get_reminders(&db, difference.num_minutes()).await {
                 if let Ok(res) = bson::from_bson(r.into()) {
-                    execute_reminder(&db, &http, res, &l, difference).await
+                    tokio::spawn(execute_reminder(db.clone(), http.clone(), res, l.clone(), difference));
                 }
             }
         }
@@ -83,10 +83,10 @@ async fn get_reminders(db: &Database, minutes: i64) -> MongoResult<Option<Docume
 }
 
 async fn execute_reminder(
-    db: &Database,
-    http: &Arc<Http>,
+    db: Database,
+    http: Arc<Http>,
     reminder: Reminder,
-    l: &LaunchData,
+    l: LaunchData,
     difference: Duration,
 ) {
     'channel: for c in &reminder.channels {
