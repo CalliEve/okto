@@ -20,6 +20,7 @@ use crate::{
     },
     utils::{
         constants::{DEFAULT_COLOR, DEFAULT_ICON, LAUNCH_AGENCIES},
+        error_log,
         format_duration,
         reminders::{get_guild_settings, get_user_settings},
     },
@@ -67,7 +68,21 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
 
             if let Ok(Some(r)) = get_reminders(&db, difference.num_minutes()).await {
                 if let Ok(res) = bson::from_bson(r.into()) {
-                    tokio::spawn(execute_reminder(db.clone(), http.clone(), res, l.clone(), difference));
+                    let handle = tokio::spawn(execute_reminder(
+                        db.clone(),
+                        http.clone(),
+                        res,
+                        l.clone(),
+                        difference,
+                    ));
+
+                    if let Err(e) = handle.await {
+                        error_log(
+                            http.clone(),
+                            &format!("A panic happened in reminders: ```{:?}```", e),
+                        )
+                        .await
+                    }
                 }
             }
         }

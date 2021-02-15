@@ -64,7 +64,7 @@ impl EventHandler for Handler {
         ctx: Context,
         _channel_id: ChannelId,
         deleted_message_id: MessageId,
-        _guild_id: Option<GuildId>
+        _guild_id: Option<GuildId>,
     ) {
         embed_delete(&ctx, deleted_message_id).await
     }
@@ -89,10 +89,7 @@ impl EventHandler for Handler {
 
     async fn guild_delete(&self, ctx: Context, incomplete: GuildUnavailable, _full: Option<Guild>) {
         if let Some(channel) = ctx.cache.guild_channel(755401788294955070).await {
-            let content = format!(
-                "Left the following guild: {}",
-                incomplete.id
-            );
+            let content = format!("Left the following guild: {}", incomplete.id);
             let _ = channel
                 .send_message(&ctx.http, |m| m.content(content))
                 .await;

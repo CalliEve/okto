@@ -1,6 +1,7 @@
 use std::{io::ErrorKind as IoErrorKind, sync::Arc};
 
 use chrono::{Duration, Utc};
+use futures::stream::StreamExt;
 use mongodb::{
     bson::{self, doc},
     error::{Error as MongoError, ErrorKind as MongoErrorKind, Result as MongoResult},
@@ -20,7 +21,6 @@ use serenity::{
     },
     prelude::{Context, RwLock},
 };
-use futures::stream::StreamExt;
 
 use crate::{
     events::{

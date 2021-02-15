@@ -22,7 +22,6 @@ use mongodb::Client as MongoClient;
 use serenity::{
     client::{bridge::gateway::GatewayIntents, Client},
     framework::standard::StandardFramework,
-    model::prelude::ChannelId,
     prelude::RwLock,
 };
 
@@ -37,7 +36,7 @@ use models::caches::{
     WaitForKey,
 };
 use reminder_tracking::reminder_tracking;
-use utils::preloading::preload_data;
+use utils::{error_log, preloading::preload_data};
 
 #[tokio::main]
 async fn main() {
@@ -63,14 +62,11 @@ async fn main() {
                             m.content("Oh no, an error happened.\nPlease try again at a later time")
                         })
                         .await;
-                    let _ = ChannelId(447876053109702668)
-                        .send_message(&ctx.http, |m| {
-                            m.content(format!(
-                                "An error happened in {}:\n```{:?}```",
-                                cmd_name, why
-                            ))
-                        })
-                        .await;
+                    error_log(
+                        &ctx.http,
+                        format!("An error happened in {}:\n```{:?}```", cmd_name, why),
+                    )
+                    .await
                 }
             })
         });

@@ -158,7 +158,20 @@ pub async fn temp_message(channel: ChannelId, http: impl AsRef<Http>, text: &str
 }
 
 const DEBUG_CHANNEL: ChannelId = ChannelId(771669392399532063);
+const ERROR_CHANNEL: ChannelId = ChannelId(447876053109702668);
 
 pub async fn debug_log(http: impl AsRef<Http>, text: &str) {
     let _ = DEBUG_CHANNEL.send_message(&http, |m| m.content(text)).await;
+}
+
+pub async fn error_log(http: impl AsRef<Http>, text: impl AsRef<str>) {
+    let _ = ERROR_CHANNEL
+        .send_message(&http, |m| {
+            m.embed(|em| {
+                em.description(text.as_ref())
+                    .color(Colour::RED)
+                    .timestamp(&Utc::now())
+            })
+        })
+        .await;
 }
