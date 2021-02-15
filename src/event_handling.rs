@@ -49,7 +49,7 @@ impl EventHandler for Handler {
                     let status = format!("{} servers", ctx.cache.guilds().await.len());
                     ctx.shard.set_activity(Some(Activity::listening(&status)));
                 }
-                tokio::time::delay_for(Duration::from_secs(300)).await;
+                tokio::time::sleep(Duration::from_secs(300)).await;
             }
         });
     }
@@ -64,6 +64,7 @@ impl EventHandler for Handler {
         ctx: Context,
         _channel_id: ChannelId,
         deleted_message_id: MessageId,
+        _guild_id: Option<GuildId>
     ) {
         embed_delete(&ctx, deleted_message_id).await
     }

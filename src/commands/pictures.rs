@@ -99,7 +99,7 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     } else {
         let start = Utc.ymd(2000, 1, 1);
         let days = (now - start).num_days();
-        let day = RNG.write().await.gen_range(0, days);
+        let day = RNG.write().await.gen_range(0..days);
         start + Duration::days(day)
     };
 
@@ -212,7 +212,7 @@ async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
 async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
-    let sol: u16 = RNG.write().await.gen_range(1, 5112);
+    let sol: u16 = RNG.write().await.gen_range(1..5112);
 
     let pictures: Vec<MarsRoverPicture> = DEFAULT_CLIENT
         .get(
@@ -266,7 +266,7 @@ async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
 async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
-    let sol: u16 = { RNG.write().await.gen_range(1, 5112) };
+    let sol: u16 = { RNG.write().await.gen_range(1..5112) };
 
     let pictures: Vec<MarsRoverPicture> = DEFAULT_CLIENT
         .get(
