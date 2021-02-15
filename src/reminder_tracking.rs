@@ -173,7 +173,7 @@ fn reminder_embed<'a>(
 
     e.color(DEFAULT_COLOR)
         .author(|a: &mut CreateEmbedAuthor| {
-            a.name(format!("{} till launch", format_duration(diff, false)))
+            a.name(format!("{} till launch", &format_duration(diff, false)))
                 .icon_url(DEFAULT_ICON)
         })
         .description(format!(
@@ -186,7 +186,7 @@ fn reminder_embed<'a>(
             l.net.format("%d %B, %Y; %H:%m:%S UTC").to_string(),
             live
         ))
-        .timestamp(l.net.format("%+").to_string());
+        .timestamp(l.net.format("%Y-%m-%dT%H:%M:%S").to_string());
 
     if let Some(img) = &l.rocket_img {
         e.thumbnail(img);
