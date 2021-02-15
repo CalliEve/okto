@@ -27,7 +27,7 @@ use crate::{
 
 pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, db: Database) {
     // wait for client to have started
-    tokio::time::delay_for(std::time::Duration::from_secs(60)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(60)).await;
 
     let mut loop_count: i64 = 0;
     let mut reminded: HashMap<String, i64> = HashMap::new();
@@ -49,7 +49,7 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
             .cloned()
             .collect();
         if launches.is_empty() {
-            tokio::time::delay_for(std::time::Duration::from_secs(55)).await;
+            tokio::time::sleep(std::time::Duration::from_secs(55)).await;
             continue;
         }
 
@@ -72,7 +72,7 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
             }
         }
 
-        tokio::time::delay_for(std::time::Duration::from_secs(55)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(55)).await;
     }
 }
 

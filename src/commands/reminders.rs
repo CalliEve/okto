@@ -20,7 +20,7 @@ use serenity::{
     },
     prelude::{Context, RwLock},
 };
-use tokio::stream::StreamExt;
+use futures::stream::StreamExt;
 
 use crate::{
     events::{
@@ -724,8 +724,10 @@ async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<V
         ID::User(user_id) => Ok(bson::from_bson(
             db.collection("reminders")
                 .find(doc! { "users": { "$in": [user_id.0] } }, None).await?
-                .collect::<Result<Vec<_>, _>>()
-                .await?
+                .collect::<Vec<Result<_, _>>>()
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()?
                 .into(),
         )?),
         ID::Channel((channel_id, guild_id)) => Ok(bson::from_bson(
@@ -734,8 +736,10 @@ async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<V
                     doc! { "channels": { "$in": [{ "channel": channel_id.0, "guild": guild_id.0 }] } },
                     None,
                 ).await?
-                .collect::<Result<Vec<_>, _>>()
-                .await?
+                .collect::<Vec<Result<_, _>>>()
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>, _>>()?
                 .into(),
         )?),
     }
