@@ -55,7 +55,6 @@ async fn main() {
             Box::pin(async move {
                 //  Print out an error if it happened
                 if let Err(why) = error {
-                    println!("Error in {}: {:?}", cmd_name, &why);
                     let _ = msg
                         .channel_id
                         .send_message(&ctx.http, |m| {

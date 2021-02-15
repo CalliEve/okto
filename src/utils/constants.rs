@@ -90,6 +90,9 @@ fn agency_map() -> HashMap<&'static str, &'static str> {
     res.insert("eurockot", "Eurockot Launch Services");
     res.insert("rocketlab", "Rocket Lab Ltd");
     res.insert("orbitalatk", "Orbital ATK");
+    res.insert("casc", "China Aerospace Corporation");
+    res.insert("casic", "China Aerospace Science and Industry Corporation");
+    res.insert("cnsa", "China National Space Administration");
 
     res
 }

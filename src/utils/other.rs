@@ -165,6 +165,7 @@ pub async fn debug_log(http: impl AsRef<Http>, text: &str) {
 }
 
 pub async fn error_log(http: impl AsRef<Http>, text: impl AsRef<str>) {
+    eprintln!("{}", text.as_ref());
     let _ = ERROR_CHANNEL
         .send_message(&http, |m| {
             m.embed(|em| {
