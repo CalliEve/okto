@@ -33,7 +33,6 @@ use serenity::{
         CreateMessage,
     },
     http::client::Http,
-    model::channel::Message,
     prelude::RwLock,
 };
 

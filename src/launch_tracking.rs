@@ -59,7 +59,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
     let scrubbed: Vec<&LaunchData> = launches
         .iter()
         .filter(|nl| {
-            launches
+            launch_cache
                 .iter()
                 .find(|ol| nl.ll_id == ol.ll_id)
                 .map_or(false, |ol| nl.net > (ol.net + five_minutes))

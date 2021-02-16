@@ -629,7 +629,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
 
                         if let Some(chan) = settings.notifications_channel {
                             text.push_str(&format!(
-                                "\nNotifications will be posted in: <#{}>",
+                                "\nScrub notifications will be posted in: <#{}>",
                                 chan
                             ));
                         } else {
@@ -689,7 +689,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
             let chan_ses = ses.clone();
             em.add_field(
                 "Set Notification Channel",
-                "Set the channel to receive general notifications in, this can only be one per server",
+                "Set the channel to receive scrub notifications in, this can only be one per server",
                 false,
                 &'📩'.into(),
                 move || {
