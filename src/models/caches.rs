@@ -1,13 +1,29 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+};
 
 use mongodb::Database;
 use serenity::{
-    model::id::{ChannelId, MessageId, UserId},
-    prelude::{RwLock, TypeMapKey},
+    model::id::{
+        ChannelId,
+        MessageId,
+        UserId,
+    },
+    prelude::{
+        RwLock,
+        TypeMapKey,
+    },
 };
 
-use super::{launches::LaunchData, pictures::MarsRoverPicture};
-use crate::events::{statefulembed::EmbedSession, waitfor::WaitFor};
+use super::{
+    launches::LaunchData,
+    pictures::MarsRoverPicture,
+};
+use crate::events::{
+    statefulembed::EmbedSession,
+    waitfor::WaitFor,
+};
 
 #[derive(Debug, Clone)]
 pub struct PictureDataCache {

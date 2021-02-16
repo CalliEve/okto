@@ -1,28 +1,63 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{
+    collections::HashMap,
+    str::FromStr,
+    sync::Arc,
+};
 
-use chrono::{Duration, NaiveDateTime, Utc};
+use chrono::{
+    Duration,
+    NaiveDateTime,
+    Utc,
+};
+use futures::{
+    future,
+    stream::{
+        self,
+        FuturesUnordered,
+        StreamExt,
+    },
+};
 use mongodb::{
-    bson::{self, doc, Document},
+    bson::{
+        self,
+        doc,
+        Document,
+    },
     error::Result as MongoResult,
     Database,
 };
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateMessage,
+    },
     http::client::Http,
+    model::channel::Message,
     prelude::RwLock,
 };
 
 use crate::{
     launch_tracking,
     models::{
-        launches::{LaunchData, LaunchStatus},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
         reminders::Reminder,
     },
     utils::{
-        constants::{DEFAULT_COLOR, DEFAULT_ICON, LAUNCH_AGENCIES},
+        constants::{
+            DEFAULT_COLOR,
+            DEFAULT_ICON,
+            LAUNCH_AGENCIES,
+        },
         error_log,
         format_duration,
-        reminders::{get_guild_settings, get_user_settings},
+        reminders::{
+            get_guild_settings,
+            get_user_settings,
+        },
     },
 };
 
@@ -104,60 +139,84 @@ async fn execute_reminder(
     l: LaunchData,
     difference: Duration,
 ) {
-    'channel: for c in &reminder.channels {
-        let settings_res = get_guild_settings(&db, c.guild.into()).await;
+    let Reminder {
+        channels,
+        users,
+        ..
+    } = reminder;
 
-        if let Ok(settings) = &settings_res {
-            for filter in &settings.filters {
-                if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
-                    if *agency == l.lsp {
-                        continue 'channel;
-                    }
-                }
+    stream::iter(channels.into_iter())
+        .filter_map(|c| {
+            let db = db.clone();
+            async move {
+                get_guild_settings(&db, c.guild.into())
+                    .await
+                    .ok()
+                    .map(|s| (c, s))
             }
-        }
+        })
+        .filter(|(_, settings)| {
+            future::ready(
+                !settings
+                    .filters
+                    .iter()
+                    .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
+                    .any(|agency| *agency == l.lsp),
+            )
+        })
+        .map(|(c, settings)| {
+            let mentions = settings
+                .mentions
+                .iter()
+                .fold(String::new(), |acc, mention| {
+                    acc + &format!(" <@&{}>", mention.as_u64())
+                });
 
-        let _ = c
-            .channel
-            .send_message(&http, |m: &mut CreateMessage| {
+            (c, mentions)
+        })
+        .map(|(c, mentions)| {
+            c.channel.send_message(&http, |m: &mut CreateMessage| {
                 m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference));
 
-                if let Ok(settings) = &settings_res {
-                    if !settings.mentions.is_empty() {
-                        let mut mentions = String::new();
-                        for mention in &settings.mentions {
-                            mentions.push_str(&format!(" <@&{}>", mention.as_u64()))
-                        }
-                        m.content(mentions);
-                    }
+                if !mentions.is_empty() {
+                    m.content(mentions);
                 }
 
                 m
             })
-            .await;
-    }
+        })
+        .collect::<FuturesUnordered<_>>()
+        .await
+        .collect::<Vec<_>>()
+        .await;
 
-    'user: for u in &reminder.users {
-        let settings_res = get_user_settings(&db, u.0).await;
-
-        if let Ok(settings) = settings_res {
-            for filter in &settings.filters {
-                if let Some(agency) = LAUNCH_AGENCIES.get(filter.as_str()) {
-                    if *agency == l.lsp {
-                        continue 'user;
-                    }
-                }
-            }
-        }
-
-        if let Ok(chan) = u.create_dm_channel(&http).await {
-            let _ = chan
-                .send_message(&http, |m: &mut CreateMessage| {
-                    m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference))
-                })
-                .await;
-        }
-    }
+    stream::iter(users.into_iter())
+        .filter_map(|u| {
+            let db = db.clone();
+            async move { get_user_settings(&db, u.0).await.ok().map(|s| (u, s)) }
+        })
+        .filter(|(_, settings)| {
+            future::ready(
+                !settings
+                    .filters
+                    .iter()
+                    .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
+                    .any(|agency| *agency == l.lsp),
+            )
+        })
+        .filter_map(|(u, _)| {
+            let http = http.clone();
+            async move { u.create_dm_channel(&http).await.ok() }
+        })
+        .map(|c| {
+            c.id.send_message(&http, |m: &mut CreateMessage| {
+                m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference))
+            })
+        })
+        .collect::<FuturesUnordered<_>>()
+        .await
+        .collect::<Vec<_>>()
+        .await;
 }
 
 fn reminder_embed<'a>(

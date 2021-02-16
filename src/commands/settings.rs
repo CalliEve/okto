@@ -1,8 +1,17 @@
-use mongodb::{bson::doc, options::UpdateOptions};
+use mongodb::{
+    bson::doc,
+    options::UpdateOptions,
+};
 use serenity::{
-    builder::{CreateEmbed, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateMessage,
+    },
     framework::standard::{
-        macros::{command, group},
+        macros::{
+            command,
+            group,
+        },
         Args,
         CommandResult,
     },
@@ -10,7 +19,10 @@ use serenity::{
     prelude::Context,
 };
 
-use crate::{models::caches::DatabaseKey, utils::default_embed};
+use crate::{
+    models::caches::DatabaseKey,
+    utils::default_embed,
+};
 
 #[group]
 #[commands(setprefix)]

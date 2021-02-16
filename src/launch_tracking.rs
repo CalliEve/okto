@@ -1,14 +1,31 @@
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    sync::Arc,
+};
+
 use chrono::Duration;
 use mongodb::Database;
-use reqwest::{header::AUTHORIZATION, Result};
-use serenity::{http::Http, prelude::RwLock};
-use std::{collections::HashMap, convert::TryFrom, sync::Arc};
+use reqwest::{
+    header::AUTHORIZATION,
+    Result,
+};
+use serenity::{
+    http::Http,
+    prelude::RwLock,
+};
 
 use crate::{
     events::change_notifications::notify_scrub,
-    models::launches::{LaunchContainer, LaunchData},
+    models::launches::{
+        LaunchContainer,
+        LaunchData,
+    },
     utils::{
-        constants::{DEFAULT_CLIENT, LL_KEY},
+        constants::{
+            DEFAULT_CLIENT,
+            LL_KEY,
+        },
         debug_log,
     },
 };

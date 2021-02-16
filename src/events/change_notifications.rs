@@ -1,22 +1,36 @@
+use std::sync::Arc;
+
 use futures::StreamExt;
 use mongodb::{
-    bson::{self, doc, Document},
+    bson::{
+        self,
+        doc,
+        Document,
+    },
     error::Result as MongoResult,
     Database,
 };
 use serde::de::DeserializeOwned;
 use serenity::{
-    builder::{CreateEmbed, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateMessage,
+    },
     http::Http,
 };
-use std::sync::Arc;
 
 use crate::{
     models::{
         launches::LaunchData,
-        reminders::{GuildSettings, UserSettings},
+        reminders::{
+            GuildSettings,
+            UserSettings,
+        },
     },
-    utils::{debug_log, default_embed},
+    utils::{
+        debug_log,
+        default_embed,
+    },
 };
 
 async fn get_toggled<T>(db: &Database, collection: &str, toggled: &str) -> MongoResult<Vec<T>>

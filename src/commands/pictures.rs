@@ -1,11 +1,26 @@
 use std::collections::HashMap;
 
-use chrono::{Duration, TimeZone, Utc};
-use rand::{seq::SliceRandom, Rng};
+use chrono::{
+    Duration,
+    TimeZone,
+    Utc,
+};
+use rand::{
+    seq::SliceRandom,
+    Rng,
+};
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateEmbedFooter,
+        CreateMessage,
+    },
     framework::standard::{
-        macros::{command, group},
+        macros::{
+            command,
+            group,
+        },
         Args,
         CommandResult,
     },
@@ -14,8 +29,15 @@ use serenity::{
 };
 
 use crate::{
-    models::{caches::PictureCacheKey, pictures::*},
-    utils::{constants::*, other::cutoff_on_last_dot, pictures::*},
+    models::{
+        caches::PictureCacheKey,
+        pictures::*,
+    },
+    utils::{
+        constants::*,
+        other::cutoff_on_last_dot,
+        pictures::*,
+    },
 };
 
 #[group]

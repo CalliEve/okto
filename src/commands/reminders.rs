@@ -1,39 +1,78 @@
-use std::{io::ErrorKind as IoErrorKind, sync::Arc};
+use std::{
+    io::ErrorKind as IoErrorKind,
+    sync::Arc,
+};
 
-use chrono::{Duration, Utc};
+use chrono::{
+    Duration,
+    Utc,
+};
 use futures::stream::StreamExt;
 use mongodb::{
-    bson::{self, doc},
-    error::{Error as MongoError, ErrorKind as MongoErrorKind, Result as MongoResult},
+    bson::{
+        self,
+        doc,
+    },
+    error::{
+        Error as MongoError,
+        ErrorKind as MongoErrorKind,
+        Result as MongoResult,
+    },
     options::UpdateOptions,
     Database,
 };
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+    },
     framework::standard::{
-        macros::{command, group},
+        macros::{
+            command,
+            group,
+        },
         Args,
         CommandResult,
     },
     model::{
         channel::Message,
-        id::{ChannelId, GuildId, RoleId, UserId},
+        id::{
+            ChannelId,
+            GuildId,
+            RoleId,
+            UserId,
+        },
     },
-    prelude::{Context, RwLock},
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
     events::{
-        statefulembed::{EmbedSession, StatefulEmbed},
-        waitfor::{WaitFor, WaitPayload},
+        statefulembed::{
+            EmbedSession,
+            StatefulEmbed,
+        },
+        waitfor::{
+            WaitFor,
+            WaitPayload,
+        },
     },
-    models::{caches::DatabaseKey, reminders::Reminder},
+    models::{
+        caches::DatabaseKey,
+        reminders::Reminder,
+    },
     utils::{
         constants::*,
         format_duration,
         parse_duration,
         parse_id,
-        reminders::{get_guild_settings, get_user_settings},
+        reminders::{
+            get_guild_settings,
+            get_user_settings,
+        },
         temp_message,
     },
 };

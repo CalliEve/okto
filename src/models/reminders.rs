@@ -1,6 +1,14 @@
 use chrono::Duration;
-use serde::{Deserialize, Serialize};
-use serenity::model::id::{ChannelId, GuildId, RoleId, UserId};
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use serenity::model::id::{
+    ChannelId,
+    GuildId,
+    RoleId,
+    UserId,
+};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Reminder {

@@ -1,11 +1,26 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::HashMap,
+    str::FromStr,
+};
 
 use reqwest::header::AUTHORIZATION;
-use serenity::framework::standard::{Args, CommandError};
+use serenity::framework::standard::{
+    Args,
+    CommandError,
+};
 
 use crate::{
-    models::launches::{LaunchData, LaunchInfo, VidURL},
-    utils::constants::{DEFAULT_CLIENT, LAUNCH_AGENCIES, LAUNCH_VEHICLES, LL_KEY},
+    models::launches::{
+        LaunchData,
+        LaunchInfo,
+        VidURL,
+    },
+    utils::constants::{
+        DEFAULT_CLIENT,
+        LAUNCH_AGENCIES,
+        LAUNCH_VEHICLES,
+        LL_KEY,
+    },
 };
 
 pub fn format_links(links: &[VidURL]) -> Option<String> {

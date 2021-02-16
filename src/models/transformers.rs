@@ -1,5 +1,9 @@
-use super::launches::{LaunchData, LaunchInfo};
 use std::str::FromStr;
+
+use super::launches::{
+    LaunchData,
+    LaunchInfo,
+};
 
 impl From<LaunchInfo> for LaunchData {
     fn from(mut info: LaunchInfo) -> LaunchData {

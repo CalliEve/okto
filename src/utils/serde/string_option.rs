@@ -1,4 +1,9 @@
-use serde::{self, Deserialize, Deserializer, Serializer};
+use serde::{
+    self,
+    Deserialize,
+    Deserializer,
+    Serializer,
+};
 
 pub fn serialize<S>(string: &Option<String>, serializer: S) -> Result<S::Ok, S::Error>
 where

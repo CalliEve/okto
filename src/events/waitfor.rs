@@ -5,10 +5,20 @@ use serenity::{
     builder::CreateMessage,
     http::Http,
     model::{
-        channel::{Message, Reaction},
-        id::{ChannelId, UserId},
+        channel::{
+            Message,
+            Reaction,
+        },
+        id::{
+            ChannelId,
+            UserId,
+        },
     },
-    prelude::{Context, RwLock, TypeMap},
+    prelude::{
+        Context,
+        RwLock,
+        TypeMap,
+    },
     Result as SerenityResult,
 };
 
