@@ -3,17 +3,36 @@ use std::time::Duration;
 use serenity::{
     async_trait,
     model::{
-        channel::{Message, Reaction},
-        guild::{Guild, GuildUnavailable},
-        id::{ChannelId, GuildId, MessageId},
+        channel::{
+            Message,
+            Reaction,
+        },
+        guild::{
+            Guild,
+            GuildUnavailable,
+        },
+        id::{
+            ChannelId,
+            GuildId,
+            MessageId,
+        },
         prelude::Activity,
     },
-    prelude::{Context, EventHandler},
+    prelude::{
+        Context,
+        EventHandler,
+    },
 };
 
 use crate::events::{
-    statefulembed::{on_message_delete as embed_delete, on_reaction_add as embed_reactions},
-    waitfor::{waitfor_message, waitfor_reaction},
+    statefulembed::{
+        on_message_delete as embed_delete,
+        on_reaction_add as embed_reactions,
+    },
+    waitfor::{
+        waitfor_message,
+        waitfor_reaction,
+    },
 };
 
 pub struct Handler;

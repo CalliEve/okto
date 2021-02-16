@@ -2,26 +2,51 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateEmbedFooter,
+        CreateMessage,
+    },
     framework::standard::{
-        macros::{command, group},
+        macros::{
+            command,
+            group,
+        },
         Args,
         CommandResult,
     },
     model::{
-        channel::{Message, ReactionType},
+        channel::{
+            Message,
+            ReactionType,
+        },
         id::EmojiId,
     },
-    prelude::{Context, RwLock},
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
-    events::statefulembed::{EmbedSession, StatefulEmbed},
+    events::statefulembed::{
+        EmbedSession,
+        StatefulEmbed,
+    },
     models::{
         caches::LaunchesCacheKey,
-        launches::{LaunchData, LaunchStatus},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
     },
-    utils::{constants::*, default_embed, format_duration, launches::*},
+    utils::{
+        constants::*,
+        default_embed,
+        format_duration,
+        launches::*,
+    },
 };
 
 #[group]

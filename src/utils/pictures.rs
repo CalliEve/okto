@@ -1,6 +1,12 @@
-use rand::{prelude::Rng, seq::SliceRandom};
+use rand::{
+    prelude::Rng,
+    seq::SliceRandom,
+};
 
-use crate::models::pictures::{HubbleImageSource, MarsRoverPicture};
+use crate::models::pictures::{
+    HubbleImageSource,
+    MarsRoverPicture,
+};
 
 pub fn get_date_epic_image(full: &str) -> String {
     full.split(' ')

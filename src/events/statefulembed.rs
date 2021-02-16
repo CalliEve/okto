@@ -6,10 +6,22 @@ use serenity::{
     cache::Cache,
     http::Http,
     model::{
-        channel::{Message, Reaction, ReactionType},
-        id::{ChannelId, MessageId, UserId},
+        channel::{
+            Message,
+            Reaction,
+            ReactionType,
+        },
+        id::{
+            ChannelId,
+            MessageId,
+            UserId,
+        },
     },
-    prelude::{Context, RwLock, TypeMap},
+    prelude::{
+        Context,
+        RwLock,
+        TypeMap,
+    },
     Error,
 };
 

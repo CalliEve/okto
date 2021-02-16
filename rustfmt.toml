@@ -1,8 +1,9 @@
-imports_layout = "HorizontalVertical"
+imports_layout = "Vertical"
 match_block_trailing_comma = true
-merge_imports = true
-struct_lit_single_line = false
-use_field_init_shorthand = true
-use_try_shorthand = true
 wrap_comments = true
 combine_control_expr = false
+struct_lit_single_line = false
+use_field_init_shorthand = true
+chain_width = 0
+group_imports = "StdExternalCrate"
+

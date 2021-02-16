@@ -1,14 +1,25 @@
-use chrono::{Duration, Utc};
+use chrono::{
+    Duration,
+    Utc,
+};
 use lazy_static::lazy_static;
 use regex::Regex;
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+    },
     http::Http,
     model::id::ChannelId,
     utils::Colour,
 };
 
-use super::constants::{DEFAULT_COLOR, DEFAULT_ICON, ID_REGEX, MENTION_REGEX};
+use super::constants::{
+    DEFAULT_COLOR,
+    DEFAULT_ICON,
+    ID_REGEX,
+    MENTION_REGEX,
+};
 
 lazy_static! {
     static ref WEEK_REGEX: Regex = Regex::new(r"(^|\b)([0-9]+)[wW]").unwrap();

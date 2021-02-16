@@ -1,5 +1,10 @@
 use chrono::Duration;
-use serde::{self, Deserialize, Deserializer, Serializer};
+use serde::{
+    self,
+    Deserialize,
+    Deserializer,
+    Serializer,
+};
 
 pub fn serialize<S>(dur: &Duration, serializer: S) -> Result<S::Ok, S::Error>
 where

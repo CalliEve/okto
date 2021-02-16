@@ -1,14 +1,31 @@
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    sync::Arc,
+};
+
 use chrono::Duration;
 use mongodb::Database;
-use reqwest::{header::AUTHORIZATION, Result};
-use serenity::{http::Http, prelude::RwLock};
-use std::{collections::HashMap, convert::TryFrom, sync::Arc};
+use reqwest::{
+    header::AUTHORIZATION,
+    Result,
+};
+use serenity::{
+    http::Http,
+    prelude::RwLock,
+};
 
 use crate::{
     events::change_notifications::notify_scrub,
-    models::launches::{LaunchContainer, LaunchData},
+    models::launches::{
+        LaunchContainer,
+        LaunchData,
+    },
     utils::{
-        constants::{DEFAULT_CLIENT, LL_KEY},
+        constants::{
+            DEFAULT_CLIENT,
+            LL_KEY,
+        },
         debug_log,
     },
 };
@@ -42,7 +59,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
     let scrubbed: Vec<&LaunchData> = launches
         .iter()
         .filter(|nl| {
-            launches
+            launch_cache
                 .iter()
                 .find(|ol| nl.ll_id == ol.ll_id)
                 .map_or(false, |ol| nl.net > (ol.net + five_minutes))

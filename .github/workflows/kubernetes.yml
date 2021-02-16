@@ -26,7 +26,9 @@ jobs:
           docker image tag docker.pkg.github.com/baev1/okto/okto-bot:${{ github.sha }} docker.pkg.github.com/baev1/okto/okto-bot:latest
 
       - name: Push image to Docker Hub
-        run: docker push docker.pkg.github.com/baev1/okto/okto-bot
+        run: |
+            docker push docker.pkg.github.com/baev1/okto/okto-bot:${{ github.sha }}
+            docker push docker.pkg.github.com/baev1/okto/okto-bot:latest
 
       - name: Save DigitalOcean kubeconfig
         uses: digitalocean/action-doctl@master

@@ -16,16 +16,20 @@ mod models;
 mod reminder_tracking;
 mod utils;
 
-use std::{collections::HashMap, env, sync::Arc};
-
-use mongodb::Client as MongoClient;
-use serenity::{
-    client::{bridge::gateway::GatewayIntents, Client},
-    framework::standard::StandardFramework,
-    prelude::RwLock,
+use std::{
+    collections::HashMap,
+    env,
+    sync::Arc,
 };
 
-use commands::{general::*, help::*, launches::*, pictures::*, reminders::*, settings::*};
+use commands::{
+    general::*,
+    help::*,
+    launches::*,
+    pictures::*,
+    reminders::*,
+    settings::*,
+};
 use event_handling::Handler;
 use launch_tracking::launch_tracking;
 use models::caches::{
@@ -35,8 +39,20 @@ use models::caches::{
     PictureCacheKey,
     WaitForKey,
 };
+use mongodb::Client as MongoClient;
 use reminder_tracking::reminder_tracking;
-use utils::{error_log, preloading::preload_data};
+use serenity::{
+    client::{
+        bridge::gateway::GatewayIntents,
+        Client,
+    },
+    framework::standard::StandardFramework,
+    prelude::RwLock,
+};
+use utils::{
+    error_log,
+    preloading::preload_data,
+};
 
 #[tokio::main]
 async fn main() {

@@ -1,8 +1,15 @@
+use std::{
+    collections::HashMap,
+    time::Duration,
+};
+
 use serde::Deserialize;
-use std::{collections::HashMap, time::Duration};
 
 use super::constants::*;
-use crate::models::{caches::PictureDataCache, pictures::MarsRoverPicture};
+use crate::models::{
+    caches::PictureDataCache,
+    pictures::MarsRoverPicture,
+};
 
 #[derive(Deserialize, Debug, Clone)]
 struct HubbleIDContainer {

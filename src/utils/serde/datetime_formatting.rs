@@ -1,5 +1,11 @@
 use chrono::NaiveDateTime;
-use serde::{self, de::Error, Deserialize, Deserializer, Serializer};
+use serde::{
+    self,
+    de::Error,
+    Deserialize,
+    Deserializer,
+    Serializer,
+};
 
 const FORMAT: &str = "%Y-%m-%dT%H:%M:%SZ";
 

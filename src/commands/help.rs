@@ -1,10 +1,19 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::HashSet,
+    sync::Arc,
+};
 
 use mongodb::bson::doc;
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+    },
     framework::standard::{
-        macros::{help, hook},
+        macros::{
+            help,
+            hook,
+        },
         Args,
         CommandGroup,
         CommandResult,
@@ -12,14 +21,33 @@ use serenity::{
         HelpOptions,
         OnlyIn,
     },
-    model::prelude::{Channel, Message, ReactionType, UserId},
-    prelude::{Context, RwLock},
+    model::prelude::{
+        Channel,
+        Message,
+        ReactionType,
+        UserId,
+    },
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
-    events::statefulembed::{EmbedSession, StatefulEmbed},
-    models::{caches::DatabaseKey, settings::GuildSettings},
-    utils::constants::{DEFAULT_COLOR, DEFAULT_ICON, EXIT_EMOJI, NUMBER_EMOJIS},
+    events::statefulembed::{
+        EmbedSession,
+        StatefulEmbed,
+    },
+    models::{
+        caches::DatabaseKey,
+        settings::GuildSettings,
+    },
+    utils::constants::{
+        DEFAULT_COLOR,
+        DEFAULT_ICON,
+        EXIT_EMOJI,
+        NUMBER_EMOJIS,
+    },
 };
 
 #[help]

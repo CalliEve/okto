@@ -2,22 +2,40 @@ use std::collections::HashMap;
 
 use chrono::Utc;
 use rand::seq::SliceRandom;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage, EditMessage},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateEmbedFooter,
+        CreateMessage,
+        EditMessage,
+    },
     framework::standard::{
-        macros::{command, group},
+        macros::{
+            command,
+            group,
+        },
         Args,
         CommandResult,
     },
-    model::{channel::Message, ModelError},
+    model::{
+        channel::Message,
+        ModelError,
+    },
     prelude::Context,
     utils::Colour,
     Error,
     Result,
 };
 
-use crate::{models::caches::PictureCacheKey, utils::constants::*};
+use crate::{
+    models::caches::PictureCacheKey,
+    utils::constants::*,
+};
 
 #[group]
 #[commands(ping, invite, info, websites, peopleinspace, iss, exoplanet)]
