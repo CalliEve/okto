@@ -1,6 +1,13 @@
 use std::sync::Arc;
 
-use futures::StreamExt;
+use futures::{
+    future,
+    stream::{
+        self,
+        FuturesUnordered,
+    },
+    StreamExt,
+};
 use mongodb::{
     bson::{
         self,
@@ -21,16 +28,16 @@ use serenity::{
 
 use crate::{
     models::{
-        launches::LaunchData,
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
         reminders::{
             GuildSettings,
             UserSettings,
         },
     },
-    utils::{
-        debug_log,
-        default_embed,
-    },
+    utils::default_embed,
 };
 
 async fn get_toggled<T>(db: &Database, collection: &str, toggled: &str) -> MongoResult<Vec<T>>
@@ -64,56 +71,117 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
             Vec::new()
         };
 
-    debug_log(
-        &http,
-        &format!(
-            "sending srub notification for {} off to subscribers\nusers: {}\nchannels: {}",
-            scrub.payload,
-            user_settings.len(),
-            guild_settings.len()
-        ),
-    )
-    .await;
-
-    for user in user_settings {
-        if let Ok(dm) = user.user.create_dm_channel(&http).await {
-            let _ = dm
-                .send_message(&http, |m: &mut CreateMessage| {
-                    m.embed(|e: &mut CreateEmbed| {
-                        default_embed(
-                            e,
-                            &format!(
-                                "launch of {} on a {} has been delayed to {}",
-                                scrub.payload,
-                                scrub.vehicle,
-                                scrub.net.format("%d %B, %Y; %H:%m:%S UTC").to_string()
-                            ),
-                            false,
-                        )
-                    })
+    stream::iter(user_settings)
+        .filter_map(|settings| {
+            let http = http.clone();
+            async move { settings.user.create_dm_channel(&http).await.ok() }
+        })
+        .map(|dm| {
+            dm.id.send_message(&http, |m: &mut CreateMessage| {
+                m.embed(|e: &mut CreateEmbed| {
+                    default_embed(
+                        e,
+                        &format!(
+                            "The launch of {} on a {} is now scheduled for {}",
+                            scrub.payload,
+                            scrub.vehicle,
+                            scrub.net.format("%d %B, %Y; %H:%m:%S UTC").to_string()
+                        ),
+                        false,
+                    )
                 })
-                .await;
-        }
-    }
+            })
+        })
+        .collect::<FuturesUnordered<_>>()
+        .await
+        .collect::<Vec<_>>()
+        .await;
 
-    for guild in guild_settings {
-        if let Some(chan) = guild.notifications_channel {
-            let _ = chan
-                .send_message(&http, |m: &mut CreateMessage| {
-                    m.embed(|e: &mut CreateEmbed| {
-                        default_embed(
-                            e,
-                            &format!(
-                                "launch of {} on a {} has been delayed to {}",
-                                scrub.payload,
-                                scrub.vehicle,
-                                scrub.net.format("%d %B, %Y; %H:%m:%S UTC").to_string()
-                            ),
-                            false,
-                        )
-                    })
+    stream::iter(guild_settings)
+        .filter_map(|settings| future::ready(settings.notifications_channel))
+        .map(|dm| {
+            dm.send_message(&http, |m: &mut CreateMessage| {
+                m.embed(|e: &mut CreateEmbed| {
+                    default_embed(
+                        e,
+                        &format!(
+                            "The launch of {} on a {} is now scheduled for {}",
+                            scrub.payload,
+                            scrub.vehicle,
+                            scrub.net.format("%d %B, %Y; %H:%m:%S UTC").to_string()
+                        ),
+                        false,
+                    )
                 })
-                .await;
-        }
-    }
+            })
+        })
+        .collect::<FuturesUnordered<_>>()
+        .await
+        .collect::<Vec<_>>()
+        .await;
+}
+
+pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData) {
+    let user_settings: Vec<UserSettings> =
+        if let Ok(settings) = get_toggled(&db, "user_settings", "outcome_notifications").await {
+            settings
+        } else {
+            Vec::new()
+        };
+
+    let guild_settings: Vec<GuildSettings> =
+        if let Ok(settings) = get_toggled(&db, "guild_settings", "outcome_notifications").await {
+            settings
+        } else {
+            Vec::new()
+        };
+
+    stream::iter(user_settings)
+        .filter_map(|settings| {
+            let http = http.clone();
+            async move { settings.user.create_dm_channel(&http).await.ok() }
+        })
+        .map(|dm| {
+            dm.id.send_message(&http, |m: &mut CreateMessage| {
+                m.embed(|e: &mut CreateEmbed| {
+                    default_embed(
+                        e,
+                        &format!(
+                            "The launch of {} on a {} has completed with a status of {}",
+                            finished.payload,
+                            finished.vehicle,
+                            finished.status.as_str()
+                        ),
+                        matches!(finished.status, LaunchStatus::Success),
+                    )
+                })
+            })
+        })
+        .collect::<FuturesUnordered<_>>()
+        .await
+        .collect::<Vec<_>>()
+        .await;
+
+    stream::iter(guild_settings)
+        .filter_map(|settings| future::ready(settings.notifications_channel))
+        .map(|dm| {
+            dm.send_message(&http, |m: &mut CreateMessage| {
+                m.embed(|e: &mut CreateEmbed| {
+                    default_embed(
+                        e,
+                        &format!(
+                            "The launch of {} on a {} has completed with a status of {}",
+                            finished.payload,
+                            finished.vehicle,
+                            finished.status.as_str()
+                        ),
+                        matches!(finished.status, LaunchStatus::Success),
+                    )
+                })
+            })
+        })
+        .collect::<FuturesUnordered<_>>()
+        .await
+        .collect::<Vec<_>>()
+        .await;
 }

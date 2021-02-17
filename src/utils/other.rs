@@ -168,9 +168,11 @@ pub async fn temp_message(channel: ChannelId, http: impl AsRef<Http>, text: &str
     }
 }
 
+#[allow(dead_code)]
 const DEBUG_CHANNEL: ChannelId = ChannelId(771669392399532063);
 const ERROR_CHANNEL: ChannelId = ChannelId(447876053109702668);
 
+#[allow(dead_code)]
 pub async fn debug_log(http: impl AsRef<Http>, text: &str) {
     let _ = DEBUG_CHANNEL.send_message(&http, |m| m.content(text)).await;
 }

@@ -5,6 +5,10 @@ use std::{
 };
 
 use chrono::Duration;
+use futures::stream::{
+    FuturesUnordered,
+    StreamExt,
+};
 use mongodb::Database;
 use reqwest::{
     header::AUTHORIZATION,
@@ -16,23 +20,25 @@ use serenity::{
 };
 
 use crate::{
-    events::change_notifications::notify_scrub,
+    events::change_notifications::{
+        notify_outcome,
+        notify_scrub,
+    },
     models::launches::{
         LaunchContainer,
         LaunchData,
+        LaunchStatus,
     },
-    utils::{
-        constants::{
-            DEFAULT_CLIENT,
-            LL_KEY,
-        },
-        debug_log,
+    utils::constants::{
+        DEFAULT_CLIENT,
+        LL_KEY,
     },
 };
 
 pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Vec<LaunchData>>>) {
     println!("getting launch information");
 
+    // Get new set of launches
     let mut launches: Vec<LaunchData> = match get_new_launches().await {
         Ok(ls) => ls.results.into_iter().map(LaunchData::from).collect(),
         Err(e) => {
@@ -42,6 +48,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
     };
     launches.sort_by_key(|l| l.net);
 
+    // Give each launch a number
     for (i, launch) in launches.iter_mut().enumerate() {
         launch.id = if let Ok(id) = i32::try_from(i) {
             id
@@ -56,7 +63,8 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
 
     let five_minutes = Duration::minutes(5);
 
-    let scrubbed: Vec<&LaunchData> = launches
+    // Get launches to notify about
+    let scrubbed: Vec<LaunchData> = launches
         .iter()
         .filter(|nl| {
             launch_cache
@@ -64,14 +72,52 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
                 .find(|ol| nl.ll_id == ol.ll_id)
                 .map_or(false, |ol| nl.net > (ol.net + five_minutes))
         })
+        .cloned()
         .collect();
-    for scrub in &scrubbed {
-        debug_log(&http, &format!("notifying of scrub of {}", &scrub.payload)).await;
-        tokio::spawn(notify_scrub(http.clone(), db.clone(), (*scrub).clone()));
-    }
 
-    launch_cache.clear();
-    launch_cache.append(&mut launches);
+    let finished: Vec<LaunchData> = launches
+        .iter()
+        .filter(|nl| {
+            matches!(
+                nl.status,
+                LaunchStatus::Success | LaunchStatus::Failure | LaunchStatus::PartialFailure
+            )
+        })
+        .filter(|nl| {
+            launch_cache
+                .iter()
+                .find(|ol| nl.ll_id == ol.ll_id)
+                .map_or(false, |ol| {
+                    matches!(
+                        ol.status,
+                        LaunchStatus::Go
+                            | LaunchStatus::TBD
+                            | LaunchStatus::InFlight
+                            | LaunchStatus::Hold
+                    )
+                })
+        })
+        .cloned()
+        .collect();
+
+    // Update launch cache and free the lock
+    *launch_cache = launches;
+    std::mem::drop(launch_cache);
+
+    // Send out notifications
+    scrubbed
+        .into_iter()
+        .map(|l| notify_scrub(http.clone(), db.clone(), l))
+        .collect::<FuturesUnordered<_>>()
+        .collect::<Vec<_>>()
+        .await;
+
+    finished
+        .into_iter()
+        .map(|l| notify_outcome(http.clone(), db.clone(), l))
+        .collect::<FuturesUnordered<_>>()
+        .collect::<Vec<_>>()
+        .await;
 }
 
 async fn get_new_launches() -> Result<LaunchContainer> {

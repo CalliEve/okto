@@ -35,6 +35,8 @@ pub struct GuildSettings {
     #[serde(default)]
     pub scrub_notifications: bool,
     #[serde(default)]
+    pub outcome_notifications: bool,
+    #[serde(default)]
     pub notifications_channel: Option<ChannelId>,
 }
 
@@ -45,6 +47,8 @@ pub struct UserSettings {
     pub filters: Vec<String>,
     #[serde(default)]
     pub scrub_notifications: bool,
+    #[serde(default)]
+    pub outcome_notifications: bool,
 }
 
 impl Reminder {

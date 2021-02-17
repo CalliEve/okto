@@ -614,6 +614,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
         };
 
         let mut scrub_notifications = false;
+        let mut outcome_notifications = false;
 
         let description = match id {
             ID::Channel((_, guild_id)) => {
@@ -623,13 +624,18 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                         let mut text = "The following options have been enabled:".to_owned();
 
                         if settings.scrub_notifications {
-                            scrub_notifications = settings.scrub_notifications;
+                            scrub_notifications = true;
                             text.push_str("\nScrub notifications");
+                        }
+
+                        if settings.outcome_notifications {
+                            outcome_notifications = true;
+                            text.push_str("\nOutcome notifications")
                         }
 
                         if let Some(chan) = settings.notifications_channel {
                             text.push_str(&format!(
-                                "\nScrub notifications will be posted in: <#{}>",
+                                "\nScrub and outcome notifications will be posted in: <#{}>",
                                 chan
                             ));
                         } else {
@@ -650,8 +656,13 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                         let mut text = "The following options have been enabled:".to_owned();
 
                         if settings.scrub_notifications {
-                            scrub_notifications = settings.scrub_notifications;
+                            scrub_notifications = true;
                             text.push_str("\nScrub notifications");
+                        }
+
+                        if settings.outcome_notifications {
+                            outcome_notifications = true;
+                            text.push_str("\nOutcome notifications")
                         }
 
                         text
@@ -671,7 +682,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
         let scrub_ses = ses.clone();
         em.add_field(
             "Toggle Scrub Notifications",
-            "Toggle scrub notifications on and off",
+            "Toggle scrub notifications on and off\nThese notifications notify you when a launch gets delayed.",
             false,
             &'🛑'.into(),
             move || {
@@ -685,11 +696,28 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
             },
         );
 
+        let outcome_ses = ses.clone();
+        em.add_field(
+            "Toggle Outcome Notifications",
+            "Toggle outcome notifications on and off\nThese notifications notify you about the outcome of a launch.",
+            false,
+            &'🛑'.into(),
+            move || {
+                let scrub_ses = outcome_ses.clone();
+                Box::pin(async move {
+                    let scrub_ses = scrub_ses.clone();
+                    toggle_setting(&scrub_ses, id, "outcome_notifications", !outcome_notifications)
+                        .await;
+                    other_page(scrub_ses, id).await
+                })
+            },
+        );
+
         if id.guild_specific() {
             let chan_ses = ses.clone();
             em.add_field(
                 "Set Notification Channel",
-                "Set the channel to receive scrub notifications in, this can only be one per server",
+                "Set the channel to receive scrub and outcome notifications in, this can only be one per server",
                 false,
                 &'📩'.into(),
                 move || {
