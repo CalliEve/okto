@@ -701,7 +701,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
             "Toggle Outcome Notifications",
             "Toggle outcome notifications on and off\nThese notifications notify you about the outcome of a launch.",
             false,
-            &'🛑'.into(),
+            &'🌍'.into(),
             move || {
                 let scrub_ses = outcome_ses.clone();
                 Box::pin(async move {
