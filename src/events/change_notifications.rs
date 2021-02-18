@@ -98,8 +98,21 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
         .await;
 
     stream::iter(guild_settings)
-        .filter_map(|settings| future::ready(settings.notifications_channel))
-        .map(|dm| {
+        .filter_map(|settings| future::ready(settings.notifications_channel.map(|c| (c, settings))))
+        .map(|(c, settings)| {
+            let mentions = settings
+                .mentions
+                .iter()
+                .fold(String::new(), |acc, mention| {
+                    acc + &format!(" <@&{}>", mention.as_u64())
+                });
+
+            (
+                c,
+                (settings.mention_others && !mentions.is_empty()).then(|| mentions),
+            )
+        })
+        .map(|(dm, mentions)| {
             dm.send_message(&http, |m: &mut CreateMessage| {
                 m.embed(|e: &mut CreateEmbed| {
                     default_embed(
@@ -112,7 +125,13 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
                         ),
                         false,
                     )
-                })
+                });
+
+                if mentions.is_some() {
+                    m.content(mentions.unwrap());
+                }
+
+                m
             })
         })
         .collect::<FuturesUnordered<_>>()
@@ -163,8 +182,21 @@ pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData)
         .await;
 
     stream::iter(guild_settings)
-        .filter_map(|settings| future::ready(settings.notifications_channel))
-        .map(|dm| {
+        .filter_map(|settings| future::ready(settings.notifications_channel.map(|c| (c, settings))))
+        .map(|(c, settings)| {
+            let mentions = settings
+                .mentions
+                .iter()
+                .fold(String::new(), |acc, mention| {
+                    acc + &format!(" <@&{}>", mention.as_u64())
+                });
+
+            (
+                c,
+                (settings.mention_others && !mentions.is_empty()).then(|| mentions),
+            )
+        })
+        .map(|(dm, mentions)| {
             dm.send_message(&http, |m: &mut CreateMessage| {
                 m.embed(|e: &mut CreateEmbed| {
                     default_embed(
@@ -177,7 +209,13 @@ pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData)
                         ),
                         matches!(finished.status, LaunchStatus::Success),
                     )
-                })
+                });
+
+                if mentions.is_some() {
+                    m.content(mentions.unwrap());
+                }
+
+                m
             })
         })
         .collect::<FuturesUnordered<_>>()

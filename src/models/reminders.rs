@@ -37,6 +37,8 @@ pub struct GuildSettings {
     #[serde(default)]
     pub outcome_notifications: bool,
     #[serde(default)]
+    pub mention_others: bool,
+    #[serde(default)]
     pub notifications_channel: Option<ChannelId>,
 }
 

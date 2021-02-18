@@ -1,4 +1,8 @@
 use std::{
+    fmt::{
+        self,
+        Display,
+    },
     io::ErrorKind as IoErrorKind,
     sync::Arc,
 };
@@ -613,61 +617,55 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
             return;
         };
 
-        let mut scrub_notifications = false;
-        let mut outcome_notifications = false;
+        let mut scrub_notifications = State::Off;
+        let mut outcome_notifications = State::Off;
+        let mut mentions = State::Off;
+        let mut description = "".to_owned();
 
-        let description = match id {
+        match id {
             ID::Channel((_, guild_id)) => {
                 let settings_res = get_guild_settings(&db, guild_id.into()).await;
                 match settings_res {
                     Ok(settings) => {
-                        let mut text = "The following options have been enabled:".to_owned();
-
                         if settings.scrub_notifications {
-                            scrub_notifications = true;
-                            text.push_str("\nScrub notifications");
+                            scrub_notifications = State::On;
                         }
 
                         if settings.outcome_notifications {
-                            outcome_notifications = true;
-                            text.push_str("\nOutcome notifications")
+                            outcome_notifications = State::On;
+                        }
+
+                        if settings.mention_others {
+                            mentions = State::On;
                         }
 
                         if let Some(chan) = settings.notifications_channel {
-                            text.push_str(&format!(
+                            description = format!(
                                 "\nScrub and outcome notifications will be posted in: <#{}>",
                                 chan
-                            ));
+                            );
                         } else {
-                            text.push_str(
-                                "\n**warning:** no notifications channel has been set yet!",
-                            )
+                            description =
+                                "\n**warning:** no notifications channel has been set yet!"
+                                    .to_owned()
                         }
-
-                        text
                     },
-                    Err(_) => "No settings found".to_owned(),
+                    Err(_) => {},
                 }
             },
             ID::User(user_id) => {
                 let settings_res = get_user_settings(&db, user_id.into()).await;
                 match settings_res {
                     Ok(settings) => {
-                        let mut text = "The following options have been enabled:".to_owned();
-
                         if settings.scrub_notifications {
-                            scrub_notifications = true;
-                            text.push_str("\nScrub notifications");
+                            scrub_notifications = State::On;
                         }
 
                         if settings.outcome_notifications {
-                            outcome_notifications = true;
-                            text.push_str("\nOutcome notifications")
+                            outcome_notifications = State::On;
                         }
-
-                        text
                     },
-                    Err(_) => "No settings have been found".to_owned(),
+                    Err(_) => {},
                 }
             },
         };
@@ -682,14 +680,14 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
         let scrub_ses = ses.clone();
         em.add_field(
             "Toggle Scrub Notifications",
-            "Toggle scrub notifications on and off\nThese notifications notify you when a launch gets delayed.",
+            &format!("Toggle scrub notifications on and off\nThese notifications notify you when a launch gets delayed.\nThis is currently **{}**", scrub_notifications),
             false,
             &'🛑'.into(),
             move || {
                 let scrub_ses = scrub_ses.clone();
                 Box::pin(async move {
                     let scrub_ses = scrub_ses.clone();
-                    toggle_setting(&scrub_ses, id, "scrub_notifications", !scrub_notifications)
+                    toggle_setting(&scrub_ses, id, "scrub_notifications", !scrub_notifications.as_ref())
                         .await;
                     other_page(scrub_ses, id).await
                 })
@@ -699,16 +697,35 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
         let outcome_ses = ses.clone();
         em.add_field(
             "Toggle Outcome Notifications",
-            "Toggle outcome notifications on and off\nThese notifications notify you about the outcome of a launch.",
+            &format!("Toggle outcome notifications on and off\nThese notifications notify you about the outcome of a launch.\nThis is currently **{}**", outcome_notifications),
             false,
             &'🌍'.into(),
             move || {
-                let scrub_ses = outcome_ses.clone();
+                let outcome_ses = outcome_ses.clone();
                 Box::pin(async move {
-                    let scrub_ses = scrub_ses.clone();
-                    toggle_setting(&scrub_ses, id, "outcome_notifications", !outcome_notifications)
+                    let outcome_ses = outcome_ses.clone();
+                    toggle_setting(&outcome_ses, id, "outcome_notifications", !outcome_notifications.as_ref())
                         .await;
-                    other_page(scrub_ses, id).await
+                    other_page(outcome_ses, id).await
+                })
+            },
+        );
+
+        let mentions_ses = ses.clone();
+        em.add_field(
+            "Toggle Mentions",
+            &format!(
+                "Toggle mentions for scrub and outcome notifications.\nThis is currently **{}**",
+                mentions
+            ),
+            false,
+            &'🔔'.into(),
+            move || {
+                let mentions_ses = mentions_ses.clone();
+                Box::pin(async move {
+                    let mentions_ses = mentions_ses.clone();
+                    toggle_setting(&mentions_ses, id, "mention_others", !mentions.as_ref()).await;
+                    other_page(mentions_ses, id).await
                 })
             },
         );
@@ -1119,5 +1136,29 @@ async fn get_db(ses: &Arc<RwLock<EmbedSession>>) -> Option<Database> {
     } else {
         println!("Could not get a database");
         None
+    }
+}
+
+#[derive(Copy, Clone)]
+enum State {
+    On,
+    Off,
+}
+
+impl Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::On => write!(f, "ON"),
+            Self::Off => write!(f, "OFF"),
+        }
+    }
+}
+
+impl AsRef<bool> for State {
+    fn as_ref(&self) -> &bool {
+        match self {
+            Self::On => &true,
+            Self::Off => &false,
+        }
     }
 }
