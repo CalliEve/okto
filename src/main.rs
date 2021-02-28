@@ -92,6 +92,9 @@ async fn main() {
     intents.remove(GatewayIntents::GUILD_PRESENCES);
     intents.remove(GatewayIntents::GUILD_VOICE_STATES);
     intents.remove(GatewayIntents::GUILD_BANS);
+    intents.remove(GatewayIntents::GUILD_INVITES);
+    intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
+    intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
 
     // Login with a bot token from the environment
     let mut client = Client::builder(&env::var("DISCORD_TOKEN").expect("no bot token"))

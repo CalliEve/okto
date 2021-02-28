@@ -16,6 +16,7 @@ use serenity::{
             GuildId,
             MessageId,
         },
+        gateway::Ready,
         prelude::Activity,
     },
     prelude::{
@@ -39,34 +40,32 @@ pub struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn cache_ready(&self, ctx: Context, guilds: Vec<GuildId>) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
         println!(
             "############\n\
             Logged in as: {} - {}\n\
             guilds: {}\n\
             CPUs: {}\n\
             ############",
-            ctx.cache.current_user().await.name,
-            ctx.cache.current_user().await.id,
-            guilds.len(),
+            ready.user.name,
+            ready.user.id,
+            ready.guilds.len(),
             num_cpus::get()
         );
 
-        if let Some(channel) = ctx.cache.guild_channel(448224720177856513).await {
-            let content = format!(
-                "**OKTO** restarted\nServing {} servers",
-                ctx.cache.guilds().await.len(),
-            );
-            let _ = channel
-                .send_message(&ctx.http, |m| m.content(content))
-                .await;
-        }
+        let content = format!(
+            "**OKTO** restarted\nServing {} servers",
+            ready.guilds.len(),
+        );
+        let _ = ChannelId(448224720177856513)
+            .send_message(&ctx.http, |m| m.content(content))
+            .await;
 
         tokio::spawn(async move {
             loop {
                 {
                     let status = format!("{} servers", ctx.cache.guilds().await.len());
-                    ctx.shard.set_activity(Some(Activity::listening(&status)));
+                    ctx.set_activity(Activity::listening(&status)).await;
                 }
                 tokio::time::sleep(Duration::from_secs(300)).await;
             }
