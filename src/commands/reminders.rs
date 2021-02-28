@@ -625,47 +625,40 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
         match id {
             ID::Channel((_, guild_id)) => {
                 let settings_res = get_guild_settings(&db, guild_id.into()).await;
-                match settings_res {
-                    Ok(settings) => {
-                        if settings.scrub_notifications {
-                            scrub_notifications = State::On;
-                        }
+                if let Ok(settings) = settings_res {
+                    if settings.scrub_notifications {
+                        scrub_notifications = State::On;
+                    }
 
-                        if settings.outcome_notifications {
-                            outcome_notifications = State::On;
-                        }
+                    if settings.outcome_notifications {
+                        outcome_notifications = State::On;
+                    }
 
-                        if settings.mention_others {
-                            mentions = State::On;
-                        }
+                    if settings.mention_others {
+                        mentions = State::On;
+                    }
 
-                        if let Some(chan) = settings.notifications_channel {
-                            description = format!(
-                                "\nScrub and outcome notifications will be posted in: <#{}>",
-                                chan
-                            );
-                        } else {
-                            description =
-                                "\n**warning:** no notifications channel has been set yet!"
-                                    .to_owned()
-                        }
-                    },
-                    Err(_) => {},
+                    if let Some(chan) = settings.notifications_channel {
+                        description = format!(
+                            "\nScrub and outcome notifications will be posted in: <#{}>",
+                            chan
+                        );
+                    } else {
+                        description =
+                            "\n**warning:** no notifications channel has been set yet!".to_owned()
+                    }
                 }
             },
             ID::User(user_id) => {
                 let settings_res = get_user_settings(&db, user_id.into()).await;
-                match settings_res {
-                    Ok(settings) => {
-                        if settings.scrub_notifications {
-                            scrub_notifications = State::On;
-                        }
+                if let Ok(settings) = settings_res {
+                    if settings.scrub_notifications {
+                        scrub_notifications = State::On;
+                    }
 
-                        if settings.outcome_notifications {
-                            outcome_notifications = State::On;
-                        }
-                    },
-                    Err(_) => {},
+                    if settings.outcome_notifications {
+                        outcome_notifications = State::On;
+                    }
                 }
             },
         };
