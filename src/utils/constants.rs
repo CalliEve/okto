@@ -23,7 +23,7 @@ use serenity::{
         channel::ReactionType,
         id::EmojiId,
     },
-    prelude::RwLock,
+    prelude::Mutex,
 };
 
 pub const DEFAULT_COLOR: u32 = 16750899;
@@ -214,5 +214,5 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
 lazy_static! {
     pub static ref LAUNCH_AGENCIES: HashMap<&'static str, &'static str> = agency_map();
     pub static ref LAUNCH_VEHICLES: HashMap<&'static str, Vec<&'static str>> = vehicle_map();
-    pub static ref RNG: RwLock<StdRng> = RwLock::new(StdRng::from_rng(thread_rng()).unwrap());
+    pub static ref RNG: Mutex<StdRng> = Mutex::new(StdRng::from_rng(thread_rng()).unwrap());
 }

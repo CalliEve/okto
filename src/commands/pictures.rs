@@ -41,7 +41,7 @@ use crate::{
 };
 
 #[group]
-#[commands(earthpic, spacepic, hubble, spirit, opportunity)]
+#[commands(earthpic, spacepic, hubble, spirit, opportunity, curiosity, perseverance)]
 struct Pictures;
 
 #[command]
@@ -121,7 +121,7 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     } else {
         let start = Utc.ymd(2000, 1, 1);
         let days = (now - start).num_days();
-        let day = RNG.write().await.gen_range(0..days);
+        let day = RNG.lock().await.gen_range(0..days);
         start + Duration::days(day)
     };
 
@@ -186,7 +186,7 @@ async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
     let picn: i32 = if let Some(pic_cache) = ctx.data.read().await.get::<PictureCacheKey>() {
         *pic_cache
             .hubble_pics
-            .choose(&mut RNG.write().await.to_owned())
+            .choose(&mut RNG.lock().await.to_owned())
             .ok_or("Could not retrieve a hubble picture from the picture cache")?
     } else {
         return Err("Could not retrieve the picture cache".into());
@@ -230,32 +230,11 @@ async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-#[description("Picks a random sol number and then grabs a random picture made by the Spirit rover on that sol (can error if Spirit didn't make a picture then)")]
+#[description("Picks a random sol number and then grabs a random picture made by the Spirit rover on that sol.")]
 async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
-    let sol: u16 = RNG.write().await.gen_range(1..5112);
-
-    let pictures: Vec<MarsRoverPicture> = DEFAULT_CLIENT
-        .get(
-            format!(
-                "https://api.nasa.gov/mars-photos/api/v1/rovers/spirit/photos?sol={}&api_key={}",
-                sol,
-                NASA_KEY.as_str()
-            )
-            .as_str(),
-        )
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<MarsRoverPictureRes>()
-        .await?
-        .photos;
-
-    let pic = {
-        get_rover_camera_picture(&pictures, &mut RNG.write().await.to_owned())
-            .ok_or(format!("No spirit picture found at sol {}", sol))?
-    };
+    let (pic, sol) = fetch_rover_camera_picture("spirit", 1..2186).await;
 
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
@@ -284,37 +263,87 @@ async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-#[description("Picks a random sol number and then grabs a random picture made by the Opportunity rover on that sol (can error if Opportunity didn't make a picture then)")]
+#[description("Picks a random sol number and then grabs a random picture made by the Opportunity rover on that sol.")]
 async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
     let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
 
-    let sol: u16 = { RNG.write().await.gen_range(1..5112) };
-
-    let pictures: Vec<MarsRoverPicture> = DEFAULT_CLIENT
-        .get(
-            format!(
-                "https://api.nasa.gov/mars-photos/api/v1/rovers/opportunity/photos?sol={}&api_key={}",
-                sol,
-                NASA_KEY.as_str()
-            )
-            .as_str(),
-        )
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<MarsRoverPictureRes>()
-        .await?.photos;
-
-    let pic = {
-        get_rover_camera_picture(&pictures, &mut RNG.write().await.to_owned())
-            .ok_or(format!("No opportunity picture found at sol {}", sol))?
-    };
+    let (pic, sol) = fetch_rover_camera_picture("opportunity", 1..5112).await;
 
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Opportunity mars rover")
+                        .icon_url(DEFAULT_ICON)
+                })
+                .color(DEFAULT_COLOR)
+                .field(
+                    "info:",
+                    format!(
+                        "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
+                        sol, pic.earth_date, pic.camera.full_name
+                    ),
+                    false,
+                )
+                .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
+                .image(pic.img_src)
+                .timestamp(&Utc::now())
+            })
+        })
+        .await?;
+
+    Ok(())
+}
+
+#[command]
+#[description("Picks a random sol number and then grabs a random picture made by the Curiosity rover on that sol.")]
+async fn curiosity(ctx: &Context, msg: &Message) -> CommandResult {
+    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
+
+    let max_sol = get_max_sol("curiosity").await?;
+
+    let (pic, sol) = fetch_rover_camera_picture("curiosity", 1..max_sol).await;
+
+    msg.channel_id
+        .send_message(&ctx.http, |m: &mut CreateMessage| {
+            m.embed(|e: &mut CreateEmbed| {
+                e.author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Random Picture made by the Curiosity mars rover")
+                        .icon_url(DEFAULT_ICON)
+                })
+                .color(DEFAULT_COLOR)
+                .field(
+                    "info:",
+                    format!(
+                        "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
+                        sol, pic.earth_date, pic.camera.full_name
+                    ),
+                    false,
+                )
+                .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
+                .image(pic.img_src)
+                .timestamp(&Utc::now())
+            })
+        })
+        .await?;
+
+    Ok(())
+}
+
+#[command]
+#[description("Picks a random sol number and then grabs a random picture made by the Perseverance rover on that sol.")]
+async fn perseverance(ctx: &Context, msg: &Message) -> CommandResult {
+    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
+
+    let max_sol = get_max_sol("perseverance").await?;
+
+    let (pic, sol) = fetch_rover_camera_picture("perseverance", 1..max_sol).await;
+
+    msg.channel_id
+        .send_message(&ctx.http, |m: &mut CreateMessage| {
+            m.embed(|e: &mut CreateEmbed| {
+                e.author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Random Picture made by the Perseverance mars rover")
                         .icon_url(DEFAULT_ICON)
                 })
                 .color(DEFAULT_COLOR)

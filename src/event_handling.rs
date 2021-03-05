@@ -7,6 +7,7 @@ use serenity::{
             Message,
             Reaction,
         },
+        gateway::Ready,
         guild::{
             Guild,
             GuildUnavailable,
@@ -16,7 +17,6 @@ use serenity::{
             GuildId,
             MessageId,
         },
-        gateway::Ready,
         prelude::Activity,
     },
     prelude::{
@@ -53,10 +53,7 @@ impl EventHandler for Handler {
             num_cpus::get()
         );
 
-        let content = format!(
-            "**OKTO** restarted\nServing {} servers",
-            ready.guilds.len(),
-        );
+        let content = format!("**OKTO** restarted\nServing {} servers", ready.guilds.len(),);
         let _ = ChannelId(448224720177856513)
             .send_message(&ctx.http, |m| m.content(content))
             .await;

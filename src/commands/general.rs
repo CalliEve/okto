@@ -355,7 +355,7 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         Some(p) => {
             let rand_name = {
                 p.exoplanets
-                    .choose(&mut RNG.write().await.to_owned())
+                    .choose(&mut RNG.lock().await.to_owned())
                     .ok_or("something went wrong while picking a planet")
             }?;
             get_planet(&ctx, &mut res_msg, &rand_name).await?
