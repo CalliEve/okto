@@ -60,6 +60,8 @@ async fn main() {
         .configure(|c| {
             c.owners(vec![247745860979392512.into()].into_iter().collect())
                 .dynamic_prefix(calc_prefix)
+                .prefixes(&["<@!429306620439166977> ", "<@429306620439166977> "])
+                .case_insensitivity(true)
         })
         .group(&GENERAL_GROUP)
         .group(&PICTURES_GROUP)

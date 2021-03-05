@@ -244,15 +244,28 @@ async fn allowed(
         return false;
     }
 
-    let req_perms = options.required_permissions();
+    let req_perms = *options.required_permissions();
 
     if !req_perms.is_empty() {
-        if let Some(Channel::Guild(channel)) = msg.channel(&ctx.cache).await {
-            if let Ok(perms) = channel
-                .permissions_for_user(&ctx.cache, msg.author.id)
-                .await
-            {
-                if !perms.contains(*req_perms) {
+        if let Some(Channel::Guild(channel)) = msg.channel(&ctx).await {
+            let guild = if let Some(guild) = msg.guild(&ctx).await {
+                guild
+            } else {
+                return false;
+            };
+
+            if msg.author.id == guild.owner_id {
+                return true;
+            }
+
+            let member = if let Ok(member) = msg.member(&ctx).await {
+                member
+            } else {
+                return false;
+            };
+
+            if let Ok(perms) = guild.user_permissions_in(&channel, &member) {
+                if !perms.contains(req_perms) {
                     return false;
                 }
             } else {

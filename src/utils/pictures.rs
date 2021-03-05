@@ -1,7 +1,13 @@
-use std::ops::{DerefMut, Range};
+use std::ops::{
+    DerefMut,
+    Range,
+};
 
 use rand::{
-    prelude::{Rng, RngCore},
+    prelude::{
+        Rng,
+        RngCore,
+    },
     seq::SliceRandom,
 };
 use reqwest::Error;
@@ -13,9 +19,9 @@ use super::constants::{
 };
 use crate::models::pictures::{
     HubbleImageSource,
+    MarsRoverInformationRes,
     MarsRoverPicture,
     MarsRoverPictureRes,
-    MarsRoverInformationRes
 };
 
 pub fn get_date_epic_image(full: &str) -> String {
@@ -49,14 +55,19 @@ async fn fetch_rover_image_from_api(sol: u16, rover: &str) -> Option<Vec<MarsRov
     )
 }
 
-pub async fn fetch_rover_camera_picture(rover: &str, sol_range: Range<u16>) -> (MarsRoverPicture, u16) {
+pub async fn fetch_rover_camera_picture(
+    rover: &str,
+    sol_range: Range<u16>,
+) -> (MarsRoverPicture, u16) {
     let mut rovers: Vec<MarsRoverPicture> = Vec::new();
     let mut sol: u16 = 0;
 
     while rovers.is_empty() {
         sol = RNG.lock().await.gen_range(sol_range.clone());
 
-        rovers = fetch_rover_image_from_api(sol, rover).await.unwrap_or(rovers);
+        rovers = fetch_rover_image_from_api(sol, rover)
+            .await
+            .unwrap_or(rovers);
     }
 
     (
@@ -77,8 +88,17 @@ where
     let cams: &[&str] = match rover {
         "spirit" | "opportunity" => &["NAVCAM", "PANCAM", "FHAZ", "RHAZ", "MINITES"],
         "curiosity" => &["MAST", "FHAZ", "NAVCAM", "RHAZ", "MAHLI", "CHEMCAM"],
-        "perseverance" => &["MCZ_RIGHT", "MCZ_LEFT", "FRONT_HAZCAM_LEFT_A", "FRONT_HAZCAM_RIGHT_A", "NAVCAM_RIGHT", "NAVCAM_LEFT", "REAR_HAZCAM_LEFT", "REAR_HAZCAM_RIGHT"],
-        _ => panic!("unknown rover provided")
+        "perseverance" => &[
+            "MCZ_RIGHT",
+            "MCZ_LEFT",
+            "FRONT_HAZCAM_LEFT_A",
+            "FRONT_HAZCAM_RIGHT_A",
+            "NAVCAM_RIGHT",
+            "NAVCAM_LEFT",
+            "REAR_HAZCAM_LEFT",
+            "REAR_HAZCAM_RIGHT",
+        ],
+        _ => panic!("unknown rover provided"),
     };
 
     for camera in cams {
@@ -94,24 +114,22 @@ where
 }
 
 pub async fn get_max_sol(rover: &str) -> Result<u16, Error> {
-    Ok(
-        DEFAULT_CLIENT
-            .get(
-                format!(
-                    "https://api.nasa.gov/mars-photos/api/v1/rovers/{}?api_key={}",
-                    rover,
-                    NASA_KEY.as_str()
-                )
-                .as_str(),
+    Ok(DEFAULT_CLIENT
+        .get(
+            format!(
+                "https://api.nasa.gov/mars-photos/api/v1/rovers/{}?api_key={}",
+                rover,
+                NASA_KEY.as_str()
             )
-            .send()
-            .await?
-            .error_for_status()?
-            .json::<MarsRoverInformationRes>()
-            .await?
-            .rover
-            .max_sol
-    )
+            .as_str(),
+        )
+        .send()
+        .await?
+        .error_for_status()?
+        .json::<MarsRoverInformationRes>()
+        .await?
+        .rover
+        .max_sol)
 }
 
 pub fn biggest_image_url(src: &HubbleImageSource) -> String {

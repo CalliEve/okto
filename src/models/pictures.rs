@@ -53,11 +53,10 @@ pub struct MarsRoverInformation {
     pub name: String,
     pub total_photos: u32,
     pub max_date: String,
-    pub max_sol: u16
+    pub max_sol: u16,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct MarsRoverInformationRes {
-    pub rover: MarsRoverInformation
+    pub rover: MarsRoverInformation,
 }
-

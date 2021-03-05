@@ -41,7 +41,15 @@ use crate::{
 };
 
 #[group]
-#[commands(earthpic, spacepic, hubble, spirit, opportunity, curiosity, perseverance)]
+#[commands(
+    earthpic,
+    spacepic,
+    hubble,
+    spirit,
+    opportunity,
+    curiosity,
+    perseverance
+)]
 struct Pictures;
 
 #[command]
