@@ -128,13 +128,15 @@ async fn scrub_message(
                 default_embed(
                     e,
                     &format!(
-                        "The launch of {} on a {} is now scheduled for {}",
+                        "The launch of {} on a **{}** is now scheduled for **{}**",
                         scrub.payload,
                         scrub.vehicle,
                         scrub.net.format("%d %B, %Y; %H:%m:%S UTC").to_string()
                     ),
                     false,
-                )
+                );
+
+                e.timestamp(scrub.net.format("%Y-%m-%dT%H:%M:%S").to_string())
             });
 
             if let Some(mentions) = mentions_opt {
@@ -186,7 +188,7 @@ async fn outcome_message(
                 default_embed(
                     e,
                     &format!(
-                        "The launch of {} on a {} has completed with a status of **{}**",
+                        "The launch of {} on a {} has completed with a status of **{}**!",
                         &finished.payload,
                         &finished.vehicle,
                         finished.status.as_str()
