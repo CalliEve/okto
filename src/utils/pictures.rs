@@ -1,7 +1,4 @@
-use std::ops::{
-    DerefMut,
-    Range,
-};
+use std::ops::Range;
 
 use rand::{
     prelude::{
@@ -71,8 +68,8 @@ pub async fn fetch_rover_camera_picture(
     }
 
     (
-        get_rover_camera_picture(rover, &rovers, RNG.lock().await.deref_mut())
-            .expect(&format!("No {} picture found", rover)),
+        get_rover_camera_picture(rover, &rovers, &mut *RNG.lock().await)
+            .unwrap_or_else(|| panic!("No {} picture found", rover)),
         sol,
     )
 }

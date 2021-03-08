@@ -393,7 +393,17 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                         Box::pin(async move {
                             println!("triggered add filter payload handler");
                             if let WaitPayload::Message(message) = payload {
-                                add_filter(&wait_ses.clone(), id, message.content).await;
+                                let content = message.content.to_lowercase();
+                                if LAUNCH_AGENCIES.contains_key(content.as_str()) {
+                                    add_filter(&wait_ses.clone(), id, content).await;
+                                } else {
+                                    temp_message(
+                                        wait_ses.read().await.channel,
+                                        &wait_ses.read().await.http,
+                                        "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
+                                        Duration::seconds(5)
+                                    ).await;
+                                }
                                 filters_page(wait_ses.clone(), id).await
                             }
                         })
@@ -427,7 +437,17 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                         let wait_ses = wait_ses.clone();
                         Box::pin(async move {
                             if let WaitPayload::Message(message) = payload {
-                                remove_filter(&wait_ses.clone(), id, message.content).await;
+                                let content = message.content.to_lowercase();
+                                if LAUNCH_AGENCIES.contains_key(content.as_str()) {
+                                    remove_filter(&wait_ses.clone(), id, content).await;
+                                } else {
+                                    temp_message(
+                                        wait_ses.read().await.channel,
+                                        &wait_ses.read().await.http,
+                                        "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
+                                        Duration::seconds(5)
+                                    ).await;
+                                }
                                 filters_page(wait_ses.clone(), id).await
                             }
                         })
@@ -902,8 +922,7 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) {
     };
 
     if !LAUNCH_AGENCIES.contains_key(filter.as_str()) {
-        println!("agencies does not contain filter {}", &filter);
-        return;
+        panic!("agencies does not contain filter {}", &filter);
     }
 
     let collection = if id.guild_specific() {
