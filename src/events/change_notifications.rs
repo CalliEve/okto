@@ -40,9 +40,10 @@ use crate::{
         reminders::{
             GuildSettings,
             UserSettings,
+            ReminderSettings
         },
     },
-    utils::default_embed,
+    utils::{default_embed, constants::LAUNCH_AGENCIES},
 };
 
 async fn get_toggled<T>(db: &Database, collection: &str, toggled: &str) -> Vec<T>
@@ -88,6 +89,13 @@ fn get_mentions(settings: &GuildSettings) -> Option<String> {
     (settings.mention_others && !mentions.is_empty()).then(|| mentions)
 }
 
+fn passes_filters<T>(settings: &T, l: &LaunchData) -> bool
+where
+    T: ReminderSettings
+{
+    !settings.get_filters().iter().filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str())).any(|agency| *agency == l.lsp)
+}
+
 pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
     let user_settings: Vec<UserSettings> =
         get_toggled(&db, "user_settings", "scrub_notifications").await;
@@ -96,6 +104,7 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
         get_toggled(&db, "guild_settings", "scrub_notifications").await;
 
     stream::iter(user_settings)
+        .filter(|settings| future::ready(passes_filters(settings, &scrub)))
         .filter_map(|settings| {
             let http = http.clone();
             async move { settings.user.create_dm_channel(&http).await.ok() }
@@ -107,6 +116,7 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
         .await;
 
     stream::iter(guild_settings)
+        .filter(|settings| future::ready(passes_filters(settings, &scrub)))
         .filter_map(|settings| future::ready(settings.notifications_channel.map(|c| (c, settings))))
         .map(|(c, settings)| (c, get_mentions(&settings)))
         .map(|(channel, mentions)| scrub_message(&http, &scrub, channel, mentions))
@@ -156,6 +166,7 @@ pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData)
         get_toggled(&db, "guild_settings", "outcome_notifications").await;
 
     stream::iter(user_settings)
+        .filter(|settings| future::ready(passes_filters(settings, &scrub)))
         .filter_map(|settings| {
             let http = http.clone();
             async move { settings.user.create_dm_channel(&http).await.ok() }
@@ -167,6 +178,7 @@ pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData)
         .await;
 
     stream::iter(guild_settings)
+        .filter(|settings| future::ready(passes_filters(settings, &scrub)))
         .filter_map(|settings| future::ready(settings.notifications_channel.map(|c| (c, settings))))
         .map(|(c, settings)| (c, get_mentions(&settings)))
         .map(|(channel, mentions)| outcome_message(&http, channel, &finished, mentions))

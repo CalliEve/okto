@@ -58,3 +58,40 @@ impl Reminder {
         Duration::minutes(self.minutes)
     }
 }
+
+pub trait ReminderSettings {
+    fn get_filters(&self) -> &Vec<String>;
+
+    fn notify_scrub(&self) -> bool;
+
+    fn notify_outcome(&self) -> bool;
+}
+
+impl ReminderSettings for GuildSettings {
+    fn get_filters(&self) -> &Vec<String> {
+        &self.filters
+    }
+
+    fn notify_scrub(&self) -> bool {
+        self.scrub_notifications
+    }
+
+    fn notify_outcome(&self) -> bool {
+        self.outcome_notifications
+    }
+}
+
+impl ReminderSettings for UserSettings {
+    fn get_filters(&self) -> &Vec<String> {
+        &self.filters
+    }
+
+    fn notify_scrub(&self) -> bool {
+        self.scrub_notifications
+    }
+
+    fn notify_outcome(&self) -> bool {
+        self.outcome_notifications
+    }
+}
+
