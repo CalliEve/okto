@@ -94,4 +94,3 @@ impl ReminderSettings for UserSettings {
         self.outcome_notifications
     }
 }
-

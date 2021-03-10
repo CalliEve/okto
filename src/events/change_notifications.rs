@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    future::Future
+};
 
 use futures::{
     future,
@@ -39,11 +42,14 @@ use crate::{
         },
         reminders::{
             GuildSettings,
+            ReminderSettings,
             UserSettings,
-            ReminderSettings
         },
     },
-    utils::{default_embed, constants::LAUNCH_AGENCIES},
+    utils::{
+        constants::LAUNCH_AGENCIES,
+        default_embed,
+    },
 };
 
 async fn get_toggled<T>(db: &Database, collection: &str, toggled: &str) -> Vec<T>
@@ -91,9 +97,63 @@ fn get_mentions(settings: &GuildSettings) -> Option<String> {
 
 fn passes_filters<T>(settings: &T, l: &LaunchData) -> bool
 where
-    T: ReminderSettings
+    T: ReminderSettings,
 {
-    !settings.get_filters().iter().filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str())).any(|agency| *agency == l.lsp)
+    !settings
+        .get_filters()
+        .iter()
+        .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
+        .any(|agency| *agency == l.lsp)
+}
+
+async fn send_user_notification<'r, F>(
+    http: &'r Arc<Http>,
+    all_settings: Vec<UserSettings>,
+    launch: &'r LaunchData,
+    message_maker: fn(
+        http: &'r Arc<Http>,
+        scrub: &'r LaunchData,
+        channel: ChannelId,
+        mentions_opt: Option<String>,
+    ) -> F,
+) where
+    F: Future<Output = Result<Message, SerenityError>>,
+{
+    stream::iter(all_settings)
+        .filter(|settings| future::ready(passes_filters(settings, &launch)))
+        .filter_map(|settings| {
+            let http = http.clone();
+            async move { settings.user.create_dm_channel(&http).await.ok() }
+        })
+        .map(|channel| message_maker(http, launch, channel.id, None))
+        .collect::<FuturesUnordered<_>>()
+        .await
+        .collect::<Vec<_>>()
+        .await;
+}
+
+async fn send_guild_notification<'r, F>(
+    http: &'r Arc<Http>,
+    all_settings: Vec<GuildSettings>,
+    launch: &'r LaunchData,
+    message_maker: fn(
+        http: &'r Arc<Http>,
+        scrub: &'r LaunchData,
+        channel: ChannelId,
+        mentions_opt: Option<String>,
+    ) -> F,
+) where
+    F: Future<Output = Result<Message, SerenityError>>,
+{
+    stream::iter(all_settings)
+        .filter(|settings| future::ready(passes_filters(settings, launch)))
+        .filter_map(|settings| future::ready(settings.notifications_channel.map(|c| (c, settings))))
+        .map(|(c, settings)| (c, get_mentions(&settings)))
+        .map(|(channel, mentions)| message_maker(http, launch, channel, mentions))
+        .collect::<FuturesUnordered<_>>()
+        .await
+        .collect::<Vec<_>>()
+        .await;
 }
 
 pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
@@ -103,32 +163,14 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
     let guild_settings: Vec<GuildSettings> =
         get_toggled(&db, "guild_settings", "scrub_notifications").await;
 
-    stream::iter(user_settings)
-        .filter(|settings| future::ready(passes_filters(settings, &scrub)))
-        .filter_map(|settings| {
-            let http = http.clone();
-            async move { settings.user.create_dm_channel(&http).await.ok() }
-        })
-        .map(|dm| scrub_message(&http, &scrub, dm.id, None))
-        .collect::<FuturesUnordered<_>>()
-        .await
-        .collect::<Vec<_>>()
-        .await;
+    send_user_notification(&http, user_settings, &scrub, scrub_message).await;
 
-    stream::iter(guild_settings)
-        .filter(|settings| future::ready(passes_filters(settings, &scrub)))
-        .filter_map(|settings| future::ready(settings.notifications_channel.map(|c| (c, settings))))
-        .map(|(c, settings)| (c, get_mentions(&settings)))
-        .map(|(channel, mentions)| scrub_message(&http, &scrub, channel, mentions))
-        .collect::<FuturesUnordered<_>>()
-        .await
-        .collect::<Vec<_>>()
-        .await;
+    send_guild_notification(&http, guild_settings, &scrub, scrub_message).await;
 }
 
-async fn scrub_message(
-    http: &Arc<Http>,
-    scrub: &LaunchData,
+async fn scrub_message<'r>(
+    http: &'r Arc<Http>,
+    scrub: &'r LaunchData,
     channel: ChannelId,
     mentions_opt: Option<String>,
 ) -> Result<Message, SerenityError> {
@@ -165,33 +207,15 @@ pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData)
     let guild_settings: Vec<GuildSettings> =
         get_toggled(&db, "guild_settings", "outcome_notifications").await;
 
-    stream::iter(user_settings)
-        .filter(|settings| future::ready(passes_filters(settings, &scrub)))
-        .filter_map(|settings| {
-            let http = http.clone();
-            async move { settings.user.create_dm_channel(&http).await.ok() }
-        })
-        .map(|dm| outcome_message(&http, dm.id, &finished, None))
-        .collect::<FuturesUnordered<_>>()
-        .await
-        .collect::<Vec<_>>()
-        .await;
+    send_user_notification(&http, user_settings, &finished, outcome_message).await;
 
-    stream::iter(guild_settings)
-        .filter(|settings| future::ready(passes_filters(settings, &scrub)))
-        .filter_map(|settings| future::ready(settings.notifications_channel.map(|c| (c, settings))))
-        .map(|(c, settings)| (c, get_mentions(&settings)))
-        .map(|(channel, mentions)| outcome_message(&http, channel, &finished, mentions))
-        .collect::<FuturesUnordered<_>>()
-        .await
-        .collect::<Vec<_>>()
-        .await;
+    send_guild_notification(&http, guild_settings, &finished, outcome_message).await;
 }
 
-async fn outcome_message(
-    http: &Arc<Http>,
+async fn outcome_message<'r>(
+    http: &'r Arc<Http>,
+    finished: &'r LaunchData,
     channel: ChannelId,
-    finished: &LaunchData,
     mentions_opt: Option<String>,
 ) -> Result<Message, SerenityError> {
     channel
