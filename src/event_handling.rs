@@ -1,4 +1,7 @@
-use std::time::Duration;
+use std::{
+    collections::HashMap,
+    time::Duration
+};
 
 use reqwest::header::AUTHORIZATION;
 use serenity::{
@@ -75,10 +78,12 @@ impl EventHandler for Handler {
                     let status = format!("{} servers", amount);
                     ctx.set_activity(Activity::listening(&status)).await;
 
+                    let mut map = HashMap::new();
+                    map.insert("server_count", amount);
                     if let Err(e) = DEFAULT_CLIENT
                         .post(format!("https://top.gg/api/bots/{}/stats", ready.user.id).as_str())
                         .header(AUTHORIZATION, TOPGG_TOKEN.as_str())
-                        .body(format!("{{\"server_count\": {}}}", amount))
+                        .json(&map)
                         .send()
                         .await
                         .and_then(|res| res.error_for_status())
