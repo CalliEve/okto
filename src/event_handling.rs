@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use reqwest::header::AUTHORIZATION;
 use serenity::{
     async_trait,
     model::{
@@ -25,14 +26,23 @@ use serenity::{
     },
 };
 
-use crate::events::{
-    statefulembed::{
-        on_message_delete as embed_delete,
-        on_reaction_add as embed_reactions,
+use crate::{
+    events::{
+        statefulembed::{
+            on_message_delete as embed_delete,
+            on_reaction_add as embed_reactions,
+        },
+        waitfor::{
+            waitfor_message,
+            waitfor_reaction,
+        },
     },
-    waitfor::{
-        waitfor_message,
-        waitfor_reaction,
+    utils::{
+        constants::{
+            DEFAULT_CLIENT,
+            TOPGG_TOKEN,
+        },
+        error_log,
     },
 };
 
@@ -61,8 +71,20 @@ impl EventHandler for Handler {
         tokio::spawn(async move {
             loop {
                 {
-                    let status = format!("{} servers", ctx.cache.guilds().await.len());
+                    let amount: usize = ctx.cache.guild_count().await;
+                    let status = format!("{} servers", amount);
                     ctx.set_activity(Activity::listening(&status)).await;
+
+                    if let Err(e) = DEFAULT_CLIENT
+                        .post(format!("https://top.gg/api/bots/{}/stats", ready.user.id).as_str())
+                        .header(AUTHORIZATION, TOPGG_TOKEN.as_str())
+                        .body(format!("{{\"server_count\": {}}}", amount))
+                        .send()
+                        .await
+                        .and_then(|res| res.error_for_status())
+                    {
+                        error_log(&ctx, &e.to_string()).await
+                    }
                 }
                 tokio::time::sleep(Duration::from_secs(300)).await;
             }

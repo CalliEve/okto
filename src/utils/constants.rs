@@ -48,6 +48,8 @@ fn default_headers() -> HeaderMap {
 lazy_static! {
     pub static ref GOOGLE_KEY: String = env::var("GOOGLE_KEY").expect("no GOOGLE_KEY has been set");
     pub static ref NASA_KEY: String = env::var("NASA_KEY").expect("no NASA_KEY has been set");
+    pub static ref TOPGG_TOKEN: String =
+        env::var("TOPGG_TOKEN").expect("no TOPGG_TOKEN has been set");
     pub static ref LL_KEY: String = format!(
         "Token {}",
         env::var("LL_KEY").expect("no LL_KEY has been set")

@@ -1,6 +1,6 @@
 use std::{
+    future::Future,
     sync::Arc,
-    future::Future
 };
 
 use futures::{
