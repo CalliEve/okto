@@ -241,7 +241,7 @@ fn reminder_embed<'a>(
             {}",
             &l.payload,
             &l.vehicle,
-            l.net.format("%d %B, %Y; %H:%m:%S UTC").to_string(),
+            l.net.format("%d %B, %Y; %H:%M:%S UTC").to_string(),
             live
         ))
         .timestamp(l.net.format("%Y-%m-%dT%H:%M:%S").to_string());

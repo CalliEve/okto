@@ -465,7 +465,7 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                         &launch.vehicle,
                         launch.status.as_str()
                     ))
-                    .field("Date:", launch.net.format("%d %B, %Y; %H:%m:%S UTC").to_string(), false)
+                    .field("Date:", launch.net.format("%d %B, %Y; %H:%M:%S UTC").to_string(), false)
                     .field(
                         "General information",
                         format!(

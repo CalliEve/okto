@@ -183,7 +183,7 @@ async fn scrub_message<'r>(
                         "The launch of {} on a **{}** is now scheduled for **{}**",
                         scrub.payload,
                         scrub.vehicle,
-                        scrub.net.format("%d %B, %Y; %H:%m:%S UTC").to_string()
+                        scrub.net.format("%d %B, %Y; %H:%M:%S UTC").to_string()
                     ),
                     false,
                 );
