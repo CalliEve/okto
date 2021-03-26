@@ -5,4 +5,4 @@
 
 OKTO is a discord bot for providing information about upcoming rocket launches, space images and general information about spaceflight.
 
-**[Invite OKTO to your server](https://discordapp.com/oauth2/authorize?client_id=429306620439166977&scope=bot&permissions=289856)**
+**[Invite OKTO to your server](https://discord.com/api/oauth2/authorize?client_id=429306620439166977&permissions=388160&scope=bot%20applications.commands)**

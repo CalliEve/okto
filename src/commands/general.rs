@@ -79,12 +79,11 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
         m.content(format!(
             "**OKTO** | `3.0`\n{}, I hope you enjoy using me on your server!",
             msg.author.name
-        ));
-        m.embed(|e: &mut CreateEmbed| {
-            e.title("Helpful Links")
+        )).embed(|e: &mut CreateEmbed| {
+            e.title("Invite Links")
             .description(
                 format!(
-                    "**__[Bot Invite](https://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=289856)__**\n\
+                    "**__[Bot Invite](https://discord.com/api/oauth2/authorize?client_id={}&permissions=388160&scope=bot%20applications.commands)__**\n\
                     **__[OKTO server](https://discord.gg/dXPHfPJ)__**",
                     user_id
                 )
@@ -125,7 +124,7 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
                     [**The Space Devs**](https://discord.gg/p7ntkNA)\n\
                     [**Rocket Watch server**](https://discord.gg/Hyd4umg)\n\
                     \n<:botTag:230105988211015680>\n\
-                    If you want OKTO on your server, click [**here**](https://discordapp.com/oauth2/authorize?client_id={}&scope=bot&permissions=289856)\n\
+                    If you want OKTO on your server, click [**here**](https://discord.com/api/oauth2/authorize?client_id={}&permissions=388160&scope=bot%20applications.commands)\n\
                     If you like OKTO, please [**vote**](https://discordbots.org/bot/429306620439166977/vote) ^-^",
                     user_id
                 )
