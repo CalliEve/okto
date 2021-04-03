@@ -1,4 +1,4 @@
-[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FBaev1%2Fokto%2Fbadge%3Fref%3Dstable&style=flat-square)](https://actions-badge.atrox.dev/Baev1/okto/goto?ref=stable)
+[![Build Status](https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2FCalliEve%2Fokto%2Fbadge%3Fref%3Dstable&style=flat-square)](https://actions-badge.atrox.dev/CalliEve/okto/goto?ref=stable)
 [![Discord](https://img.shields.io/discord/429307670730637312.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/dXPHfPJ)
 
 # okto

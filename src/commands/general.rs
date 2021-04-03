@@ -116,7 +116,7 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
                     "This is a bot to show upcoming launches and provide additional information on everything to do with spaceflight\n\
                     **Author:** Calli#3141\n\
                     **Version:** 3.0 \"rewrite it in rust\"\n\
-                    **Source Code:** [GitHub link](https://github.com/Baev1/okto)\n\
+                    **Source Code:** [GitHub link](https://github.com/callieve/okto)\n\
                     **Library:** [Serenity](https://github.com/serenity-rs/serenity)\n\
                     <:RustRainbow:752508751675654204>\n\
                     \n<:discord:314003252830011395>\n\
