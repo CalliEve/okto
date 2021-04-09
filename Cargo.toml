@@ -22,5 +22,5 @@ regex = "1"
 num_cpus = "1.13"
 threadpool = "1.8"
 tokio = { version = "1", features = ["full"] }
-mongodb = "2.0.0-alpha"
+mongodb = "2.0.0-alpha.1"
 futures = "0.3"
