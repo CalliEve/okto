@@ -367,20 +367,20 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
 #[derive(Deserialize, Debug, Clone)]
 struct StarInfo {
-    pub st_dist: Option<f64>,
-    pub st_spstr: Option<String>,
+    pub sy_dist: Option<f64>,
+    pub st_spectype: Option<String>,
     pub st_dens: Option<f64>,
     pub hd_name: Option<String>,
     pub st_age: Option<f64>,
     pub st_mass: Option<f64>,
     pub st_rad: Option<f64>,
-    pub pl_num: i32,
+    pub sy_pnum: i32,
     pub pl_letter: String,
 }
 
 impl StarInfo {
     fn get_lightyears_dist(&self) -> String {
-        match &self.st_dist {
+        match &self.sy_dist {
             Some(dist) => format!("{} lightyears", dist * 3.26156),
             None => "Unknown".to_owned(),
         }
@@ -410,13 +410,11 @@ impl StarInfo {
 
 async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandResult {
     let mut params = HashMap::new();
-    params.insert("table", "exoplanets".to_owned());
     params.insert("format", "json".to_owned());
-    params.insert("select", "st_dens,hd_name,pl_hostname,pl_letter,st_spstr,st_age,st_lum,st_mass,pl_pnum,st_rad,st_dist".to_owned());
-    params.insert("where", format!("pl_hostname like '{}'", &star_name));
+    params.insert("query", format!("select st_dens,hd_name,hostname,pl_letter,st_spectype,st_age,st_lum,st_mass,sy_pnum,st_rad,sy_dist from ps where hostname = '{}'", &star_name));
 
     let res: Vec<StarInfo> = DEFAULT_CLIENT
-        .get("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI")
+        .get("https://exoplanetarchive.ipac.caltech.edu/TAP/sync")
         .query(&params)
         .send()
         .await?
@@ -444,10 +442,10 @@ async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandR
                         **Letters used to designate planets in the system:** {}\n\
                         **Distance from us in lightyears:** {}\n\
                         **Distance from us in parsecs:** {}",
-                        star.pl_num,
+                        star.sy_pnum,
                         planets,
                         star.get_lightyears_dist(),
-                        star.st_dist
+                        star.sy_dist
                             .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
                     ),
                     false,
@@ -462,7 +460,7 @@ async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandR
                         **Mass of the star:** {}\n\
                         **Stellar Density:** {}",
                         star.get_age(),
-                        star.st_spstr
+                        star.st_spectype
                             .as_ref()
                             .cloned()
                             .unwrap_or_else(|| "unknown".to_owned()),
@@ -489,29 +487,27 @@ struct PlanetInfo {
     pub pl_masse: Option<f64>,
     pub pl_massj: Option<f64>,
     pub pl_eqt: Option<i32>,
-    pub pl_telescope: Option<String>,
-    pub pl_locale: Option<String>,
+    pub disc_telescope: Option<String>,
+    pub disc_locale: Option<String>,
     pub pl_rade: Option<f64>,
     pub pl_radj: Option<f64>,
     pub pl_dens: Option<f64>,
     pub pl_orbeccen: Option<f64>,
     pub pl_orbincl: Option<f64>,
     pub pl_orbper: Option<f64>,
-    pub pl_hostname: Option<String>,
+    pub hostname: Option<String>,
     pub pl_orbsmax: Option<f64>,
-    pub pl_disc: Option<i32>,
-    pub pl_discmethod: Option<String>,
+    pub disc_year: Option<i32>,
+    pub discoverymethod: Option<String>,
 }
 
 async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> CommandResult {
     let mut params = HashMap::new();
-    params.insert("table", "exoplanets".to_owned());
     params.insert("format", "json".to_owned());
-    params.insert("select", "pl_masse,pl_massj,pl_eqt,pl_telescope,pl_locale,pl_rade,pl_radj,pl_dens,pl_orbeccen,pl_orbincl,pl_orbper,pl_hostname,pl_orbsmax,pl_disc,pl_discmethod".to_owned());
-    params.insert("where", format!("pl_name like '{}'", &planet_name));
+    params.insert("query", format!("select pl_masse,pl_massj,pl_eqt,disc_telescope,disc_locale,pl_rade,pl_radj,pl_dens,pl_orbeccen,pl_orbincl,pl_orbper,hostname,pl_orbsmax,disc_year,discoverymethod from ps where pl_name = '{}'", &planet_name));
 
     let planet: PlanetInfo = DEFAULT_CLIENT
-        .get("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI")
+        .get("https://exoplanetarchive.ipac.caltech.edu/TAP/sync")
         .query(&params)
         .send()
         .await?
@@ -579,7 +575,7 @@ async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> Comm
                         .pl_orbsmax
                         .map_or_else(|| "unknown".to_owned(), |n| format!("{}AU", n)),
                     planet
-                        .pl_hostname
+                        .hostname
                         .as_ref()
                         .cloned()
                         .unwrap_or_else(|| "unknown".to_owned()),
@@ -594,20 +590,20 @@ async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> Comm
                     **Location of observation of planet discovery:** {}\n\
                     **Name of telescoped used:** {}",
                     planet
-                        .pl_disc
+                        .disc_year
                         .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
                     planet
-                        .pl_discmethod
+                        .discoverymethod
                         .as_ref()
                         .cloned()
                         .unwrap_or_else(|| "unknown".to_owned()),
                     planet
-                        .pl_locale
+                        .disc_locale
                         .as_ref()
                         .cloned()
                         .unwrap_or_else(|| "unknown".to_owned()),
                     planet
-                        .pl_telescope
+                        .disc_telescope
                         .as_ref()
                         .cloned()
                         .unwrap_or_else(|| "unknown".to_owned()),

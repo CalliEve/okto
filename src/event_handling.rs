@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    time::Duration
+    time::Duration,
 };
 
 use reqwest::header::AUTHORIZATION;

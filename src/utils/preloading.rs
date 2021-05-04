@@ -28,7 +28,7 @@ struct ExoplanetContainer {
 
 #[derive(Deserialize, Debug, Clone)]
 struct HostStarContainer {
-    pub pl_hostname: String,
+    pub hostname: String,
 }
 
 async fn hubble_pics() -> reqwest::Result<Vec<i32>> {
@@ -64,12 +64,11 @@ async fn curiosity_mardi() -> reqwest::Result<Vec<MarsRoverPicture>> {
 
 async fn exoplanets() -> reqwest::Result<Vec<String>> {
     let mut params = HashMap::new();
-    params.insert("table", "exoplanets");
     params.insert("format", "json");
-    params.insert("select", "pl_name");
+    params.insert("query", "select pl_name from ps");
 
     let exoplanet_res: Vec<ExoplanetContainer> = DEFAULT_CLIENT
-        .get("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI")
+        .get("https://exoplanetarchive.ipac.caltech.edu/TAP/sync")
         .query(&params)
         .send()
         .await?
@@ -82,12 +81,11 @@ async fn exoplanets() -> reqwest::Result<Vec<String>> {
 
 async fn host_stars() -> reqwest::Result<Vec<String>> {
     let mut params = HashMap::new();
-    params.insert("table", "exoplanets");
     params.insert("format", "json");
-    params.insert("select", "pl_hostname");
+    params.insert("query", "select hostname from ps");
 
     let host_star_res: Vec<HostStarContainer> = DEFAULT_CLIENT
-        .get("https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI")
+        .get("https://exoplanetarchive.ipac.caltech.edu/TAP/sync")
         .query(&params)
         .send()
         .await?
@@ -95,7 +93,7 @@ async fn host_stars() -> reqwest::Result<Vec<String>> {
         .json()
         .await?;
 
-    Ok(host_star_res.into_iter().map(|h| h.pl_hostname).collect())
+    Ok(host_star_res.into_iter().map(|h| h.hostname).collect())
 }
 
 pub async fn preload_data() -> PictureDataCache {
