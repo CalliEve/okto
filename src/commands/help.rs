@@ -3,7 +3,7 @@ use std::{
     sync::Arc,
 };
 
-use mongodb::bson::doc;
+use mongodb::bson::{doc, document::Document};
 use serenity::{
     builder::{
         CreateEmbed,
@@ -293,7 +293,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
     };
 
     let res = db
-        .collection("general_settings")
+        .collection::<Document>("general_settings")
         .find_one(doc! { "guild": msg.guild_id.unwrap().0 }, None)
         .await;
 

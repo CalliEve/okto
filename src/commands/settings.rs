@@ -1,5 +1,8 @@
 use mongodb::{
-    bson::doc,
+    bson::{
+        doc,
+        document::Document,
+    },
     options::UpdateOptions,
 };
 use serenity::{
@@ -43,7 +46,7 @@ async fn setprefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     };
 
     let res = db
-        .collection("general_settings")
+        .collection::<Document>("general_settings")
         .update_one(
             doc! {"guild": msg.guild_id.unwrap().0},
             doc! {

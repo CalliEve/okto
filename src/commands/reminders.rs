@@ -16,6 +16,7 @@ use mongodb::{
     bson::{
         self,
         doc,
+        document::Document,
     },
     error::{
         Error as MongoError,
@@ -23,6 +24,7 @@ use mongodb::{
         Result as MongoResult,
     },
     options::UpdateOptions,
+    Collection,
     Database,
 };
 use serenity::{
@@ -812,14 +814,14 @@ async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<V
     let db = if let Some(db) = get_db(&ses).await {
         db
     } else {
-        return Err(MongoError::from(MongoErrorKind::Io(
+        return Err(MongoError::from(MongoErrorKind::Io(Arc::new(
             IoErrorKind::NotFound.into(),
-        )));
+        ))));
     };
 
     match id {
         ID::User(user_id) => Ok(bson::from_bson(
-            db.collection("reminders")
+            db.collection::<Document>("reminders")
                 .find(doc! { "users": { "$in": [user_id.0] } }, None).await?
                 .collect::<Vec<Result<_, _>>>()
                 .await
@@ -828,7 +830,7 @@ async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<V
                 .into(),
         )?),
         ID::Channel((channel_id, guild_id)) => Ok(bson::from_bson(
-            db.collection("reminders")
+            db.collection::<Document>("reminders")
                 .find(
                     doc! { "channels": { "$in": [{ "channel": channel_id.0, "guild": guild_id.0 }] } },
                     None,
@@ -849,7 +851,7 @@ async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duratio
         return;
     };
 
-    let collection = db.collection("reminders");
+    let collection = db.collection::<Document>("reminders");
 
     let result = match id {
         ID::User(user_id) => collection.update_one(
@@ -885,7 +887,7 @@ async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dura
         return;
     };
 
-    let collection = db.collection("reminders");
+    let collection = db.collection::<Document>("reminders");
 
     let result = match id {
         ID::User(user_id) => collection.update_one(
@@ -925,7 +927,7 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) {
         panic!("agencies does not contain filter {}", &filter);
     }
 
-    let collection = if id.guild_specific() {
+    let collection: Collection<Document> = if id.guild_specific() {
         db.collection("guild_settings")
     } else {
         db.collection("user_settings")
@@ -965,7 +967,7 @@ async fn remove_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) 
         return;
     };
 
-    let collection = if id.guild_specific() {
+    let collection: Collection<Document> = if id.guild_specific() {
         db.collection("guild_settings")
     } else {
         db.collection("user_settings")
@@ -1005,7 +1007,7 @@ async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &str, 
         return;
     };
 
-    let collection = if id.guild_specific() {
+    let collection: Collection<Document> = if id.guild_specific() {
         db.collection("guild_settings")
     } else {
         db.collection("user_settings")
@@ -1045,7 +1047,7 @@ async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, chann
         return;
     };
 
-    let collection = db.collection("guild_settings");
+    let collection = db.collection::<Document>("guild_settings");
 
     let result = match id {
         ID::Channel((_, guild_id)) => collection.update_one(
@@ -1080,7 +1082,7 @@ async fn add_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
     };
 
     let result = db
-        .collection("guild_settings")
+        .collection::<Document>("guild_settings")
         .update_one(
             doc! {"guild": guild_id.0},
             doc! {
@@ -1111,7 +1113,7 @@ async fn remove_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
     };
 
     let result = db
-        .collection("guild_settings")
+        .collection::<Document>("guild_settings")
         .update_one(
             doc! {"guild": guild_id.0},
             doc! {
