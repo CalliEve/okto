@@ -77,7 +77,7 @@ async fn exoplanets() -> reqwest::Result<Vec<String>> {
         .json()
         .await?;
 
-    Ok(exoplanet_res.into_iter().map(|h| h.pl_name).unique().collect())
+    Ok(dbg!(exoplanet_res.into_iter().map(|h| h.pl_name).unique().collect()))
 }
 
 async fn host_stars() -> reqwest::Result<Vec<String>> {

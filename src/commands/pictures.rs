@@ -194,7 +194,7 @@ async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
     let picn: i32 = if let Some(pic_cache) = ctx.data.read().await.get::<PictureCacheKey>() {
         *pic_cache
             .hubble_pics
-            .choose(&mut RNG.lock().await.to_owned())
+            .choose(&mut *RNG.lock().await)
             .ok_or("Could not retrieve a hubble picture from the picture cache")?
     } else {
         return Err("Could not retrieve the picture cache".into());
