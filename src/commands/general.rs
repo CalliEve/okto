@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use itertools::Itertools;
 
 use chrono::Utc;
 use rand::seq::SliceRandom;
@@ -376,6 +377,7 @@ struct StarInfo {
     pub st_rad: Option<f64>,
     pub sy_pnum: i32,
     pub pl_letter: String,
+    pub hostname: String
 }
 
 impl StarInfo {
@@ -419,12 +421,16 @@ async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandR
         .send()
         .await?
         .error_for_status()?
-        .json()
-        .await?;
+        .json::<Vec<StarInfo>>()
+        .await?
+        .into_iter()
+        .unique_by(|s| s.hostname.clone())
+        .collect();
 
     let planets = res
         .iter()
         .map(|s| s.pl_letter.clone())
+        .unique()
         .collect::<Vec<String>>()
         .join(", ");
     let star = &res[0];
@@ -486,7 +492,7 @@ async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandR
 struct PlanetInfo {
     pub pl_masse: Option<f64>,
     pub pl_massj: Option<f64>,
-    pub pl_eqt: Option<i32>,
+    pub pl_eqt: Option<f64>,
     pub disc_telescope: Option<String>,
     pub disc_locale: Option<String>,
     pub pl_rade: Option<f64>,
@@ -499,12 +505,13 @@ struct PlanetInfo {
     pub pl_orbsmax: Option<f64>,
     pub disc_year: Option<i32>,
     pub discoverymethod: Option<String>,
+    pub pl_name: String,
 }
 
 async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> CommandResult {
     let mut params = HashMap::new();
     params.insert("format", "json".to_owned());
-    params.insert("query", format!("select pl_masse,pl_massj,pl_eqt,disc_telescope,disc_locale,pl_rade,pl_radj,pl_dens,pl_orbeccen,pl_orbincl,pl_orbper,hostname,pl_orbsmax,disc_year,discoverymethod from ps where pl_name = '{}'", &planet_name));
+    params.insert("query", format!("select pl_name,pl_masse,pl_massj,pl_eqt,disc_telescope,disc_locale,pl_rade,pl_radj,pl_dens,pl_orbeccen,pl_orbincl,pl_orbper,hostname,pl_orbsmax,disc_year,discoverymethod from ps where pl_name = '{}'", &planet_name));
 
     let planet: PlanetInfo = DEFAULT_CLIENT
         .get("https://exoplanetarchive.ipac.caltech.edu/TAP/sync")
@@ -513,8 +520,11 @@ async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> Comm
         .await?
         .error_for_status()?
         .json::<Vec<PlanetInfo>>()
-        .await?[0]
-        .clone();
+        .await?
+        .into_iter()
+        .unique_by(|p| p.pl_name.clone())
+        .next()
+        .ok_or("No planet like this found")?;
 
     msg.edit(&ctx.http, |m: &mut EditMessage| {
         m.embed(|e: &mut CreateEmbed| {

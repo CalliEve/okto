@@ -4,6 +4,7 @@ use std::{
 };
 
 use serde::Deserialize;
+use itertools::Itertools;
 
 use super::constants::*;
 use crate::models::{
@@ -76,7 +77,7 @@ async fn exoplanets() -> reqwest::Result<Vec<String>> {
         .json()
         .await?;
 
-    Ok(exoplanet_res.into_iter().map(|h| h.pl_name).collect())
+    Ok(exoplanet_res.into_iter().map(|h| h.pl_name).unique().collect())
 }
 
 async fn host_stars() -> reqwest::Result<Vec<String>> {
@@ -93,7 +94,7 @@ async fn host_stars() -> reqwest::Result<Vec<String>> {
         .json()
         .await?;
 
-    Ok(host_star_res.into_iter().map(|h| h.hostname).collect())
+    Ok(host_star_res.into_iter().map(|h| h.hostname).unique().collect())
 }
 
 pub async fn preload_data() -> PictureDataCache {

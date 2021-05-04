@@ -24,3 +24,4 @@ threadpool = "1.8"
 tokio = { version = "1", features = ["full"] }
 mongodb = "2.0.0-alpha.1"
 futures = "0.3"
+itertools = "0.10"
