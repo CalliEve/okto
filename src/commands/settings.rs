@@ -1,31 +1,18 @@
 use mongodb::{
-    bson::{
-        doc,
-        document::Document,
-    },
+    bson::{doc, document::Document},
     options::UpdateOptions,
 };
 use serenity::{
-    builder::{
-        CreateEmbed,
-        CreateMessage,
-    },
+    builder::{CreateEmbed, CreateMessage},
     framework::standard::{
-        macros::{
-            command,
-            group,
-        },
-        Args,
-        CommandResult,
+        macros::{command, group},
+        Args, CommandResult,
     },
     model::channel::Message,
     prelude::Context,
 };
 
-use crate::{
-    models::caches::DatabaseKey,
-    utils::default_embed,
-};
+use crate::{models::caches::DatabaseKey, utils::default_embed};
 
 #[group]
 #[commands(setprefix)]
@@ -48,7 +35,7 @@ async fn setprefix(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let res = db
         .collection::<Document>("general_settings")
         .update_one(
-            doc! {"guild": msg.guild_id.unwrap().0},
+            doc! {"guild": msg.guild_id.unwrap().0 as i64},
             doc! {
                 "$set": {
                     "prefix": prefix,

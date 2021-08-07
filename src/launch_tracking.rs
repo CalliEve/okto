@@ -1,38 +1,15 @@
-use std::{
-    collections::HashMap,
-    convert::TryFrom,
-    sync::Arc,
-};
+use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
 use chrono::Duration;
-use futures::stream::{
-    FuturesUnordered,
-    StreamExt,
-};
+use futures::stream::{FuturesUnordered, StreamExt};
 use mongodb::Database;
-use reqwest::{
-    header::AUTHORIZATION,
-    Result,
-};
-use serenity::{
-    http::Http,
-    prelude::RwLock,
-};
+use reqwest::{header::AUTHORIZATION, Result};
+use serenity::{http::Http, prelude::RwLock};
 
 use crate::{
-    events::change_notifications::{
-        notify_outcome,
-        notify_scrub,
-    },
-    models::launches::{
-        LaunchContainer,
-        LaunchData,
-        LaunchStatus,
-    },
-    utils::constants::{
-        DEFAULT_CLIENT,
-        LL_KEY,
-    },
+    events::change_notifications::{notify_outcome, notify_scrub},
+    models::launches::{LaunchContainer, LaunchData, LaunchStatus},
+    utils::constants::{DEFAULT_CLIENT, LL_KEY},
 };
 
 pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Vec<LaunchData>>>) {
@@ -44,7 +21,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
         Err(e) => {
             dbg!(e);
             return;
-        },
+        }
     };
     launches.sort_by_key(|l| l.net);
 
@@ -64,15 +41,20 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
     let five_minutes = Duration::minutes(5);
 
     // Get launches to notify about
-    let scrubbed: Vec<LaunchData> = launches
+    let scrubbed: Vec<(LaunchData, LaunchData)> = launches
         .iter()
-        .filter(|nl| {
+        .filter_map(|nl| {
             launch_cache
                 .iter()
                 .find(|ol| nl.ll_id == ol.ll_id)
-                .map_or(false, |ol| nl.net > (ol.net + five_minutes))
+                .and_then(|ol| {
+                    if nl.net > (ol.net + five_minutes) {
+                        Some((ol.clone(), nl.clone()))
+                    } else {
+                        None
+                    }
+                })
         })
-        .cloned()
         .collect();
 
     let finished: Vec<LaunchData> = launches
@@ -107,7 +89,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
     // Send out notifications
     scrubbed
         .into_iter()
-        .map(|l| notify_scrub(http.clone(), db.clone(), l))
+        .map(|l| notify_scrub(http.clone(), db.clone(), l.0, l.1))
         .collect::<FuturesUnordered<_>>()
         .collect::<Vec<_>>()
         .await;

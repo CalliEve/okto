@@ -5,10 +5,7 @@ use chrono::{
     TimeZone,
     Utc,
 };
-use rand::{
-    seq::SliceRandom,
-    Rng,
-};
+use rand::Rng;
 use serenity::{
     builder::{
         CreateEmbed,
@@ -29,10 +26,7 @@ use serenity::{
 };
 
 use crate::{
-    models::{
-        caches::PictureCacheKey,
-        pictures::*,
-    },
+    models::pictures::*,
     utils::{
         constants::*,
         other::cutoff_on_last_dot,
@@ -41,15 +35,7 @@ use crate::{
 };
 
 #[group]
-#[commands(
-    earthpic,
-    spacepic,
-    hubble,
-    spirit,
-    opportunity,
-    curiosity,
-    perseverance
-)]
+#[commands(earthpic, spacepic, spirit, opportunity, curiosity, perseverance)]
 struct Pictures;
 
 #[command]
@@ -178,57 +164,6 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     f.text(format!("APOD of {}", date.format("%Y-%m-%d")))
                 })
                 .image(apod_image.url)
-                .timestamp(&Utc::now())
-            })
-        })
-        .await?;
-
-    Ok(())
-}
-
-#[command]
-#[description("Picks a random picture from the hubblesite api")]
-async fn hubble(ctx: &Context, msg: &Message) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
-
-    let picn: i32 = if let Some(pic_cache) = ctx.data.read().await.get::<PictureCacheKey>() {
-        *pic_cache
-            .hubble_pics
-            .choose(&mut *RNG.lock().await)
-            .ok_or("Could not retrieve a hubble picture from the picture cache")?
-    } else {
-        return Err("Could not retrieve the picture cache".into());
-    };
-
-    let hubble_image_data: HubbleImageSource = DEFAULT_CLIENT
-        .get(format!("http://hubblesite.org/api/v3/image/{}", picn).as_str())
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
-
-    let pic = biggest_image_url(&hubble_image_data);
-
-    let description = &hubble_image_data
-        .description
-        .as_ref()
-        .map_or("no image description provided", |d: &String| {
-            cutoff_on_last_dot(d, 2040)
-        });
-
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Random Hubble Picture").icon_url(DEFAULT_ICON)
-                })
-                .color(DEFAULT_COLOR)
-                .description(description)
-                .footer(|f: &mut CreateEmbedFooter| {
-                    f.text(format!("source: hubblesite.org, pic ID: {}", picn))
-                })
-                .image(pic)
                 .timestamp(&Utc::now())
             })
         })

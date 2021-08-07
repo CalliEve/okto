@@ -27,7 +27,6 @@ use crate::events::{
 
 #[derive(Debug, Clone)]
 pub struct PictureDataCache {
-    pub hubble_pics: Vec<i32>,
     pub curiosity_mardi: Vec<MarsRoverPicture>,
     pub exoplanets: Vec<String>,
     pub host_stars: Vec<String>,

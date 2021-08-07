@@ -1,53 +1,20 @@
-use std::{
-    collections::HashSet,
-    sync::Arc,
-};
+use std::{collections::HashSet, sync::Arc};
 
-use mongodb::bson::{doc, document::Document};
+use mongodb::bson::{doc, document::Document, from_bson};
 use serenity::{
-    builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-    },
+    builder::{CreateEmbed, CreateEmbedAuthor},
     framework::standard::{
-        macros::{
-            help,
-            hook,
-        },
-        Args,
-        CommandGroup,
-        CommandResult,
-        CommonOptions,
-        HelpOptions,
-        OnlyIn,
+        macros::{help, hook},
+        Args, CommandGroup, CommandResult, CommonOptions, HelpOptions, OnlyIn,
     },
-    model::prelude::{
-        Channel,
-        Message,
-        ReactionType,
-        UserId,
-    },
-    prelude::{
-        Context,
-        RwLock,
-    },
+    model::prelude::{Channel, Message, ReactionType, UserId},
+    prelude::{Context, RwLock},
 };
 
 use crate::{
-    events::statefulembed::{
-        EmbedSession,
-        StatefulEmbed,
-    },
-    models::{
-        caches::DatabaseKey,
-        settings::GuildSettings,
-    },
-    utils::constants::{
-        DEFAULT_COLOR,
-        DEFAULT_ICON,
-        EXIT_EMOJI,
-        NUMBER_EMOJIS,
-    },
+    events::statefulembed::{EmbedSession, StatefulEmbed},
+    models::{caches::DatabaseKey, settings::GuildSettings},
+    utils::constants::{DEFAULT_COLOR, DEFAULT_ICON, EXIT_EMOJI, NUMBER_EMOJIS},
 };
 
 #[help]
@@ -294,7 +261,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
 
     let res = db
         .collection::<Document>("general_settings")
-        .find_one(doc! { "guild": msg.guild_id.unwrap().0 }, None)
+        .find_one(doc! { "guild": msg.guild_id.unwrap().0 as i64 }, None)
         .await;
 
     if res.is_err() {
@@ -304,7 +271,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
 
     res.unwrap()
         .and_then(|c| {
-            let settings = bson::from_bson::<GuildSettings>(c.into());
+            let settings = from_bson::<GuildSettings>(c.into());
             if settings.is_err() {
                 println!("Error in getting prefix: {:?}", settings.unwrap_err());
                 return None;

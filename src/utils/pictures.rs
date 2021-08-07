@@ -15,7 +15,6 @@ use super::constants::{
     RNG,
 };
 use crate::models::pictures::{
-    HubbleImageSource,
     MarsRoverInformationRes,
     MarsRoverPicture,
     MarsRoverPictureRes,
@@ -127,14 +126,4 @@ pub async fn get_max_sol(rover: &str) -> Result<u16, Error> {
         .await?
         .rover
         .max_sol)
-}
-
-pub fn biggest_image_url(src: &HubbleImageSource) -> String {
-    src.image_files
-        .iter()
-        .find(|i| i.width > 200)
-        .unwrap_or_else(|| src.image_files.first().expect("No hubble image returned"))
-        .file_url
-        .as_str()
-        .replace("//imgsrc.hubblesite.org/hvi", "https://hubblesite.org")
 }

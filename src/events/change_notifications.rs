@@ -1,55 +1,30 @@
-use std::{
-    future::Future,
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use futures::{
     future,
-    stream::{
-        self,
-        FuturesUnordered,
-    },
+    stream::{self, FuturesUnordered},
     StreamExt,
 };
 use mongodb::{
-    bson::{
-        self,
-        doc,
-        Document,
-    },
+    bson::{self, doc, Document},
     error::Result as MongoResult,
     Database,
 };
 use serde::de::DeserializeOwned;
 use serenity::{
-    builder::{
-        CreateEmbed,
-        CreateMessage,
-    },
+    builder::{CreateEmbed, CreateMessage},
     http::Http,
-    model::{
-        channel::Message,
-        id::ChannelId,
-    },
+    model::{channel::Message, id::ChannelId},
+    utils::Colour,
     Error as SerenityError,
 };
 
 use crate::{
     models::{
-        launches::{
-            LaunchData,
-            LaunchStatus,
-        },
-        reminders::{
-            GuildSettings,
-            ReminderSettings,
-            UserSettings,
-        },
+        launches::{LaunchData, LaunchStatus},
+        reminders::{GuildSettings, ReminderSettings, UserSettings},
     },
-    utils::{
-        constants::LAUNCH_AGENCIES,
-        default_embed,
-    },
+    utils::{constants::LAUNCH_AGENCIES, default_embed},
 };
 
 async fn get_toggled<T>(db: &Database, collection: &str, toggled: &str) -> Vec<T>
@@ -104,91 +79,75 @@ where
         .iter()
         .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
         .any(|agency| *agency == l.lsp)
+        && (settings.get_allow_filters().is_empty()
+            || settings
+                .get_allow_filters()
+                .iter()
+                .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
+                .any(|agency| *agency == l.lsp))
 }
 
-async fn send_user_notification<'r, F>(
+async fn send_user_notification<'r>(
     http: &'r Arc<Http>,
     all_settings: Vec<UserSettings>,
     launch: &'r LaunchData,
-    message_maker: fn(
-        http: &'r Arc<Http>,
-        scrub: &'r LaunchData,
-        channel: ChannelId,
-        mentions_opt: Option<String>,
-    ) -> F,
-) where
-    F: Future<Output = Result<Message, SerenityError>>,
-{
+    embed: &'r CreateEmbed,
+) {
     stream::iter(all_settings)
         .filter(|settings| future::ready(passes_filters(settings, &launch)))
         .filter_map(|settings| {
             let http = http.clone();
             async move { settings.user.create_dm_channel(&http).await.ok() }
         })
-        .map(|channel| message_maker(http, launch, channel.id, None))
+        .map(|channel| send_message(http, channel.id, None, embed))
         .collect::<FuturesUnordered<_>>()
         .await
         .collect::<Vec<_>>()
         .await;
 }
 
-async fn send_guild_notification<'r, F>(
+async fn send_guild_notification<'r>(
     http: &'r Arc<Http>,
     all_settings: Vec<GuildSettings>,
     launch: &'r LaunchData,
-    message_maker: fn(
-        http: &'r Arc<Http>,
-        scrub: &'r LaunchData,
-        channel: ChannelId,
-        mentions_opt: Option<String>,
-    ) -> F,
-) where
-    F: Future<Output = Result<Message, SerenityError>>,
-{
+    embed: &'r CreateEmbed,
+) {
     stream::iter(all_settings)
         .filter(|settings| future::ready(passes_filters(settings, launch)))
         .filter_map(|settings| future::ready(settings.notifications_channel.map(|c| (c, settings))))
         .map(|(c, settings)| (c, get_mentions(&settings)))
-        .map(|(channel, mentions)| message_maker(http, launch, channel, mentions))
+        .map(|(channel, mentions)| send_message(http, channel, mentions, embed))
         .collect::<FuturesUnordered<_>>()
         .await
         .collect::<Vec<_>>()
         .await;
 }
 
-pub async fn notify_scrub(http: Arc<Http>, db: Database, scrub: LaunchData) {
+pub async fn notify_scrub(http: Arc<Http>, db: Database, old: LaunchData, new: LaunchData) {
     let user_settings: Vec<UserSettings> =
         get_toggled(&db, "user_settings", "scrub_notifications").await;
 
     let guild_settings: Vec<GuildSettings> =
         get_toggled(&db, "guild_settings", "scrub_notifications").await;
 
-    send_user_notification(&http, user_settings, &scrub, scrub_message).await;
+    let embed = scrub_embed(&old, &new);
 
-    send_guild_notification(&http, guild_settings, &scrub, scrub_message).await;
+    send_user_notification(&http, user_settings, &new, &embed).await;
+
+    send_guild_notification(&http, guild_settings, &new, &embed).await;
 }
 
-async fn scrub_message<'r>(
+async fn send_message<'r>(
     http: &'r Arc<Http>,
-    scrub: &'r LaunchData,
     channel: ChannelId,
     mentions_opt: Option<String>,
+    embed: &'r CreateEmbed,
 ) -> Result<Message, SerenityError> {
     channel
         .send_message(http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
-                default_embed(
-                    e,
-                    &format!(
-                        "The launch of {} on a **{}** is now scheduled for **{}**",
-                        scrub.payload,
-                        scrub.vehicle,
-                        scrub.net.format("%d %B, %Y; %H:%M:%S UTC").to_string()
-                    ),
-                    false,
-                );
-
-                e.timestamp(scrub.net.format("%Y-%m-%dT%H:%M:%S").to_string())
+                *e = embed.clone();
+                e
             });
 
             if let Some(mentions) = mentions_opt {
@@ -198,6 +157,26 @@ async fn scrub_message<'r>(
             m
         })
         .await
+}
+
+fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
+    let mut e = CreateEmbed::default();
+
+    default_embed(
+        &mut e,
+        &format!(
+            "The launch of {} on a **{}** is now scheduled for <t:{}> instead of <t:{}>",
+            new.payload,
+            new.vehicle,
+            new.net.timestamp(),
+            old.net.timestamp()
+        ),
+        false,
+    );
+
+    e.timestamp(new.net.format("%Y-%m-%dT%H:%M:%S").to_string());
+
+    e
 }
 
 pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData) {
@@ -207,37 +186,34 @@ pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData)
     let guild_settings: Vec<GuildSettings> =
         get_toggled(&db, "guild_settings", "outcome_notifications").await;
 
-    send_user_notification(&http, user_settings, &finished, outcome_message).await;
+    let embed = outcome_embed(&finished);
 
-    send_guild_notification(&http, guild_settings, &finished, outcome_message).await;
+    send_user_notification(&http, user_settings, &finished, &embed).await;
+
+    send_guild_notification(&http, guild_settings, &finished, &embed).await;
 }
 
-async fn outcome_message<'r>(
-    http: &'r Arc<Http>,
-    finished: &'r LaunchData,
-    channel: ChannelId,
-    mentions_opt: Option<String>,
-) -> Result<Message, SerenityError> {
-    channel
-        .send_message(http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
-                default_embed(
-                    e,
-                    &format!(
-                        "The launch of {} on a {} has completed with a status of **{}**!",
-                        &finished.payload,
-                        &finished.vehicle,
-                        finished.status.as_str()
-                    ),
-                    matches!(finished.status, LaunchStatus::Success),
-                )
-            });
+fn outcome_embed<'r>(finished: &'r LaunchData) -> CreateEmbed {
+    let mut e = CreateEmbed::default();
 
-            if let Some(mentions) = mentions_opt {
-                m.content(mentions);
-            }
+    default_embed(
+        &mut e,
+        &format!(
+            "The launch of {} on a {} has completed with a status of **{}**!",
+            &finished.payload,
+            &finished.vehicle,
+            finished.status.as_str()
+        ),
+        true,
+    );
 
-            m
-        })
-        .await
+    e.color(if matches!(finished.status, LaunchStatus::Success) {
+        Colour::FOOYOO
+    } else if matches!(finished.status, LaunchStatus::PartialFailure) {
+        Colour::ORANGE
+    } else {
+        Colour::RED
+    });
+
+    e
 }

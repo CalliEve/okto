@@ -1,37 +1,17 @@
-use std::{
-    collections::HashMap,
-    str::FromStr,
-    sync::Arc,
-};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
-use chrono::{
-    Duration,
-    NaiveDateTime,
-    Utc,
-};
+use chrono::{Duration, NaiveDateTime, Utc};
 use futures::{
     future,
-    stream::{
-        self,
-        FuturesUnordered,
-        StreamExt,
-    },
+    stream::{self, FuturesUnordered, StreamExt},
 };
 use mongodb::{
-    bson::{
-        self,
-        doc,
-        Document,
-    },
+    bson::{self, doc, Document},
     error::Result as MongoResult,
     Database,
 };
 use serenity::{
-    builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-        CreateMessage,
-    },
+    builder::{CreateEmbed, CreateEmbedAuthor, CreateMessage},
     http::client::Http,
     prelude::RwLock,
 };
@@ -39,24 +19,13 @@ use serenity::{
 use crate::{
     launch_tracking,
     models::{
-        launches::{
-            LaunchData,
-            LaunchStatus,
-        },
+        launches::{LaunchData, LaunchStatus},
         reminders::Reminder,
     },
     utils::{
-        constants::{
-            DEFAULT_COLOR,
-            DEFAULT_ICON,
-            LAUNCH_AGENCIES,
-        },
-        error_log,
-        format_duration,
-        reminders::{
-            get_guild_settings,
-            get_user_settings,
-        },
+        constants::{DEFAULT_COLOR, DEFAULT_ICON, LAUNCH_AGENCIES},
+        error_log, format_duration,
+        reminders::{get_guild_settings, get_user_settings},
     },
 };
 
@@ -139,9 +108,7 @@ async fn execute_reminder(
     difference: Duration,
 ) {
     let Reminder {
-        channels,
-        users,
-        ..
+        channels, users, ..
     } = reminder;
 
     stream::iter(channels.into_iter())
@@ -160,7 +127,13 @@ async fn execute_reminder(
                     .filters
                     .iter()
                     .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
-                    .any(|agency| *agency == l.lsp),
+                    .any(|agency| *agency == l.lsp)
+                    && (settings.allow_filters.is_empty()
+                        || settings
+                            .allow_filters
+                            .iter()
+                            .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
+                            .any(|agency| *agency == l.lsp)),
             )
         })
         .map(|(c, settings)| {
@@ -200,7 +173,13 @@ async fn execute_reminder(
                     .filters
                     .iter()
                     .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
-                    .any(|agency| *agency == l.lsp),
+                    .any(|agency| *agency == l.lsp)
+                    && (settings.allow_filters.is_empty()
+                        || settings
+                            .allow_filters
+                            .iter()
+                            .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
+                            .any(|agency| *agency == l.lsp)),
             )
         })
         .filter_map(|(u, _)| {
@@ -237,11 +216,11 @@ fn reminder_embed<'a>(
         .description(format!(
             "**Payload:** {}\n\
             **Vehicle:** {}\n\
-            **NET:** {}\n\
+            **NET:** <t:{}>\n\
             {}",
             &l.payload,
             &l.vehicle,
-            l.net.format("%d %B, %Y; %H:%M:%S UTC").to_string(),
+            l.net.timestamp(),
             live
         ))
         .timestamp(l.net.format("%Y-%m-%dT%H:%M:%S").to_string());

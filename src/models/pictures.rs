@@ -36,19 +36,6 @@ pub struct MarsRoverPictureRes {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-pub struct HubbleImage {
-    pub width: u32,
-    pub file_url: String,
-}
-
-#[derive(Deserialize, Debug, Clone)]
-pub struct HubbleImageSource {
-    pub description: Option<String>,
-    pub image_files: Vec<HubbleImage>,
-    pub name: String,
-}
-
-#[derive(Deserialize, Debug, Clone)]
 pub struct MarsRoverInformation {
     pub name: String,
     pub total_photos: u32,

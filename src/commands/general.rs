@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use itertools::Itertools;
 
 use chrono::Utc;
+use itertools::Itertools;
 use rand::seq::SliceRandom;
 use serde::{
     Deserialize,
@@ -377,7 +377,7 @@ struct StarInfo {
     pub st_rad: Option<f64>,
     pub sy_pnum: i32,
     pub pl_letter: String,
-    pub hostname: String
+    pub hostname: String,
 }
 
 impl StarInfo {

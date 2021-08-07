@@ -1,50 +1,26 @@
-use std::{
-    collections::HashMap,
-    time::Duration,
-};
+use std::{collections::HashMap, time::Duration};
 
+use http::StatusCode;
 use reqwest::header::AUTHORIZATION;
 use serenity::{
     async_trait,
     model::{
-        channel::{
-            Message,
-            Reaction,
-        },
+        channel::{Message, Reaction},
         gateway::Ready,
-        guild::{
-            Guild,
-            GuildUnavailable,
-        },
-        id::{
-            ChannelId,
-            GuildId,
-            MessageId,
-        },
+        guild::{Guild, GuildUnavailable},
+        id::{ChannelId, GuildId, MessageId},
         prelude::Activity,
     },
-    prelude::{
-        Context,
-        EventHandler,
-    },
+    prelude::{Context, EventHandler},
 };
 
 use crate::{
     events::{
-        statefulembed::{
-            on_message_delete as embed_delete,
-            on_reaction_add as embed_reactions,
-        },
-        waitfor::{
-            waitfor_message,
-            waitfor_reaction,
-        },
+        statefulembed::{on_message_delete as embed_delete, on_reaction_add as embed_reactions},
+        waitfor::{waitfor_message, waitfor_reaction},
     },
     utils::{
-        constants::{
-            DEFAULT_CLIENT,
-            TOPGG_TOKEN,
-        },
+        constants::{DEFAULT_CLIENT, TOPGG_TOKEN},
         error_log,
     },
 };
@@ -88,7 +64,12 @@ impl EventHandler for Handler {
                         .await
                         .and_then(|res| res.error_for_status())
                     {
-                        error_log(&ctx, &e.to_string()).await
+                        if e.status()
+                            .map(|s| s != StatusCode::FORBIDDEN)
+                            .unwrap_or(true)
+                        {
+                            error_log(&ctx, &e.to_string()).await
+                        }
                     }
                 }
                 tokio::time::sleep(Duration::from_secs(300)).await;

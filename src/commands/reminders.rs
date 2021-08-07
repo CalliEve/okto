@@ -1,84 +1,40 @@
 use std::{
-    fmt::{
-        self,
-        Display,
-    },
+    fmt::{self, Display},
     io::ErrorKind as IoErrorKind,
     sync::Arc,
 };
 
-use chrono::{
-    Duration,
-    Utc,
-};
+use chrono::{Duration, Utc};
 use futures::stream::StreamExt;
 use mongodb::{
-    bson::{
-        self,
-        doc,
-        document::Document,
-    },
-    error::{
-        Error as MongoError,
-        ErrorKind as MongoErrorKind,
-        Result as MongoResult,
-    },
+    bson::{self, doc, document::Document},
+    error::{Error as MongoError, ErrorKind as MongoErrorKind, Result as MongoResult},
     options::UpdateOptions,
-    Collection,
-    Database,
+    Collection, Database,
 };
 use serenity::{
-    builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-    },
+    builder::{CreateEmbed, CreateEmbedAuthor},
     framework::standard::{
-        macros::{
-            command,
-            group,
-        },
-        Args,
-        CommandResult,
+        macros::{command, group},
+        Args, CommandResult,
     },
     model::{
         channel::Message,
-        id::{
-            ChannelId,
-            GuildId,
-            RoleId,
-            UserId,
-        },
+        id::{ChannelId, GuildId, RoleId, UserId},
     },
-    prelude::{
-        Context,
-        RwLock,
-    },
+    prelude::{Context, RwLock},
 };
 
 use crate::{
     events::{
-        statefulembed::{
-            EmbedSession,
-            StatefulEmbed,
-        },
-        waitfor::{
-            WaitFor,
-            WaitPayload,
-        },
+        statefulembed::{EmbedSession, StatefulEmbed},
+        waitfor::{WaitFor, WaitPayload},
     },
-    models::{
-        caches::DatabaseKey,
-        reminders::Reminder,
-    },
+    models::{caches::DatabaseKey, reminders::Reminder},
     utils::{
         constants::*,
-        format_duration,
-        parse_duration,
-        parse_id,
-        reminders::{
-            get_guild_settings,
-            get_user_settings,
-        },
+        format_duration, parse_duration, parse_id,
+        reminders::{get_guild_settings, get_user_settings},
         temp_message,
     },
 };
@@ -157,12 +113,24 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
         let filters_ses = ses.clone();
         em.add_field(
             "Filters",
-            "Set which agencies to filter out of launch reminders",
+            "Set which agencies to filter out of launch reminders, making you not get any reminders for these agencies again",
             false,
             &'📝'.into(),
             move || {
                 let filters_ses = filters_ses.clone();
                 Box::pin(async move { filters_page(filters_ses.clone(), id).await })
+            },
+        );
+
+        let allow_filters_ses = ses.clone();
+        em.add_field(
+            "Allow Filters",
+            "Set which agencies to filter launch reminders for, making you get only reminders for these agencies",
+            false,
+            &'🔍'.into(),
+            move || {
+                let allow_filters_ses = allow_filters_ses.clone();
+                Box::pin(async move { allow_filters_page(allow_filters_ses.clone(), id).await })
             },
         );
 
@@ -232,7 +200,7 @@ fn reminders_page(
                     ))
                 }
                 text
-            },
+            }
             _ => "No reminders have been set yet".to_owned(),
         };
 
@@ -348,10 +316,10 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    },
+                    }
                     _ => "No agency filters have been set yet".to_owned(),
                 }
-            },
+            }
             ID::User(user_id) => {
                 let settings_res = get_user_settings(&db, user_id.into()).await;
                 match settings_res {
@@ -361,10 +329,10 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    },
+                    }
                     _ => "No agency filters have been set yet".to_owned(),
                 }
-            },
+            }
         };
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
@@ -393,11 +361,10 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
                         let wait_ses = wait_ses.clone();
                         Box::pin(async move {
-                            println!("triggered add filter payload handler");
                             if let WaitPayload::Message(message) = payload {
                                 let content = message.content.to_lowercase();
                                 if LAUNCH_AGENCIES.contains_key(content.as_str()) {
-                                    add_filter(&wait_ses.clone(), id, content).await;
+                                    add_filter(&wait_ses.clone(), id, content, "filters").await;
                                 } else {
                                     temp_message(
                                         wait_ses.read().await.channel,
@@ -441,7 +408,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             if let WaitPayload::Message(message) = payload {
                                 let content = message.content.to_lowercase();
                                 if LAUNCH_AGENCIES.contains_key(content.as_str()) {
-                                    remove_filter(&wait_ses.clone(), id, content).await;
+                                    remove_filter(&wait_ses.clone(), id, content, "filters").await;
                                 } else {
                                     temp_message(
                                         wait_ses.read().await.channel,
@@ -456,6 +423,163 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     })
                     .send_explanation(
                         "Send the filter name of the agency you want to receive reminders for again",
+                        &inner_ses.read().await.http,
+                    )
+                    .await
+                    .listen(inner_ses.read().await.data.clone())
+                    .await;
+                })
+            },
+        );
+
+        em.add_field(
+            "Back",
+            "Go back to main menu",
+            false,
+            &'❌'.into(),
+            move || {
+                let ses = ses.clone();
+                Box::pin(async move { main_menu(ses.clone(), id).await })
+            },
+        );
+
+        let result = em.show().await;
+        if result.is_err() {
+            dbg!(result.unwrap_err());
+        }
+    })
+}
+
+fn allow_filters_page(
+    ses: Arc<RwLock<EmbedSession>>,
+    id: ID,
+) -> futures::future::BoxFuture<'static, ()> {
+    Box::pin(async move {
+        let db = if let Some(db_res) = get_db(&ses).await {
+            db_res
+        } else {
+            return;
+        };
+
+        let description = match id {
+            ID::Channel(channel_id) => {
+                let settings_res = get_guild_settings(&db, channel_id.1.into()).await;
+                match settings_res {
+                    Ok(settings) if !settings.allow_filters.is_empty() => {
+                        let mut text =
+                            "The following agency allow filters have been set:".to_owned();
+                        for filter in &settings.allow_filters {
+                            text.push_str(&format!("\n`{}`", filter))
+                        }
+                        text
+                    }
+                    _ => "No agency allow filters have been set yet".to_owned(),
+                }
+            }
+            ID::User(user_id) => {
+                let settings_res = get_user_settings(&db, user_id.into()).await;
+                match settings_res {
+                    Ok(settings) if !settings.allow_filters.is_empty() => {
+                        let mut text =
+                            "The following agency allow filters have been set:".to_owned();
+                        for filter in &settings.allow_filters {
+                            text.push_str(&format!("\n`{}`", filter))
+                        }
+                        text
+                    }
+                    _ => "No agency allow filters have been set yet".to_owned(),
+                }
+            }
+        };
+
+        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
+            e.color(DEFAULT_COLOR)
+                .timestamp(&Utc::now())
+                .author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Launch Agency Allow Filters").icon_url(DEFAULT_ICON)
+                })
+                .description(description)
+        });
+
+        let add_ses = ses.clone();
+        em.add_field(
+            "Add Allow Filter",
+            "Add a new allow filter",
+            false,
+            &PROGRADE,
+            move || {
+                let add_ses = add_ses.clone();
+                Box::pin(async move {
+                    let inner_ses = add_ses.clone();
+                    let channel_id = inner_ses.read().await.channel;
+                    let user_id = inner_ses.read().await.author;
+                    let wait_ses = add_ses.clone();
+
+                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                        let wait_ses = wait_ses.clone();
+                        Box::pin(async move {
+                            if let WaitPayload::Message(message) = payload {
+                                let content = message.content.to_lowercase();
+                                if LAUNCH_AGENCIES.contains_key(content.as_str()) {
+                                    add_filter(&wait_ses.clone(), id, content, "allow_filters").await;
+                                } else {
+                                    temp_message(
+                                        wait_ses.read().await.channel,
+                                        &wait_ses.read().await.http,
+                                        "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
+                                        Duration::seconds(5)
+                                    ).await;
+                                }
+                                filters_page(wait_ses.clone(), id).await
+                            }
+                        })
+                    })
+                    .send_explanation(
+                        "Send the filter name of the agency you specifically want to get reminders for",
+                        &inner_ses.read().await.http,
+                    )
+                    .await
+                    .listen(inner_ses.read().await.data.clone())
+                    .await;
+                })
+            },
+        );
+
+        let remove_ses = ses.clone();
+        em.add_field(
+            "Remove Allow Filter",
+            "Remove an allow filter",
+            false,
+            &RETROGRADE,
+            move || {
+                let remove_ses = remove_ses.clone();
+                Box::pin(async move {
+                    let inner_ses = remove_ses.clone();
+                    let channel_id = inner_ses.read().await.channel;
+                    let user_id = inner_ses.read().await.author;
+                    let wait_ses = remove_ses.clone();
+
+                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                        let wait_ses = wait_ses.clone();
+                        Box::pin(async move {
+                            if let WaitPayload::Message(message) = payload {
+                                let content = message.content.to_lowercase();
+                                if LAUNCH_AGENCIES.contains_key(content.as_str()) {
+                                    remove_filter(&wait_ses.clone(), id, content, "allow_filters").await;
+                                } else {
+                                    temp_message(
+                                        wait_ses.read().await.channel,
+                                        &wait_ses.read().await.http,
+                                        "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
+                                        Duration::seconds(5)
+                                    ).await;
+                                }
+                                filters_page(wait_ses.clone(), id).await
+                            }
+                        })
+                    })
+                    .send_explanation(
+                        "Send the filter name of the agency you do not want to receive reminders for again",
                         &inner_ses.read().await.http,
                     )
                     .await
@@ -511,10 +635,10 @@ fn mentions_page(
                             }
                         }
                         text
-                    },
+                    }
                     _ => "No role mentions have been set yet".to_owned(),
                 }
-            },
+            }
             _ => return,
         };
 
@@ -670,7 +794,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                             "\n**warning:** no notifications channel has been set yet!".to_owned()
                     }
                 }
-            },
+            }
             ID::User(user_id) => {
                 let settings_res = get_user_settings(&db, user_id.into()).await;
                 if let Ok(settings) = settings_res {
@@ -682,7 +806,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                         outcome_notifications = State::On;
                     }
                 }
-            },
+            }
         };
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
@@ -822,7 +946,7 @@ async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<V
     match id {
         ID::User(user_id) => Ok(bson::from_bson(
             db.collection::<Document>("reminders")
-                .find(doc! { "users": { "$in": [user_id.0] } }, None).await?
+                .find(doc! { "users": { "$in": [user_id.0 as i64] } }, None).await?
                 .collect::<Vec<Result<_, _>>>()
                 .await
                 .into_iter()
@@ -832,7 +956,7 @@ async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<V
         ID::Channel((channel_id, guild_id)) => Ok(bson::from_bson(
             db.collection::<Document>("reminders")
                 .find(
-                    doc! { "channels": { "$in": [{ "channel": channel_id.0, "guild": guild_id.0 }] } },
+                    doc! { "channels": { "$in": [{ "channel": channel_id.0 as i64, "guild": guild_id.0 as i64 }] } },
                     None,
                 ).await?
                 .collect::<Vec<Result<_, _>>>()
@@ -858,7 +982,7 @@ async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duratio
             doc! {"minutes": duration.num_minutes()},
             doc! {
                 "$addToSet": {
-                    "users": user_id.0
+                    "users": user_id.0 as i64
                 }
             },
             Some(UpdateOptions::builder().upsert(true).build()),
@@ -867,7 +991,7 @@ async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duratio
             doc! {"minutes": duration.num_minutes()},
             doc! {
                 "$addToSet": {
-                    "channels": { "channel": channel_id.0, "guild": guild_id.0 }
+                    "channels": { "channel": channel_id.0 as i64, "guild": guild_id.0 as i64 }
                 }
             },
             Some(UpdateOptions::builder().upsert(true).build()),
@@ -894,7 +1018,7 @@ async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dura
             doc! {"minutes": duration.num_minutes()},
             doc! {
                 "$pull": {
-                    "users": user_id.0
+                    "users": user_id.0 as i64
                 }
             },
             None,
@@ -903,7 +1027,7 @@ async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dura
             doc! {"minutes": duration.num_minutes()},
             doc! {
                 "$pull": {
-                    "channels": { "channel": channel_id.0, "guild": guild_id.0 }
+                    "channels": { "channel": channel_id.0 as i64, "guild": guild_id.0 as i64 }
                 }
             },
             None,
@@ -916,7 +1040,7 @@ async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dura
     }
 }
 
-async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) {
+async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String, filter_type: &str) {
     let db = if let Some(db) = get_db(&ses).await {
         db
     } else {
@@ -935,19 +1059,19 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) {
 
     let result = match id {
         ID::User(user_id) => collection.update_one(
-            doc! {"user": user_id.0},
+            doc! {"user": user_id.0 as i64},
             doc! {
                 "$addToSet": {
-                    "filters": filter
+                    filter_type: filter
                 }
             },
             Some(UpdateOptions::builder().upsert(true).build()),
         ),
         ID::Channel((_, guild_id)) => collection.update_one(
-            doc! {"guild": guild_id.0},
+            doc! {"guild": guild_id.0 as i64},
             doc! {
                 "$addToSet": {
-                    "filters": filter
+                    filter_type: filter
                 }
             },
             Some(UpdateOptions::builder().upsert(true).build()),
@@ -960,7 +1084,7 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) {
     }
 }
 
-async fn remove_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) {
+async fn remove_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String, filter_type: &str) {
     let db = if let Some(db) = get_db(&ses).await {
         db
     } else {
@@ -975,19 +1099,19 @@ async fn remove_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String) 
 
     let result = match id {
         ID::User(user_id) => collection.update_one(
-            doc! {"user": user_id.0},
+            doc! {"user": user_id.0 as i64},
             doc! {
                 "$pull": {
-                    "filters": filter
+                    filter_type: filter
                 }
             },
             None,
         ),
         ID::Channel((_, guild_id)) => collection.update_one(
-            doc! {"guild": guild_id.0},
+            doc! {"guild": guild_id.0 as i64},
             doc! {
                 "$pull": {
-                    "filters": filter
+                    filter_type: filter
                 }
             },
             None,
@@ -1015,7 +1139,7 @@ async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &str, 
 
     let result = match id {
         ID::User(user_id) => collection.update_one(
-            doc! {"user": user_id.0},
+            doc! {"user": user_id.0 as i64},
             doc! {
                 "$set": {
                     setting: val
@@ -1024,7 +1148,7 @@ async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &str, 
             Some(UpdateOptions::builder().upsert(true).build()),
         ),
         ID::Channel((_, guild_id)) => collection.update_one(
-            doc! {"guild": guild_id.0},
+            doc! {"guild": guild_id.0 as i64},
             doc! {
                 "$set": {
                     setting: val
@@ -1051,10 +1175,10 @@ async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, chann
 
     let result = match id {
         ID::Channel((_, guild_id)) => collection.update_one(
-            doc! {"guild": guild_id.0},
+            doc! {"guild": guild_id.0 as i64},
             doc! {
                 "$set": {
-                    "notifications_channel": channel.0
+                    "notifications_channel": channel.0 as i64
                 }
             },
             Some(UpdateOptions::builder().upsert(true).build()),
@@ -1084,10 +1208,10 @@ async fn add_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
     let result = db
         .collection::<Document>("guild_settings")
         .update_one(
-            doc! {"guild": guild_id.0},
+            doc! {"guild": guild_id.0 as i64},
             doc! {
                 "$addToSet": {
-                    "mentions": role.0
+                    "mentions": role.0 as i64
                 }
             },
             Some(UpdateOptions::builder().upsert(true).build()),
@@ -1115,10 +1239,10 @@ async fn remove_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
     let result = db
         .collection::<Document>("guild_settings")
         .update_one(
-            doc! {"guild": guild_id.0},
+            doc! {"guild": guild_id.0 as i64},
             doc! {
                 "$pull": {
-                    "mentions": role.0
+                    "mentions": role.0 as i64
                 }
             },
             None,
