@@ -1,28 +1,14 @@
-use std::{
-    collections::HashMap,
-    env,
-};
+use std::{collections::HashMap, env};
 
 use lazy_static::lazy_static;
-use rand::{
-    rngs::StdRng,
-    thread_rng,
-    SeedableRng,
-};
+use rand::{rngs::StdRng, thread_rng, SeedableRng};
 use regex::Regex;
 use reqwest::{
-    header::{
-        HeaderMap,
-        ACCEPT,
-    },
-    Client,
-    ClientBuilder,
+    header::{HeaderMap, ACCEPT},
+    Client, ClientBuilder,
 };
 use serenity::{
-    model::{
-        channel::ReactionType,
-        id::EmojiId,
-    },
+    model::{channel::ReactionType, id::EmojiId},
     prelude::Mutex,
 };
 
@@ -104,7 +90,7 @@ fn agency_map() -> HashMap<&'static str, &'static str> {
     res.insert("arianespace", "Arianespace");
     res.insert("eurockot", "Eurockot Launch Services");
     res.insert("rocketlab", "Rocket Lab Ltd");
-    res.insert("orbitalatk", "Orbital ATK");
+    res.insert("ngis", "Northrop Grumman Innovation Systems");
     res.insert("casc", "China Aerospace Science and Technology Corporation");
     res.insert("casic", "China Aerospace Science and Industry Corporation");
     res.insert("cnsa", "China National Space Administration");

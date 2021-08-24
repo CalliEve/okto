@@ -510,12 +510,12 @@ async fn filtersinfo(ctx: &Context, msg: &Message) -> CommandResult {
                         false,
                     )
                     .field(
-                        "Launch Service Providers:",
+                        "Launch Service Provider abbreviations with their full names:",
                         LAUNCH_AGENCIES
-                            .keys()
-                            .copied()
-                            .collect::<Vec<&str>>()
-                            .join(", "),
+                            .iter()
+                            .map(|(k, v)| format!("{}: {}", k, v))
+                            .collect::<Vec<String>>()
+                            .join("\n"),
                         false,
                     )
             })

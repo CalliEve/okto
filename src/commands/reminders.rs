@@ -530,7 +530,7 @@ fn allow_filters_page(
                                         Duration::seconds(5)
                                     ).await;
                                 }
-                                filters_page(wait_ses.clone(), id).await
+                                allow_filters_page(wait_ses.clone(), id).await
                             }
                         })
                     })
@@ -574,7 +574,7 @@ fn allow_filters_page(
                                         Duration::seconds(5)
                                     ).await;
                                 }
-                                filters_page(wait_ses.clone(), id).await
+                                allow_filters_page(wait_ses.clone(), id).await
                             }
                         })
                     })
