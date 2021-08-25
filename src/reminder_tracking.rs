@@ -98,7 +98,11 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
                     continue;
                 }
             }
-            reminded.insert(l.ll_id.clone(), difference.num_minutes());
+            reminded.insert(
+                l.ll_id
+                    .clone(),
+                difference.num_minutes(),
+            );
 
             if let Ok(Some(r)) = get_reminders(&db, difference.num_minutes()).await {
                 if let Ok(res) = bson::from_bson(r.into()) {
@@ -148,10 +152,14 @@ async fn execute_reminder(
         .filter_map(|c| {
             let db = db.clone();
             async move {
-                get_guild_settings(&db, c.guild.into())
-                    .await
-                    .ok()
-                    .map(|s| (c, s))
+                get_guild_settings(
+                    &db,
+                    c.guild
+                        .into(),
+                )
+                .await
+                .ok()
+                .map(|s| (c, s))
             }
         })
         .filter(|(_, settings)| {
@@ -161,7 +169,9 @@ async fn execute_reminder(
                     .iter()
                     .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
                     .any(|agency| *agency == l.lsp)
-                    && (settings.allow_filters.is_empty()
+                    && (settings
+                        .allow_filters
+                        .is_empty()
                         || settings
                             .allow_filters
                             .iter()
@@ -180,15 +190,16 @@ async fn execute_reminder(
             (c, mentions)
         })
         .map(|(c, mentions)| {
-            c.channel.send_message(&http, |m: &mut CreateMessage| {
-                m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference));
+            c.channel
+                .send_message(&http, |m: &mut CreateMessage| {
+                    m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference));
 
-                if !mentions.is_empty() {
-                    m.content(mentions);
-                }
+                    if !mentions.is_empty() {
+                        m.content(mentions);
+                    }
 
-                m
-            })
+                    m
+                })
         })
         .collect::<FuturesUnordered<_>>()
         .await
@@ -198,7 +209,12 @@ async fn execute_reminder(
     stream::iter(users.into_iter())
         .filter_map(|u| {
             let db = db.clone();
-            async move { get_user_settings(&db, u.0).await.ok().map(|s| (u, s)) }
+            async move {
+                get_user_settings(&db, u.0)
+                    .await
+                    .ok()
+                    .map(|s| (u, s))
+            }
         })
         .filter(|(_, settings)| {
             future::ready(
@@ -207,7 +223,9 @@ async fn execute_reminder(
                     .iter()
                     .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
                     .any(|agency| *agency == l.lsp)
-                    && (settings.allow_filters.is_empty()
+                    && (settings
+                        .allow_filters
+                        .is_empty()
                         || settings
                             .allow_filters
                             .iter()
@@ -217,7 +235,11 @@ async fn execute_reminder(
         })
         .filter_map(|(u, _)| {
             let http = http.clone();
-            async move { u.create_dm_channel(&http).await.ok() }
+            async move {
+                u.create_dm_channel(&http)
+                    .await
+                    .ok()
+            }
         })
         .map(|c| {
             c.id.send_message(&http, |m: &mut CreateMessage| {
@@ -235,7 +257,10 @@ fn reminder_embed<'a>(
     l: &LaunchData,
     diff: Duration,
 ) -> &'a mut CreateEmbed {
-    let live = if let Some(link) = l.vid_urls.first() {
+    let live = if let Some(link) = l
+        .vid_urls
+        .first()
+    {
         format!("**Live at:** {}", format_url(&link.url))
     } else {
         "".to_owned()
@@ -253,10 +278,15 @@ fn reminder_embed<'a>(
             {}",
             &l.payload,
             &l.vehicle,
-            l.net.timestamp(),
+            l.net
+                .timestamp(),
             live
         ))
-        .timestamp(l.net.format("%Y-%m-%dT%H:%M:%S").to_string());
+        .timestamp(
+            l.net
+                .format("%Y-%m-%dT%H:%M:%S")
+                .to_string(),
+        );
 
     if let Some(img) = &l.rocket_img {
         e.thumbnail(img);

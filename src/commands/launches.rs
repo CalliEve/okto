@@ -59,8 +59,16 @@ struct Launches;
 #[usage("Provide the name of a rocket or lsp to filter the launches on, see filtersinfo for more information")]
 async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
-        if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
-            Ok(launch_cache.read().await.to_vec())
+        if let Some(launch_cache) = ctx
+            .data
+            .read()
+            .await
+            .get::<LaunchesCacheKey>()
+        {
+            Ok(launch_cache
+                .read()
+                .await
+                .to_vec())
         } else {
             Err("Can't get launch cache")
         }
@@ -108,13 +116,21 @@ async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
                 e.color(DEFAULT_COLOR)
                     .author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Next Launch").icon_url(DEFAULT_ICON)
+                        a.name("Next Launch")
+                            .icon_url(DEFAULT_ICON)
                     })
-                    .timestamp(launch.net.format("%Y-%m-%dT%H:%M:%S").to_string())
+                    .timestamp(
+                        launch
+                            .net
+                            .format("%Y-%m-%dT%H:%M:%S")
+                            .to_string(),
+                    )
                     .title(format!(
                         "{}\nStatus: {}",
                         &launch.vehicle,
-                        launch.status.as_str()
+                        launch
+                            .status
+                            .as_str()
                     ))
                     .description(format!(
                         "**Payload:** {}\n\
@@ -123,7 +139,9 @@ async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                         **Location:** {}\n\
                         **Launch Window:** {}",
                         &launch.payload,
-                        launch.net.timestamp(),
+                        launch
+                            .net
+                            .timestamp(),
                         &launch.lsp,
                         &launch.location,
                         window
@@ -178,7 +196,8 @@ fn list_page(
         let mut em = StatefulEmbed::new_with(session.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
                 .author(|a: &mut CreateEmbedAuthor| {
-                    a.icon_url(DEFAULT_ICON).name("List of upcoming launches")
+                    a.icon_url(DEFAULT_ICON)
+                        .name("List of upcoming launches")
                 })
                 .timestamp(&Utc::now())
                 .footer(|f: &mut CreateEmbedFooter| {
@@ -204,12 +223,16 @@ fn list_page(
                         "{}: {} - {}",
                         launch.id,
                         &launch.vehicle,
-                        launch.status.as_str()
+                        launch
+                            .status
+                            .as_str()
                     ),
                     format!(
                         "**Payload:** {}\n**NET:** <t:{}>\n**Provider:** {}\n**Location:** {}",
                         &launch.payload,
-                        launch.net.timestamp(),
+                        launch
+                            .net
+                            .timestamp(),
                         &launch.lsp,
                         &launch.location
                     ),
@@ -255,7 +278,11 @@ fn list_page(
             });
         }
 
-        if all && launches.iter().any(|l| l.status == LaunchStatus::Go) {
+        if all
+            && launches
+                .iter()
+                .any(|l| l.status == LaunchStatus::Go)
+        {
             let certain_page_launches = list.clone();
             let certain_page_session = session.clone();
             em.add_option(
@@ -342,14 +369,23 @@ fn list_page(
         em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
             let session = session.clone();
             Box::pin(async move {
-                let lock = session.read().await;
-                if let Some(m) = lock.message.as_ref() {
-                    let _ = m.delete(&lock.http).await;
+                let lock = session
+                    .read()
+                    .await;
+                if let Some(m) = lock
+                    .message
+                    .as_ref()
+                {
+                    let _ = m
+                        .delete(&lock.http)
+                        .await;
                 };
             })
         });
 
-        let res = em.show().await;
+        let res = em
+            .show()
+            .await;
         if res.is_err() {
             dbg!(res.unwrap_err());
         }
@@ -362,8 +398,16 @@ fn list_page(
 #[usage("Provide the name of a rocket or lsp to filter the launches on, see filtersinfo for more information")]
 async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
-        if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
-            Ok(launch_cache.read().await.to_vec())
+        if let Some(launch_cache) = ctx
+            .data
+            .read()
+            .await
+            .get::<LaunchesCacheKey>()
+        {
+            Ok(launch_cache
+                .read()
+                .await
+                .to_vec())
         } else {
             Err("Can't get launch cache")
         }
@@ -385,7 +429,12 @@ async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         },
     };
 
-    let session = EmbedSession::new(&ctx, msg.channel_id, msg.author.id);
+    let session = EmbedSession::new(
+        ctx,
+        msg.channel_id,
+        msg.author
+            .id,
+    );
 
     list_page(session, launches, 0, true).await;
 
@@ -398,8 +447,16 @@ async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 #[usage("Provide the number of the launch, or the LaunchLibrary ID")]
 async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     let launches: Vec<LaunchData> = {
-        if let Some(launch_cache) = ctx.data.read().await.get::<LaunchesCacheKey>() {
-            Ok(launch_cache.read().await.to_vec())
+        if let Some(launch_cache) = ctx
+            .data
+            .read()
+            .await
+            .get::<LaunchesCacheKey>()
+        {
+            Ok(launch_cache
+                .read()
+                .await
+                .to_vec())
         } else {
             Err("Can't get launch cache")
         }
@@ -409,9 +466,15 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return Err("No launches found".into());
     }
 
-    let launch = match args.current().map(str::parse::<i32>) {
+    let launch = match args
+        .current()
+        .map(str::parse::<i32>)
+    {
         Some(Ok(id)) => {
-            if let Some(l) = launches.into_iter().find(|l| l.id == id) {
+            if let Some(l) = launches
+                .into_iter()
+                .find(|l| l.id == id)
+            {
                 l
             } else {
                 msg.channel_id
@@ -522,7 +585,8 @@ async fn filtersinfo(ctx: &Context, msg: &Message) -> CommandResult {
             m.embed(|e: &mut CreateEmbed| {
                 e.color(DEFAULT_COLOR)
                     .author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Filters Info").icon_url(DEFAULT_ICON)
+                        a.name("Filters Info")
+                            .icon_url(DEFAULT_ICON)
                     })
                     .timestamp(&Utc::now())
                     .title("The following filters can be used to filter launches:")

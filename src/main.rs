@@ -3,6 +3,7 @@
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::let_underscore_drop)] // looks better imo
+#![allow(clippy::semicolon_if_nothing_returned)] // looks better imo
 #![allow(clippy::cast_possible_wrap)] // for mongo bson some u64 ids need to be cast to i64
 #![allow(clippy::wildcard_imports)] // the commands/events structure of serenity requires these
 #![allow(clippy::used_underscore_binding)] // the commands/events structure of serenity requires these
@@ -60,10 +61,14 @@ use utils::{
 async fn main() {
     let framework = StandardFramework::new()
         .configure(|c| {
-            c.owners(vec![247745860979392512.into()].into_iter().collect())
-                .dynamic_prefix(calc_prefix)
-                .prefixes(&["<@!429306620439166977> ", "<@429306620439166977> "])
-                .case_insensitivity(true)
+            c.owners(
+                vec![247745860979392512.into()]
+                    .into_iter()
+                    .collect(),
+            )
+            .dynamic_prefix(calc_prefix)
+            .prefixes(&["<@!429306620439166977> ", "<@429306620439166977> "])
+            .case_insensitivity(true)
         })
         .group(&GENERAL_GROUP)
         .group(&PICTURES_GROUP)
@@ -121,7 +126,10 @@ async fn main() {
 
     {
         println!("Preparing caches");
-        let mut data = client.data.write().await;
+        let mut data = client
+            .data
+            .write()
+            .await;
         data.insert::<EmbedSessionsKey>(HashMap::new());
         data.insert::<WaitForKey>(HashMap::new());
         data.insert::<PictureCacheKey>(preload_data().await);
@@ -134,10 +142,23 @@ async fn main() {
         );
     }
 
-    if let Some(launches_cache) = client.data.read().await.get::<LaunchesCacheKey>() {
-        if let Some(db) = client.data.read().await.get::<DatabaseKey>() {
+    if let Some(launches_cache) = client
+        .data
+        .read()
+        .await
+        .get::<LaunchesCacheKey>()
+    {
+        if let Some(db) = client
+            .data
+            .read()
+            .await
+            .get::<DatabaseKey>()
+        {
             let launches_cache_clone = launches_cache.clone();
-            let http_clone = client.cache_and_http.http.clone();
+            let http_clone = client
+                .cache_and_http
+                .http
+                .clone();
             let db_clone = db.clone();
             tokio::spawn(reminder_tracking(
                 http_clone,
@@ -148,7 +169,10 @@ async fn main() {
     }
 
     println!("Starting the bot");
-    if let Err(why) = client.start().await {
+    if let Err(why) = client
+        .start()
+        .await
+    {
         println!("An error occurred while running the client: {:?}", why);
     }
 }

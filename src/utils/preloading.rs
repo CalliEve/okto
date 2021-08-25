@@ -40,11 +40,16 @@ async fn curiosity_mardi() -> reqwest::Result<Vec<MarsRoverPicture>> {
         .json()
         .await?;
 
-    Ok(if curiosity_res.photos.is_empty() {
-        Vec::new()
-    } else {
-        curiosity_res.photos[1000..3659].to_vec()
-    })
+    Ok(
+        if curiosity_res
+            .photos
+            .is_empty()
+        {
+            Vec::new()
+        } else {
+            curiosity_res.photos[1000..3659].to_vec()
+        },
+    )
 }
 
 async fn exoplanets() -> reqwest::Result<Vec<String>> {

@@ -59,7 +59,10 @@ pub async fn fetch_rover_camera_picture(
     let mut sol: u16 = 0;
 
     while rovers.is_empty() {
-        sol = RNG.lock().await.gen_range(sol_range.clone());
+        sol = RNG
+            .lock()
+            .await
+            .gen_range(sol_range.clone());
 
         rovers = fetch_rover_image_from_api(sol, rover)
             .await
@@ -67,8 +70,14 @@ pub async fn fetch_rover_camera_picture(
     }
 
     (
-        get_rover_camera_picture(rover, &rovers, &mut *RNG.lock().await)
-            .unwrap_or_else(|| panic!("No {} picture found", rover)),
+        get_rover_camera_picture(
+            rover,
+            &rovers,
+            &mut *RNG
+                .lock()
+                .await,
+        )
+        .unwrap_or_else(|| panic!("No {} picture found", rover)),
         sol,
     )
 }
@@ -100,13 +109,18 @@ where
     for camera in cams {
         let pics = list
             .iter()
-            .filter(|p| p.camera.name == *camera)
+            .filter(|p| {
+                p.camera
+                    .name
+                    == *camera
+            })
             .collect::<Vec<&MarsRoverPicture>>();
         if let Some(pic) = pics.choose(&mut rng) {
             return Some((*pic).clone());
         }
     }
-    list.first().cloned()
+    list.first()
+        .cloned()
 }
 
 pub async fn get_max_sol(rover: &str) -> Result<u16, Error> {

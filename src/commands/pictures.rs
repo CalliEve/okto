@@ -44,12 +44,18 @@ struct Pictures;
     "Tell the command to provide the natural or enhanced version of the image, defaults to natural"
 )]
 async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
+    let _ = msg
+        .channel_id
+        .broadcast_typing(&ctx.http)
+        .await;
     let image_type = args
         .quoted()
         .current()
         .map_or("natural", |t| {
-            if ["natural", "enhanced"].contains(&t.to_lowercase().as_str()) {
+            if ["natural", "enhanced"].contains(
+                &t.to_lowercase()
+                    .as_str(),
+            ) {
                 t
             } else {
                 "natural"
@@ -77,27 +83,31 @@ async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
     msg.channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| a.name("Earth Picture").icon_url(DEFAULT_ICON))
-                    .color(DEFAULT_COLOR)
-                    .description(format!(
-                        "Most recent {} image from the EPIC camera onboard the NOAA DSCOVR spacecraft",
-                        image_type
+                e.author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Earth Picture")
+                        .icon_url(DEFAULT_ICON)
+                })
+                .color(DEFAULT_COLOR)
+                .description(format!(
+                    "Most recent {} image from the EPIC camera onboard the NOAA DSCOVR spacecraft",
+                    image_type
+                ))
+                .footer(|f: &mut CreateEmbedFooter| {
+                    f.text(format!(
+                        "Taken on: {}\nRun this command again with the {} argument!",
+                        epic_image_data.date, opposite
                     ))
-                    .footer(|f: &mut CreateEmbedFooter| {
-                        f.text(format!(
-                            "Taken on: {}\nRun this command again with the {} argument!",
-                            epic_image_data.date, opposite
-                        ))
-                    })
-                    .image(format!(
-                        "https://epic.gsfc.nasa.gov/archive/{}/{}/png/{}.png",
-                        image_type,
-                        get_date_epic_image(&epic_image_data.date),
-                        epic_image_data.image
-                    ))
-                    .timestamp(&Utc::now())
+                })
+                .image(format!(
+                    "https://epic.gsfc.nasa.gov/archive/{}/{}/png/{}.png",
+                    image_type,
+                    get_date_epic_image(&epic_image_data.date),
+                    epic_image_data.image
+                ))
+                .timestamp(&Utc::now())
             })
-        }).await?;
+        })
+        .await?;
 
     Ok(())
 }
@@ -106,7 +116,10 @@ async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
 #[description("Get an Astronomy Picture Of the Day")]
 #[usage("Picks a random picture, but can be told to get the one from today by giving the \"today\" argument")]
 async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
+    let _ = msg
+        .channel_id
+        .broadcast_typing(&ctx.http)
+        .await;
 
     let now = Utc::today();
 
@@ -115,13 +128,20 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     } else {
         let start = Utc.ymd(2000, 1, 1);
         let days = (now - start).num_days();
-        let day = RNG.lock().await.gen_range(0..days);
+        let day = RNG
+            .lock()
+            .await
+            .gen_range(0..days);
         start + Duration::days(day)
     };
 
     let mut params = HashMap::new();
     params.insert("hd", "True".to_owned());
-    params.insert("date", date.format("%Y-%m-%d").to_string());
+    params.insert(
+        "date",
+        date.format("%Y-%m-%d")
+            .to_string(),
+    );
     params.insert("api_key", NASA_KEY.to_string());
 
     let apod_image: APODImage = DEFAULT_CLIENT
@@ -155,7 +175,8 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .send_message(&ctx.http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Astronomy Picture of Today").icon_url(DEFAULT_ICON)
+                    a.name("Astronomy Picture of Today")
+                        .icon_url(DEFAULT_ICON)
                 })
                 .title(&apod_image.title)
                 .color(DEFAULT_COLOR)
@@ -175,7 +196,10 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 #[command]
 #[description("Picks a random sol number and then grabs a random picture made by the Spirit rover on that sol.")]
 async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
+    let _ = msg
+        .channel_id
+        .broadcast_typing(&ctx.http)
+        .await;
 
     let (pic, sol) = fetch_rover_camera_picture("spirit", 1..2186).await;
 
@@ -191,7 +215,10 @@ async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
                     "info:",
                     format!(
                         "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                        sol, pic.earth_date, pic.camera.full_name
+                        sol,
+                        pic.earth_date,
+                        pic.camera
+                            .full_name
                     ),
                     false,
                 )
@@ -208,7 +235,10 @@ async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[description("Picks a random sol number and then grabs a random picture made by the Opportunity rover on that sol.")]
 async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
+    let _ = msg
+        .channel_id
+        .broadcast_typing(&ctx.http)
+        .await;
 
     let (pic, sol) = fetch_rover_camera_picture("opportunity", 1..5112).await;
 
@@ -224,7 +254,10 @@ async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
                     "info:",
                     format!(
                         "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                        sol, pic.earth_date, pic.camera.full_name
+                        sol,
+                        pic.earth_date,
+                        pic.camera
+                            .full_name
                     ),
                     false,
                 )
@@ -241,7 +274,10 @@ async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[description("Picks a random sol number and then grabs a random picture made by the Curiosity rover on that sol.")]
 async fn curiosity(ctx: &Context, msg: &Message) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
+    let _ = msg
+        .channel_id
+        .broadcast_typing(&ctx.http)
+        .await;
 
     let max_sol = get_max_sol("curiosity").await?;
 
@@ -259,7 +295,10 @@ async fn curiosity(ctx: &Context, msg: &Message) -> CommandResult {
                     "info:",
                     format!(
                         "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                        sol, pic.earth_date, pic.camera.full_name
+                        sol,
+                        pic.earth_date,
+                        pic.camera
+                            .full_name
                     ),
                     false,
                 )
@@ -276,7 +315,10 @@ async fn curiosity(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[description("Picks a random sol number and then grabs a random picture made by the Perseverance rover on that sol.")]
 async fn perseverance(ctx: &Context, msg: &Message) -> CommandResult {
-    let _ = msg.channel_id.broadcast_typing(&ctx.http).await;
+    let _ = msg
+        .channel_id
+        .broadcast_typing(&ctx.http)
+        .await;
 
     let max_sol = get_max_sol("perseverance").await?;
 
@@ -294,7 +336,10 @@ async fn perseverance(ctx: &Context, msg: &Message) -> CommandResult {
                     "info:",
                     format!(
                         "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                        sol, pic.earth_date, pic.camera.full_name
+                        sol,
+                        pic.earth_date,
+                        pic.camera
+                            .full_name
                     ),
                     false,
                 )

@@ -33,7 +33,10 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
 
                 res.push_str(&format!(
                     "\"{}\"\n[{}]({})\n\n",
-                    link_obj.title.as_ref().map_or("unknown url", |l| &l),
+                    link_obj
+                        .title
+                        .as_ref()
+                        .map_or("unknown url", |s| s.as_str()),
                     domain,
                     &link_obj.url
                 ));
@@ -69,7 +72,12 @@ pub fn filter_launches(launches: Vec<LaunchData>, args: &Args) -> Result<Vec<Lau
     if let Some(filter) = LAUNCH_VEHICLES.get(&filter_arg.as_str()) {
         let filtered = launches
             .into_iter()
-            .filter(|l| filter.contains(&l.vehicle.as_str()))
+            .filter(|l| {
+                filter.contains(
+                    &l.vehicle
+                        .as_str(),
+                )
+            })
             .collect::<Vec<LaunchData>>();
         if filtered.is_empty() {
             return Err("this launch vehicle does not have any upcoming launches :(".to_owned());

@@ -13,7 +13,9 @@ pub fn serialize<S>(date: &NaiveDateTime, serializer: S) -> Result<S::Ok, S::Err
 where
     S: Serializer,
 {
-    let date_str = date.format(FORMAT).to_string();
+    let date_str = date
+        .format(FORMAT)
+        .to_string();
     serializer.serialize_str(&date_str)
 }
 

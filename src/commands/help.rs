@@ -63,7 +63,12 @@ async fn help_cmd(
     groups: &[&'static CommandGroup],
     owners: HashSet<UserId>,
 ) -> CommandResult {
-    let ses = EmbedSession::new(&ctx, msg.channel_id, msg.author.id);
+    let ses = EmbedSession::new(
+        ctx,
+        msg.channel_id,
+        msg.author
+            .id,
+    );
 
     help_menu(ses, ctx.clone(), msg.clone(), groups.to_vec(), owners).await;
 
@@ -89,16 +94,26 @@ fn help_menu(
             ).description("Use the reactions to get the descriptions for the commands in that group.\nCurrently available commands:")
         });
 
-        for (i, group) in groups.iter().enumerate() {
+        for (i, group) in groups
+            .iter()
+            .enumerate()
+        {
             if allowed(&ctx, &group.options, &msg, &owners).await {
                 let mut cmds = String::new();
 
-                for command in group.options.commands {
+                for command in group
+                    .options
+                    .commands
+                {
                     if allowed(&ctx, &command.options, &msg, &owners).await {
                         cmds.push_str(&format!(
                             "\n- **{}{}**",
                             &prefix,
-                            command.options.names.first().expect("no command name")
+                            command
+                                .options
+                                .names
+                                .first()
+                                .expect("no command name")
                         ));
                     }
                 }
@@ -137,14 +152,23 @@ fn help_menu(
         em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
             let ses = ses.clone();
             Box::pin(async move {
-                let lock = ses.read().await;
-                if let Some(m) = lock.message.as_ref() {
-                    let _ = m.delete(&lock.http).await;
+                let lock = ses
+                    .read()
+                    .await;
+                if let Some(m) = lock
+                    .message
+                    .as_ref()
+                {
+                    let _ = m
+                        .delete(&lock.http)
+                        .await;
                 };
             })
         });
 
-        let show_res = em.show().await;
+        let show_res = em
+            .show()
+            .await;
         if let Err(e) = show_res {
             println!("Error in help: {}", e);
         }
@@ -173,36 +197,49 @@ fn command_details(
                 .description("More Detailed information about the commands in this group")
         });
 
-        for command in selected_group.options.commands {
+        for command in selected_group
+            .options
+            .commands
+        {
             if allowed(&ctx, &command.options, &msg, &owners).await {
-                let aliases: Vec<&str> = command.options.names.iter().skip(1).copied().collect();
+                let aliases: Vec<&str> = command
+                    .options
+                    .names
+                    .iter()
+                    .skip(1)
+                    .copied()
+                    .collect();
                 let aliases = if aliases.is_empty() {
                     None
                 } else {
                     Some(aliases)
                 };
 
-                em.inner.field(
-                    command
-                        .options
-                        .names
-                        .first()
-                        .map(|s| format!("{}{}", &prefix, s))
-                        .expect("no command name"),
-                    format!(
-                        "{}{}{}",
-                        aliases.map_or("".to_owned(), |a| format!("**Aliases**: {}", a.join(", "))),
+                em.inner
+                    .field(
                         command
                             .options
-                            .desc
-                            .map_or("".to_owned(), |d| format!("\n**Description:** {}", d)),
-                        command
-                            .options
-                            .usage
-                            .map_or("".to_owned(), |u| format!("\n{}", u))
-                    ),
-                    false,
-                );
+                            .names
+                            .first()
+                            .map(|s| format!("{}{}", &prefix, s))
+                            .expect("no command name"),
+                        format!(
+                            "{}{}{}",
+                            aliases.map_or("".to_owned(), |a| format!(
+                                "**Aliases**: {}",
+                                a.join(", ")
+                            )),
+                            command
+                                .options
+                                .desc
+                                .map_or("".to_owned(), |d| format!("\n**Description:** {}", d)),
+                            command
+                                .options
+                                .usage
+                                .map_or("".to_owned(), |u| format!("\n{}", u))
+                        ),
+                        false,
+                    );
             }
         }
 
@@ -223,7 +260,9 @@ fn command_details(
             },
         );
 
-        let show_res = em.show().await;
+        let show_res = em
+            .show()
+            .await;
         if let Err(e) = show_res {
             println!("Error in help: {}", e);
         }
@@ -236,7 +275,12 @@ async fn allowed(
     msg: &Message,
     owners: &HashSet<UserId>,
 ) -> bool {
-    if options.owners_only() && !owners.contains(&msg.author.id) {
+    if options.owners_only()
+        && !owners.contains(
+            &msg.author
+                .id,
+        )
+    {
         return false;
     }
 
@@ -251,18 +295,31 @@ async fn allowed(
     let req_perms = *options.required_permissions();
 
     if !req_perms.is_empty() {
-        if let Some(Channel::Guild(channel)) = msg.channel(&ctx).await {
-            let guild = if let Some(guild) = msg.guild(&ctx).await {
+        if let Some(Channel::Guild(channel)) = msg
+            .channel(&ctx)
+            .await
+        {
+            let guild = if let Some(guild) = msg
+                .guild(&ctx)
+                .await
+            {
                 guild
             } else {
                 return false;
             };
 
-            if msg.author.id == guild.owner_id {
+            if msg
+                .author
+                .id
+                == guild.owner_id
+            {
                 return true;
             }
 
-            let member = if let Ok(member) = msg.member(&ctx).await {
+            let member = if let Ok(member) = msg
+                .member(&ctx)
+                .await
+            {
                 member
             } else {
                 return false;
@@ -285,11 +342,19 @@ async fn allowed(
 
 #[hook]
 pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
-    if msg.guild_id.is_none() {
+    if msg
+        .guild_id
+        .is_none()
+    {
         return Some(";".to_owned());
     }
 
-    let db = if let Some(db) = ctx.data.read().await.get::<DatabaseKey>() {
+    let db = if let Some(db) = ctx
+        .data
+        .read()
+        .await
+        .get::<DatabaseKey>()
+    {
         db.clone()
     } else {
         println!("No database found");

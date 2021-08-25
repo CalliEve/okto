@@ -75,7 +75,11 @@ where
         return Vec::new();
     };
 
-    if let Ok(settings) = documents.into_iter().map(bson::from_document).collect() {
+    if let Ok(settings) = documents
+        .into_iter()
+        .map(bson::from_document)
+        .collect()
+    {
         settings
     } else {
         Vec::new()
@@ -102,7 +106,9 @@ where
         .iter()
         .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
         .any(|agency| *agency == l.lsp)
-        && (settings.get_allow_filters().is_empty()
+        && (settings
+            .get_allow_filters()
+            .is_empty()
             || settings
                 .get_allow_filters()
                 .iter()
@@ -117,10 +123,16 @@ async fn send_user_notification<'r>(
     embed: &'r CreateEmbed,
 ) {
     stream::iter(all_settings)
-        .filter(|settings| future::ready(passes_filters(settings, &launch)))
+        .filter(|settings| future::ready(passes_filters(settings, launch)))
         .filter_map(|settings| {
             let http = http.clone();
-            async move { settings.user.create_dm_channel(&http).await.ok() }
+            async move {
+                settings
+                    .user
+                    .create_dm_channel(&http)
+                    .await
+                    .ok()
+            }
         })
         .map(|channel| send_message(http, channel.id, None, embed))
         .collect::<FuturesUnordered<_>>()
@@ -137,7 +149,13 @@ async fn send_guild_notification<'r>(
 ) {
     stream::iter(all_settings)
         .filter(|settings| future::ready(passes_filters(settings, launch)))
-        .filter_map(|settings| future::ready(settings.notifications_channel.map(|c| (c, settings))))
+        .filter_map(|settings| {
+            future::ready(
+                settings
+                    .notifications_channel
+                    .map(|c| (c, settings)),
+            )
+        })
         .map(|(c, settings)| (c, get_mentions(&settings)))
         .map(|(channel, mentions)| send_message(http, channel, mentions, embed))
         .collect::<FuturesUnordered<_>>()
@@ -191,13 +209,19 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
             "The launch of {} on a **{}** is now scheduled for <t:{}> instead of <t:{}>",
             new.payload,
             new.vehicle,
-            new.net.timestamp(),
-            old.net.timestamp()
+            new.net
+                .timestamp(),
+            old.net
+                .timestamp()
         ),
         false,
     );
 
-    e.timestamp(new.net.format("%Y-%m-%dT%H:%M:%S").to_string());
+    e.timestamp(
+        new.net
+            .format("%Y-%m-%dT%H:%M:%S")
+            .to_string(),
+    );
 
     e
 }
@@ -225,7 +249,9 @@ fn outcome_embed(finished: &LaunchData) -> CreateEmbed {
             "The launch of {} on a {} has completed with a status of **{}**!",
             &finished.payload,
             &finished.vehicle,
-            finished.status.as_str()
+            finished
+                .status
+                .as_str()
         ),
         true,
     );

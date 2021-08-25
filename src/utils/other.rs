@@ -30,7 +30,10 @@ lazy_static! {
 
 pub fn cutoff_on_last_dot(text: &str, length: usize) -> &str {
     let mut last: usize = 0;
-    for (index, character) in text.chars().enumerate() {
+    for (index, character) in text
+        .chars()
+        .enumerate()
+    {
         if character == '.' {
             last = index
         } else if index >= length - 1 {
@@ -49,7 +52,10 @@ pub fn default_embed<'a>(
     success: bool,
 ) -> &'a mut CreateEmbed {
     embed
-        .author(|a: &mut CreateEmbedAuthor| a.name("OKTO").icon_url(DEFAULT_ICON))
+        .author(|a: &mut CreateEmbedAuthor| {
+            a.name("OKTO")
+                .icon_url(DEFAULT_ICON)
+        })
         .color(
             if success {
                 DEFAULT_COLOR.into()
@@ -122,25 +128,45 @@ pub fn parse_duration(text: &str) -> Duration {
     let mut dur = Duration::zero();
 
     if let Some(num_raw) = WEEK_REGEX.captures(text) {
-        if let Ok(num) = num_raw.get(2).unwrap().as_str().parse() {
+        if let Ok(num) = num_raw
+            .get(2)
+            .unwrap()
+            .as_str()
+            .parse()
+        {
             dur = dur + Duration::weeks(num)
         }
     }
 
     if let Some(num_raw) = DAY_REGEX.captures(text) {
-        if let Ok(num) = num_raw.get(2).unwrap().as_str().parse() {
+        if let Ok(num) = num_raw
+            .get(2)
+            .unwrap()
+            .as_str()
+            .parse()
+        {
             dur = dur + Duration::days(num)
         }
     }
 
     if let Some(num_raw) = HOUR_REGEX.captures(text) {
-        if let Ok(num) = num_raw.get(2).unwrap().as_str().parse() {
+        if let Ok(num) = num_raw
+            .get(2)
+            .unwrap()
+            .as_str()
+            .parse()
+        {
             dur = dur + Duration::hours(num)
         }
     }
 
     if let Some(num_raw) = MINUTE_REGEX.captures(text) {
-        if let Ok(num) = num_raw.get(2).unwrap().as_str().parse() {
+        if let Ok(num) = num_raw
+            .get(2)
+            .unwrap()
+            .as_str()
+            .parse()
+        {
             dur = dur + Duration::minutes(num)
         }
     }
@@ -150,20 +176,37 @@ pub fn parse_duration(text: &str) -> Duration {
 
 pub fn parse_id(text: &str) -> Option<u64> {
     if ID_REGEX.is_match(text) {
-        return text.parse().ok();
+        return text
+            .parse()
+            .ok();
     }
 
     if let Some(captures) = MENTION_REGEX.captures(text) {
-        return captures.get(1).unwrap().as_str().parse().ok();
+        return captures
+            .get(1)
+            .unwrap()
+            .as_str()
+            .parse()
+            .ok();
     }
 
     None
 }
 
 pub async fn temp_message(channel: ChannelId, http: impl AsRef<Http>, text: &str, delay: Duration) {
-    if let Ok(message) = channel.send_message(&http, |m| m.content(text)).await {
-        tokio::time::sleep(delay.to_std().unwrap()).await;
-        let _ = channel.delete_message(http, message.id).await;
+    if let Ok(message) = channel
+        .send_message(&http, |m| m.content(text))
+        .await
+    {
+        tokio::time::sleep(
+            delay
+                .to_std()
+                .unwrap(),
+        )
+        .await;
+        let _ = channel
+            .delete_message(http, message.id)
+            .await;
     }
 }
 
@@ -173,7 +216,9 @@ const ERROR_CHANNEL: ChannelId = ChannelId(447876053109702668);
 
 #[allow(dead_code)]
 pub async fn debug_log(http: impl AsRef<Http>, text: &str) {
-    let _ = DEBUG_CHANNEL.send_message(&http, |m| m.content(text)).await;
+    let _ = DEBUG_CHANNEL
+        .send_message(&http, |m| m.content(text))
+        .await;
 }
 
 pub async fn error_log(http: impl AsRef<Http>, text: impl AsRef<str>) {

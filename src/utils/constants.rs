@@ -40,7 +40,12 @@ pub const LAUNCH_LIBRARY_URL: &str = "https://thespacedevs.com";
 fn default_headers() -> HeaderMap {
     let mut headers = HeaderMap::new();
 
-    headers.insert(ACCEPT, "application/json".parse().unwrap());
+    headers.insert(
+        ACCEPT,
+        "application/json"
+            .parse()
+            .unwrap(),
+    );
 
     headers
 }
