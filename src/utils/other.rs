@@ -36,9 +36,8 @@ pub fn cutoff_on_last_dot(text: &str, length: usize) -> &str {
         } else if index >= length - 1 {
             if last == 0 {
                 return &text[..length];
-            } else {
-                return &text[..=last];
             }
+            return &text[..=last];
         }
     }
     text

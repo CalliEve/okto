@@ -2,6 +2,8 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
 #![allow(clippy::module_name_repetitions)]
+#![allow(clippy::let_underscore_drop)] // looks better imo
+#![allow(clippy::cast_possible_wrap)] // for mongo bson some u64 ids need to be cast to i64
 #![allow(clippy::wildcard_imports)] // the commands/events structure of serenity requires these
 #![allow(clippy::used_underscore_binding)] // the commands/events structure of serenity requires these
 #![allow(clippy::eval_order_dependence)] // messes up due to async, but should look into more

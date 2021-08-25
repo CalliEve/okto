@@ -1,40 +1,84 @@
 use std::{
-    fmt::{self, Display},
+    fmt::{
+        self,
+        Display,
+    },
     io::ErrorKind as IoErrorKind,
     sync::Arc,
 };
 
-use chrono::{Duration, Utc};
+use chrono::{
+    Duration,
+    Utc,
+};
 use futures::stream::StreamExt;
 use mongodb::{
-    bson::{self, doc, document::Document},
-    error::{Error as MongoError, ErrorKind as MongoErrorKind, Result as MongoResult},
+    bson::{
+        self,
+        doc,
+        document::Document,
+    },
+    error::{
+        Error as MongoError,
+        ErrorKind as MongoErrorKind,
+        Result as MongoResult,
+    },
     options::UpdateOptions,
-    Collection, Database,
+    Collection,
+    Database,
 };
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+    },
     framework::standard::{
-        macros::{command, group},
-        Args, CommandResult,
+        macros::{
+            command,
+            group,
+        },
+        Args,
+        CommandResult,
     },
     model::{
         channel::Message,
-        id::{ChannelId, GuildId, RoleId, UserId},
+        id::{
+            ChannelId,
+            GuildId,
+            RoleId,
+            UserId,
+        },
     },
-    prelude::{Context, RwLock},
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
     events::{
-        statefulembed::{EmbedSession, StatefulEmbed},
-        waitfor::{WaitFor, WaitPayload},
+        statefulembed::{
+            EmbedSession,
+            StatefulEmbed,
+        },
+        waitfor::{
+            WaitFor,
+            WaitPayload,
+        },
     },
-    models::{caches::DatabaseKey, reminders::Reminder},
+    models::{
+        caches::DatabaseKey,
+        reminders::Reminder,
+    },
     utils::{
         constants::*,
-        format_duration, parse_duration, parse_id,
-        reminders::{get_guild_settings, get_user_settings},
+        format_duration,
+        parse_duration,
+        parse_id,
+        reminders::{
+            get_guild_settings,
+            get_user_settings,
+        },
         temp_message,
     },
 };
@@ -200,7 +244,7 @@ fn reminders_page(
                     ))
                 }
                 text
-            }
+            },
             _ => "No reminders have been set yet".to_owned(),
         };
 
@@ -316,10 +360,10 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    }
+                    },
                     _ => "No agency filters have been set yet".to_owned(),
                 }
-            }
+            },
             ID::User(user_id) => {
                 let settings_res = get_user_settings(&db, user_id.into()).await;
                 match settings_res {
@@ -329,10 +373,10 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    }
+                    },
                     _ => "No agency filters have been set yet".to_owned(),
                 }
-            }
+            },
         };
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
@@ -472,10 +516,10 @@ fn allow_filters_page(
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    }
+                    },
                     _ => "No agency allow filters have been set yet".to_owned(),
                 }
-            }
+            },
             ID::User(user_id) => {
                 let settings_res = get_user_settings(&db, user_id.into()).await;
                 match settings_res {
@@ -486,10 +530,10 @@ fn allow_filters_page(
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    }
+                    },
                     _ => "No agency allow filters have been set yet".to_owned(),
                 }
-            }
+            },
         };
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
@@ -635,11 +679,11 @@ fn mentions_page(
                             }
                         }
                         text
-                    }
+                    },
                     _ => "No role mentions have been set yet".to_owned(),
                 }
-            }
-            _ => return,
+            },
+            ID::User(_) => return,
         };
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
@@ -794,7 +838,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                             "\n**warning:** no notifications channel has been set yet!".to_owned()
                     }
                 }
-            }
+            },
             ID::User(user_id) => {
                 let settings_res = get_user_settings(&db, user_id.into()).await;
                 if let Ok(settings) = settings_res {
@@ -806,7 +850,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                         outcome_notifications = State::On;
                     }
                 }
-            }
+            },
         };
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
@@ -1183,7 +1227,7 @@ async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, chann
             },
             Some(UpdateOptions::builder().upsert(true).build()),
         ),
-        _ => return,
+        ID::User(_) => return,
     }
     .await;
 

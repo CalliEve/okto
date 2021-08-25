@@ -2,25 +2,51 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateEmbedFooter,
+        CreateMessage,
+    },
     framework::standard::{
-        macros::{command, group},
-        Args, CommandResult,
+        macros::{
+            command,
+            group,
+        },
+        Args,
+        CommandResult,
     },
     model::{
-        channel::{Message, ReactionType},
+        channel::{
+            Message,
+            ReactionType,
+        },
         id::EmojiId,
     },
-    prelude::{Context, RwLock},
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
-    events::statefulembed::{EmbedSession, StatefulEmbed},
+    events::statefulembed::{
+        EmbedSession,
+        StatefulEmbed,
+    },
     models::{
         caches::LaunchesCacheKey,
-        launches::{LaunchData, LaunchStatus},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
     },
-    utils::{constants::*, default_embed, format_duration, launches::*},
+    utils::{
+        constants::*,
+        default_embed,
+        format_duration,
+        launches::*,
+    },
 };
 
 #[group]
@@ -67,7 +93,7 @@ async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                 })
                 .await?;
             return Ok(());
-        }
+        },
     };
 
     let launch = &launches[0];
@@ -356,7 +382,7 @@ async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult
                 })
                 .await?;
             return Ok(());
-        }
+        },
     };
 
     let session = EmbedSession::new(&ctx, msg.channel_id, msg.author.id);
@@ -397,7 +423,7 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     .await?;
                 return Ok(());
             }
-        }
+        },
         Some(_) => {
             if let Ok(l) = request_launch(
                 args.current()
@@ -416,7 +442,7 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     .await?;
                 return Ok(());
             }
-        }
+        },
         None => launches[0].clone(),
     };
 

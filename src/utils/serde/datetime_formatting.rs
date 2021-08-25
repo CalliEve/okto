@@ -23,5 +23,5 @@ where
 {
     let string: String = String::deserialize(deserializer)?;
 
-    Ok(NaiveDateTime::parse_from_str(&string, FORMAT).map_err(Error::custom)?)
+    NaiveDateTime::parse_from_str(&string, FORMAT).map_err(Error::custom)
 }

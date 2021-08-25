@@ -1,17 +1,37 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{
+    collections::HashMap,
+    str::FromStr,
+    sync::Arc,
+};
 
-use chrono::{Duration, NaiveDateTime, Utc};
+use chrono::{
+    Duration,
+    NaiveDateTime,
+    Utc,
+};
 use futures::{
     future,
-    stream::{self, FuturesUnordered, StreamExt},
+    stream::{
+        self,
+        FuturesUnordered,
+        StreamExt,
+    },
 };
 use mongodb::{
-    bson::{self, doc, Document},
+    bson::{
+        self,
+        doc,
+        Document,
+    },
     error::Result as MongoResult,
     Database,
 };
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateMessage,
+    },
     http::client::Http,
     prelude::RwLock,
 };
@@ -19,13 +39,24 @@ use serenity::{
 use crate::{
     launch_tracking,
     models::{
-        launches::{LaunchData, LaunchStatus},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
         reminders::Reminder,
     },
     utils::{
-        constants::{DEFAULT_COLOR, DEFAULT_ICON, LAUNCH_AGENCIES},
-        error_log, format_duration,
-        reminders::{get_guild_settings, get_user_settings},
+        constants::{
+            DEFAULT_COLOR,
+            DEFAULT_ICON,
+            LAUNCH_AGENCIES,
+        },
+        error_log,
+        format_duration,
+        reminders::{
+            get_guild_settings,
+            get_user_settings,
+        },
     },
 };
 
@@ -108,7 +139,9 @@ async fn execute_reminder(
     difference: Duration,
 ) {
     let Reminder {
-        channels, users, ..
+        channels,
+        users,
+        ..
     } = reminder;
 
     stream::iter(channels.into_iter())

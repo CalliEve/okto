@@ -1,14 +1,28 @@
-use std::{collections::HashMap, env};
+use std::{
+    collections::HashMap,
+    env,
+};
 
 use lazy_static::lazy_static;
-use rand::{rngs::StdRng, thread_rng, SeedableRng};
+use rand::{
+    rngs::StdRng,
+    thread_rng,
+    SeedableRng,
+};
 use regex::Regex;
 use reqwest::{
-    header::{HeaderMap, ACCEPT},
-    Client, ClientBuilder,
+    header::{
+        HeaderMap,
+        ACCEPT,
+    },
+    Client,
+    ClientBuilder,
 };
 use serenity::{
-    model::{channel::ReactionType, id::EmojiId},
+    model::{
+        channel::ReactionType,
+        id::EmojiId,
+    },
     prelude::Mutex,
 };
 

@@ -1,10 +1,16 @@
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::HashMap,
+    time::Duration,
+};
 
 use itertools::Itertools;
 use serde::Deserialize;
 
 use super::constants::*;
-use crate::models::{caches::PictureDataCache, pictures::MarsRoverPicture};
+use crate::models::{
+    caches::PictureDataCache,
+    pictures::MarsRoverPicture,
+};
 
 #[derive(Deserialize, Debug, Clone)]
 struct CuriosityContainer {

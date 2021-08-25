@@ -1,18 +1,31 @@
 use mongodb::{
-    bson::{doc, document::Document},
+    bson::{
+        doc,
+        document::Document,
+    },
     options::UpdateOptions,
 };
 use serenity::{
-    builder::{CreateEmbed, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateMessage,
+    },
     framework::standard::{
-        macros::{command, group},
-        Args, CommandResult,
+        macros::{
+            command,
+            group,
+        },
+        Args,
+        CommandResult,
     },
     model::channel::Message,
     prelude::Context,
 };
 
-use crate::{models::caches::DatabaseKey, utils::default_embed};
+use crate::{
+    models::caches::DatabaseKey,
+    utils::default_embed,
+};
 
 #[group]
 #[commands(setprefix)]

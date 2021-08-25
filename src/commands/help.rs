@@ -1,20 +1,57 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::HashSet,
+    sync::Arc,
+};
 
-use mongodb::bson::{doc, document::Document, from_bson};
+use mongodb::bson::{
+    doc,
+    document::Document,
+    from_bson,
+};
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor},
-    framework::standard::{
-        macros::{help, hook},
-        Args, CommandGroup, CommandResult, CommonOptions, HelpOptions, OnlyIn,
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
     },
-    model::prelude::{Channel, Message, ReactionType, UserId},
-    prelude::{Context, RwLock},
+    framework::standard::{
+        macros::{
+            help,
+            hook,
+        },
+        Args,
+        CommandGroup,
+        CommandResult,
+        CommonOptions,
+        HelpOptions,
+        OnlyIn,
+    },
+    model::prelude::{
+        Channel,
+        Message,
+        ReactionType,
+        UserId,
+    },
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
-    events::statefulembed::{EmbedSession, StatefulEmbed},
-    models::{caches::DatabaseKey, settings::GuildSettings},
-    utils::constants::{DEFAULT_COLOR, DEFAULT_ICON, EXIT_EMOJI, NUMBER_EMOJIS},
+    events::statefulembed::{
+        EmbedSession,
+        StatefulEmbed,
+    },
+    models::{
+        caches::DatabaseKey,
+        settings::GuildSettings,
+    },
+    utils::constants::{
+        DEFAULT_COLOR,
+        DEFAULT_ICON,
+        EXIT_EMOJI,
+        NUMBER_EMOJIS,
+    },
 };
 
 #[help]
@@ -243,7 +280,7 @@ async fn allowed(
         }
     }
 
-    return true;
+    true
 }
 
 #[hook]

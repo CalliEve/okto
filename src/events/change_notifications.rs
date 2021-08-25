@@ -2,29 +2,52 @@ use std::sync::Arc;
 
 use futures::{
     future,
-    stream::{self, FuturesUnordered},
+    stream::{
+        self,
+        FuturesUnordered,
+    },
     StreamExt,
 };
 use mongodb::{
-    bson::{self, doc, Document},
+    bson::{
+        self,
+        doc,
+        Document,
+    },
     error::Result as MongoResult,
     Database,
 };
 use serde::de::DeserializeOwned;
 use serenity::{
-    builder::{CreateEmbed, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateMessage,
+    },
     http::Http,
-    model::{channel::Message, id::ChannelId},
+    model::{
+        channel::Message,
+        id::ChannelId,
+    },
     utils::Colour,
     Error as SerenityError,
 };
 
 use crate::{
     models::{
-        launches::{LaunchData, LaunchStatus},
-        reminders::{GuildSettings, ReminderSettings, UserSettings},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
+        reminders::{
+            GuildSettings,
+            ReminderSettings,
+            UserSettings,
+        },
     },
-    utils::{constants::LAUNCH_AGENCIES, default_embed},
+    utils::{
+        constants::LAUNCH_AGENCIES,
+        default_embed,
+    },
 };
 
 async fn get_toggled<T>(db: &Database, collection: &str, toggled: &str) -> Vec<T>
@@ -193,7 +216,7 @@ pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData)
     send_guild_notification(&http, guild_settings, &finished, &embed).await;
 }
 
-fn outcome_embed<'r>(finished: &'r LaunchData) -> CreateEmbed {
+fn outcome_embed(finished: &LaunchData) -> CreateEmbed {
     let mut e = CreateEmbed::default();
 
     default_embed(
@@ -207,13 +230,15 @@ fn outcome_embed<'r>(finished: &'r LaunchData) -> CreateEmbed {
         true,
     );
 
-    e.color(if matches!(finished.status, LaunchStatus::Success) {
-        Colour::FOOYOO
-    } else if matches!(finished.status, LaunchStatus::PartialFailure) {
-        Colour::ORANGE
-    } else {
-        Colour::RED
-    });
+    e.color(
+        if matches!(finished.status, LaunchStatus::Success) {
+            Colour::FOOYOO
+        } else if matches!(finished.status, LaunchStatus::PartialFailure) {
+            Colour::ORANGE
+        } else {
+            Colour::RED
+        },
+    );
 
     e
 }

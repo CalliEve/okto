@@ -1,15 +1,38 @@
-use std::{collections::HashMap, convert::TryFrom, sync::Arc};
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    sync::Arc,
+};
 
 use chrono::Duration;
-use futures::stream::{FuturesUnordered, StreamExt};
+use futures::stream::{
+    FuturesUnordered,
+    StreamExt,
+};
 use mongodb::Database;
-use reqwest::{header::AUTHORIZATION, Result};
-use serenity::{http::Http, prelude::RwLock};
+use reqwest::{
+    header::AUTHORIZATION,
+    Result,
+};
+use serenity::{
+    http::Http,
+    prelude::RwLock,
+};
 
 use crate::{
-    events::change_notifications::{notify_outcome, notify_scrub},
-    models::launches::{LaunchContainer, LaunchData, LaunchStatus},
-    utils::constants::{DEFAULT_CLIENT, LL_KEY},
+    events::change_notifications::{
+        notify_outcome,
+        notify_scrub,
+    },
+    models::launches::{
+        LaunchContainer,
+        LaunchData,
+        LaunchStatus,
+    },
+    utils::constants::{
+        DEFAULT_CLIENT,
+        LL_KEY,
+    },
 };
 
 pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Vec<LaunchData>>>) {
@@ -21,7 +44,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
         Err(e) => {
             dbg!(e);
             return;
-        }
+        },
     };
     launches.sort_by_key(|l| l.net);
 

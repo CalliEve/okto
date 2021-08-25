@@ -2,12 +2,22 @@ use std::io::ErrorKind as IoErrorKind;
 use std::sync::Arc;
 
 use mongodb::{
-    bson::{self, doc},
-    error::{Error as MongoError, ErrorKind as MongoErrorKind, Result as MongoResult},
+    bson::{
+        self,
+        doc,
+    },
+    error::{
+        Error as MongoError,
+        ErrorKind as MongoErrorKind,
+        Result as MongoResult,
+    },
     Database,
 };
 
-use crate::models::reminders::{GuildSettings, UserSettings};
+use crate::models::reminders::{
+    GuildSettings,
+    UserSettings,
+};
 
 pub async fn get_user_settings(db: &Database, id: u64) -> MongoResult<UserSettings> {
     db.collection("user_settings")
