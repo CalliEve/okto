@@ -1,4 +1,4 @@
-[OKTO] Copyright (2020) (Bart Evers)(“Licensor”)
+[OKTO] Copyright (2020) (Calli Evers)(“Licensor”)
 
 Hippocratic License Version Number: 2.1.
 

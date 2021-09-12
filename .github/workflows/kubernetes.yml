@@ -18,17 +18,17 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: login to docker
-        run: docker login docker.pkg.github.com -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
+        run: docker login ghcr.io -u ${{ secrets.DOCKER_USERNAME }} -p ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build container image
         run: |
-          docker build . --tag docker.pkg.github.com/callieve/okto/okto-bot:${{ github.sha }}
-          docker image tag docker.pkg.github.com/callieve/okto/okto-bot:${{ github.sha }} docker.pkg.github.com/callieve/okto/okto-bot:latest
+          docker build . --tag ghcr.io/callieve/okto/okto-bot:${{ github.sha }}
+          docker image tag ghcr.io/callieve/okto/okto-bot:${{ github.sha }} ghcr.io/callieve/okto/okto-bot:latest
 
       - name: Push image to Docker Hub
         run: |
-            docker push docker.pkg.github.com/callieve/okto/okto-bot:${{ github.sha }}
-            docker push docker.pkg.github.com/callieve/okto/okto-bot:latest
+            docker push ghcr.io/callieve/okto/okto-bot:${{ github.sha }}
+            docker push ghcr.io/callieve/okto/okto-bot:latest
 
       - name: Save DigitalOcean kubeconfig
         uses: digitalocean/action-doctl@master
@@ -38,4 +38,4 @@ jobs:
           args: kubernetes cluster kubeconfig show k8s-okto > $GITHUB_WORKSPACE/.kubeconfig
 
       - name: Deploy to DigitalOcean Kubernetes
-        run: kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig -n discord-bots set image statefulset/stateful-okto okto-bot=docker.pkg.github.com/callieve/okto/okto-bot:${{ github.sha }}
+        run: kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig -n discord-bots set image statefulset/stateful-okto okto-bot=ghcr.io/callieve/okto/okto-bot:${{ github.sha }}
