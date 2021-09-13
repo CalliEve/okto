@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use itertools::Itertools;
 
 use chrono::Utc;
+use itertools::Itertools;
 use rand::seq::SliceRandom;
 use serde::{
     Deserialize,
@@ -55,16 +55,20 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     let end = Utc::now();
 
     let round_trip = end - start;
-    let ws_delay = start - msg.id.created_at();
+    let ws_delay = start
+        - msg
+            .id
+            .created_at();
 
     message
         .edit(ctx, |e: &mut EditMessage| {
             e.embed(|e: &mut CreateEmbed| {
-                e.title("Pong!").description(format!(
-                    "\u{1f3d3}\nws delay: {}ms\napi ping: {}ms",
-                    ws_delay.num_milliseconds(),
-                    round_trip.num_milliseconds()
-                ))
+                e.title("Pong!")
+                    .description(format!(
+                        "\u{1f3d3}\nws delay: {}ms\napi ping: {}ms",
+                        ws_delay.num_milliseconds(),
+                        round_trip.num_milliseconds()
+                    ))
             })
         })
         .await?;
@@ -75,7 +79,11 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[description("Invite the bot to your server!")]
 async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
-    let user_id = ctx.cache.current_user().await.id;
+    let user_id = ctx
+        .cache
+        .current_user()
+        .await
+        .id;
     let msg_res: Result<Message> = msg.channel_id.send_message(&ctx.http, |m: &mut CreateMessage| {
         m.content(format!(
             "**OKTO** | `3.0`\n{}, I hope you enjoy using me on your server!",
@@ -108,7 +116,11 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
 #[command]
 #[description("Get some general information about the bot")]
 async fn info(ctx: &Context, msg: &Message) -> CommandResult {
-    let user_id = ctx.cache.current_user().await.id;
+    let user_id = ctx
+        .cache
+        .current_user()
+        .await
+        .id;
     msg.channel_id.send_message(&ctx.http, |m: &mut CreateMessage| {
         m.embed(|e: &mut CreateEmbed| {
             e.title("OKTO")
@@ -200,9 +212,12 @@ async fn peopleinspace(ctx: &Context, msg: &Message) -> CommandResult {
         .json()
         .await?;
 
-    let mut text_vec: Vec<String> = Vec::with_capacity(pis.people.len());
+    let mut text_vec: Vec<String> = Vec::with_capacity(
+        pis.people
+            .len(),
+    );
     for person in &pis.people {
-        text_vec.push(format!("{}: {}\n", person.name, person.craft))
+        text_vec.push(format!("{}: {}\n", person.name, person.craft));
     }
 
     msg.channel_id
@@ -219,7 +234,8 @@ async fn peopleinspace(ctx: &Context, msg: &Message) -> CommandResult {
                         .collect::<String>(),
                 )
                 .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("People in space").icon_url(DEFAULT_ICON)
+                    a.name("People in space")
+                        .icon_url(DEFAULT_ICON)
                 })
                 .timestamp(&Utc::now())
                 .color(DEFAULT_COLOR)
@@ -245,9 +261,12 @@ async fn iss(ctx: &Context, msg: &Message) -> CommandResult {
         .channel_id
         .send_message(&ctx.http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| a.name("Position ISS").icon_url(DEFAULT_ICON))
-                    .color(DEFAULT_COLOR)
-                    .description("<a:typing:393848431413559296> loading position...")
+                e.author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Position ISS")
+                        .icon_url(DEFAULT_ICON)
+                })
+                .color(DEFAULT_COLOR)
+                .description("<a:typing:393848431413559296> loading position...")
             })
         })
         .await?;
@@ -316,7 +335,8 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         .send_message(&ctx.http, |m: &mut CreateMessage| {
             m.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Exoplanet/Star Information").icon_url(DEFAULT_ICON)
+                    a.name("Exoplanet/Star Information")
+                        .icon_url(DEFAULT_ICON)
                 })
                 .color(DEFAULT_COLOR)
                 .description("<a:typing:393848431413559296> loading data...")
@@ -324,19 +344,52 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         })
         .await?;
 
-    let search_name = args.current().map(std::borrow::ToOwned::to_owned);
+    let search_name = args
+        .current()
+        .map(std::borrow::ToOwned::to_owned);
 
-    match ctx.data.read().await.get::<PictureCacheKey>() {
+    match ctx
+        .data
+        .read()
+        .await
+        .get::<PictureCacheKey>()
+    {
         None => return Err("can't get picture cache".into()),
         Some(p)
-            if search_name.is_some() && p.host_stars.contains(&search_name.clone().unwrap()) =>
+            if search_name.is_some()
+                && p.host_stars
+                    .contains(
+                        &search_name
+                            .clone()
+                            .unwrap(),
+                    ) =>
         {
-            get_star(&ctx, &mut res_msg, &search_name.clone().unwrap()).await?
+            get_star(
+                ctx,
+                &mut res_msg,
+                &search_name
+                    .clone()
+                    .unwrap(),
+            )
+            .await?
         },
         Some(p)
-            if search_name.is_some() && p.exoplanets.contains(&search_name.clone().unwrap()) =>
+            if search_name.is_some()
+                && p.exoplanets
+                    .contains(
+                        &search_name
+                            .clone()
+                            .unwrap(),
+                    ) =>
         {
-            get_planet(&ctx, &mut res_msg, &search_name.clone().unwrap()).await?
+            get_planet(
+                ctx,
+                &mut res_msg,
+                &search_name
+                    .clone()
+                    .unwrap(),
+            )
+            .await?
         },
         Some(_) if search_name.is_some() => {
             res_msg.edit(&ctx.http, |m: &mut EditMessage| {
@@ -356,10 +409,14 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         Some(p) => {
             let rand_name = {
                 p.exoplanets
-                    .choose(&mut *RNG.lock().await)
+                    .choose(
+                        &mut *RNG
+                            .lock()
+                            .await,
+                    )
                     .ok_or("something went wrong while picking a planet")
             }?;
-            get_planet(&ctx, &mut res_msg, &rand_name).await?
+            get_planet(ctx, &mut res_msg, rand_name).await?
         },
     };
 
@@ -377,7 +434,7 @@ struct StarInfo {
     pub st_rad: Option<f64>,
     pub sy_pnum: i32,
     pub pl_letter: String,
-    pub hostname: String
+    pub hostname: String,
 }
 
 impl StarInfo {
@@ -424,12 +481,18 @@ async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandR
         .json::<Vec<StarInfo>>()
         .await?
         .into_iter()
-        .unique_by(|s| s.hostname.clone())
+        .unique_by(|s| {
+            s.hostname
+                .clone()
+        })
         .collect();
 
     let planets = res
         .iter()
-        .map(|s| s.pl_letter.clone())
+        .map(|s| {
+            s.pl_letter
+                .clone()
+        })
         .unique()
         .collect::<Vec<String>>()
         .join(", ");
@@ -437,50 +500,53 @@ async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandR
 
     msg.edit(&ctx.http, |m: &mut EditMessage| {
         m.embed(|e: &mut CreateEmbed| {
-            e.author(|a: &mut CreateEmbedAuthor| a.name("Star Information").icon_url(DEFAULT_ICON))
-                .color(DEFAULT_COLOR)
-                .title(star_name)
-                .timestamp(&Utc::now())
-                .field(
-                    "System Data",
-                    format!(
-                        "**Number of planets in system:** {}\n\
+            e.author(|a: &mut CreateEmbedAuthor| {
+                a.name("Star Information")
+                    .icon_url(DEFAULT_ICON)
+            })
+            .color(DEFAULT_COLOR)
+            .title(star_name)
+            .timestamp(&Utc::now())
+            .field(
+                "System Data",
+                format!(
+                    "**Number of planets in system:** {}\n\
                         **Letters used to designate planets in the system:** {}\n\
                         **Distance from us in lightyears:** {}\n\
                         **Distance from us in parsecs:** {}",
-                        star.sy_pnum,
-                        planets,
-                        star.get_lightyears_dist(),
-                        star.sy_dist
-                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
-                    ),
-                    false,
-                )
-                .field(
-                    "Star Data",
-                    format!(
-                        "**Stellar Age:** {}\n\
+                    star.sy_pnum,
+                    planets,
+                    star.get_lightyears_dist(),
+                    star.sy_dist
+                        .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
+                ),
+                false,
+            )
+            .field(
+                "Star Data",
+                format!(
+                    "**Stellar Age:** {}\n\
                         **Spectral Type:** {}\n\
                         **Henry Draper Catalog Name:** {}\n\
                         **Radius Star:** {}\n\
                         **Mass of the star:** {}\n\
                         **Stellar Density:** {}",
-                        star.get_age(),
-                        star.st_spectype
-                            .as_ref()
-                            .cloned()
-                            .unwrap_or_else(|| "unknown".to_owned()),
-                        star.hd_name
-                            .as_ref()
-                            .cloned()
-                            .unwrap_or_else(|| "unknown".to_owned()),
-                        star.get_rad(),
-                        star.get_mass(),
-                        star.st_dens
-                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
-                    ),
-                    false,
-                )
+                    star.get_age(),
+                    star.st_spectype
+                        .as_ref()
+                        .cloned()
+                        .unwrap_or_else(|| "unknown".to_owned()),
+                    star.hd_name
+                        .as_ref()
+                        .cloned()
+                        .unwrap_or_else(|| "unknown".to_owned()),
+                    star.get_rad(),
+                    star.get_mass(),
+                    star.st_dens
+                        .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
+                ),
+                false,
+            )
         })
     })
     .await?;
@@ -522,14 +588,18 @@ async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> Comm
         .json::<Vec<PlanetInfo>>()
         .await?
         .into_iter()
-        .unique_by(|p| p.pl_name.clone())
+        .unique_by(|p| {
+            p.pl_name
+                .clone()
+        })
         .next()
         .ok_or("No planet like this found")?;
 
     msg.edit(&ctx.http, |m: &mut EditMessage| {
         m.embed(|e: &mut CreateEmbed| {
             e.author(|a: &mut CreateEmbedAuthor| {
-                a.name("Planet Information").icon_url(DEFAULT_ICON)
+                a.name("Planet Information")
+                    .icon_url(DEFAULT_ICON)
             })
             .color(DEFAULT_COLOR)
             .title(planet_name)

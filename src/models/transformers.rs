@@ -7,7 +7,10 @@ use super::launches::{
 
 impl From<LaunchInfo> for LaunchData {
     fn from(mut info: LaunchInfo) -> LaunchData {
-        if let Some(urls) = info.vid_urls.as_mut() {
+        if let Some(urls) = info
+            .vid_urls
+            .as_mut()
+        {
             urls.sort_by_key(|u| u.priority);
             urls.dedup_by_key(|u| {
                 if let Ok(link) = url::Url::from_str(&u.url) {
@@ -25,14 +28,23 @@ impl From<LaunchInfo> for LaunchData {
             id: 0,
             ll_id: info.id,
             launch_name: info.name,
-            status: info.status.id,
+            status: info
+                .status
+                .id,
             payload: info
                 .mission
                 .clone()
                 .map_or_else(|| String::from("payload unknown"), |m| m.name),
-            vid_urls: info.vid_urls.unwrap_or_default(),
-            vehicle: info.rocket.configuration.full_name,
-            location: info.pad.name,
+            vid_urls: info
+                .vid_urls
+                .unwrap_or_default(),
+            vehicle: info
+                .rocket
+                .configuration
+                .full_name,
+            location: info
+                .pad
+                .name,
             net: info.net,
             launch_window: info.window_end - info.window_start,
             rocket_img: info.image,
@@ -40,10 +52,13 @@ impl From<LaunchInfo> for LaunchData {
                 .mission
                 .clone()
                 .map_or_else(|| String::from("mission type unknown"), |m| m.mission_type),
-            mission_description: info.mission.clone().map_or_else(
-                || String::from("mission description unknown"),
-                |m| m.description,
-            ),
+            mission_description: info
+                .mission
+                .clone()
+                .map_or_else(
+                    || String::from("mission description unknown"),
+                    |m| m.description,
+                ),
             lsp: info
                 .launch_service_provider
                 .map_or_else(|| String::from("Unknown launch provider"), |l| l.name),

@@ -174,7 +174,7 @@ pub struct VidURL {
 #[repr(u8)]
 pub enum LaunchStatus {
     Go = 1,
-    TBD = 2,
+    Tbd = 2,
     Success = 3,
     Failure = 4,
     Hold = 5,
@@ -186,7 +186,7 @@ impl LaunchStatus {
     pub fn as_str(&self) -> &str {
         match self {
             LaunchStatus::Go => "Go",
-            LaunchStatus::TBD => "TBD",
+            LaunchStatus::Tbd => "TBD",
             LaunchStatus::Failure => "Failure",
             LaunchStatus::Success => "Success",
             LaunchStatus::InFlight => "In Flight",

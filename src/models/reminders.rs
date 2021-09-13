@@ -31,6 +31,8 @@ pub struct GuildSettings {
     #[serde(default)]
     pub filters: Vec<String>,
     #[serde(default)]
+    pub allow_filters: Vec<String>,
+    #[serde(default)]
     pub mentions: Vec<RoleId>,
     #[serde(default)]
     pub scrub_notifications: bool,
@@ -48,6 +50,8 @@ pub struct UserSettings {
     #[serde(default)]
     pub filters: Vec<String>,
     #[serde(default)]
+    pub allow_filters: Vec<String>,
+    #[serde(default)]
     pub scrub_notifications: bool,
     #[serde(default)]
     pub outcome_notifications: bool,
@@ -62,6 +66,8 @@ impl Reminder {
 pub trait ReminderSettings {
     fn get_filters(&self) -> &Vec<String>;
 
+    fn get_allow_filters(&self) -> &Vec<String>;
+
     fn notify_scrub(&self) -> bool;
 
     fn notify_outcome(&self) -> bool;
@@ -70,6 +76,10 @@ pub trait ReminderSettings {
 impl ReminderSettings for GuildSettings {
     fn get_filters(&self) -> &Vec<String> {
         &self.filters
+    }
+
+    fn get_allow_filters(&self) -> &Vec<String> {
+        &self.allow_filters
     }
 
     fn notify_scrub(&self) -> bool {
@@ -84,6 +94,10 @@ impl ReminderSettings for GuildSettings {
 impl ReminderSettings for UserSettings {
     fn get_filters(&self) -> &Vec<String> {
         &self.filters
+    }
+
+    fn get_allow_filters(&self) -> &Vec<String> {
+        &self.allow_filters
     }
 
     fn notify_scrub(&self) -> bool {

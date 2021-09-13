@@ -40,7 +40,12 @@ pub const LAUNCH_LIBRARY_URL: &str = "https://thespacedevs.com";
 fn default_headers() -> HeaderMap {
     let mut headers = HeaderMap::new();
 
-    headers.insert(ACCEPT, "application/json".parse().unwrap());
+    headers.insert(
+        ACCEPT,
+        "application/json"
+            .parse()
+            .unwrap(),
+    );
 
     headers
 }
@@ -104,7 +109,7 @@ fn agency_map() -> HashMap<&'static str, &'static str> {
     res.insert("arianespace", "Arianespace");
     res.insert("eurockot", "Eurockot Launch Services");
     res.insert("rocketlab", "Rocket Lab Ltd");
-    res.insert("orbitalatk", "Orbital ATK");
+    res.insert("ngis", "Northrop Grumman Innovation Systems");
     res.insert("casc", "China Aerospace Science and Technology Corporation");
     res.insert("casic", "China Aerospace Science and Industry Corporation");
     res.insert("cnsa", "China National Space Administration");

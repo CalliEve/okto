@@ -40,7 +40,11 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
 
     // Get new set of launches
     let mut launches: Vec<LaunchData> = match get_new_launches().await {
-        Ok(ls) => ls.results.into_iter().map(LaunchData::from).collect(),
+        Ok(ls) => ls
+            .results
+            .into_iter()
+            .map(LaunchData::from)
+            .collect(),
         Err(e) => {
             dbg!(e);
             return;
@@ -49,7 +53,10 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
     launches.sort_by_key(|l| l.net);
 
     // Give each launch a number
-    for (i, launch) in launches.iter_mut().enumerate() {
+    for (i, launch) in launches
+        .iter_mut()
+        .enumerate()
+    {
         launch.id = if let Ok(id) = i32::try_from(i) {
             id
         } else {
@@ -59,23 +66,36 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
 
     println!("got {} launches", launches.len());
 
-    let mut launch_cache = cache.write().await;
+    let mut launch_cache = cache
+        .write()
+        .await;
+
+    // Update launch cache and free the lock
+    *launch_cache = launches.clone();
+    std::mem::drop(launch_cache);
+    let launch_cache = cache
+        .read()
+        .await;
 
     let five_minutes = Duration::minutes(5);
 
     // Get launches to notify about
-    let scrubbed: Vec<LaunchData> = launches
+    let scrubbed = launches
         .iter()
-        .filter(|nl| {
+        .filter_map(|nl| {
             launch_cache
                 .iter()
                 .find(|ol| nl.ll_id == ol.ll_id)
-                .map_or(false, |ol| nl.net > (ol.net + five_minutes))
-        })
-        .cloned()
-        .collect();
+                .and_then(|ol| {
+                    if nl.net > (ol.net + five_minutes) {
+                        Some((ol.clone(), nl.clone()))
+                    } else {
+                        None
+                    }
+                })
+        });
 
-    let finished: Vec<LaunchData> = launches
+    let finished = launches
         .iter()
         .filter(|nl| {
             matches!(
@@ -91,29 +111,22 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
                     matches!(
                         ol.status,
                         LaunchStatus::Go
-                            | LaunchStatus::TBD
+                            | LaunchStatus::Tbd
                             | LaunchStatus::InFlight
                             | LaunchStatus::Hold
                     )
                 })
         })
-        .cloned()
-        .collect();
-
-    // Update launch cache and free the lock
-    *launch_cache = launches;
-    std::mem::drop(launch_cache);
+        .cloned();
 
     // Send out notifications
     scrubbed
-        .into_iter()
-        .map(|l| notify_scrub(http.clone(), db.clone(), l))
+        .map(|l| notify_scrub(http.clone(), db.clone(), l.0, l.1))
         .collect::<FuturesUnordered<_>>()
         .collect::<Vec<_>>()
         .await;
 
     finished
-        .into_iter()
         .map(|l| notify_outcome(http.clone(), db.clone(), l))
         .collect::<FuturesUnordered<_>>()
         .collect::<Vec<_>>()

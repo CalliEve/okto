@@ -33,8 +33,14 @@ pub enum WaitPayload {
 impl WaitPayload {
     async fn delete(&self, ctx: &Context) -> SerenityResult<()> {
         match self {
-            Self::Message(m) => m.delete(ctx).await,
-            Self::Reaction(r) => r.delete(ctx).await,
+            Self::Message(m) => {
+                m.delete(ctx)
+                    .await
+            },
+            Self::Reaction(r) => {
+                r.delete(ctx)
+                    .await
+            },
         }
     }
 }
@@ -108,7 +114,11 @@ impl WaitFor {
     }
 
     pub async fn listen(self, data: Arc<RwLock<TypeMap>>) {
-        if let Some(waiting) = data.write().await.get_mut::<WaitForKey>() {
+        if let Some(waiting) = data
+            .write()
+            .await
+            .get_mut::<WaitForKey>()
+        {
             waiting.insert((self.channel, self.user), self);
         }
     }
@@ -139,7 +149,12 @@ impl WaitFor {
 }
 
 pub async fn waitfor_message(ctx: &Context, message: Message) {
-    let filter = (message.channel_id, message.author.id);
+    let filter = (
+        message.channel_id,
+        message
+            .author
+            .id,
+    );
     handle_waitfor(ctx, filter, WaitPayload::Message(message)).await
 }
 
@@ -151,7 +166,12 @@ pub async fn waitfor_reaction(ctx: &Context, reaction: Reaction) {
 }
 
 async fn handle_waitfor(ctx: &Context, filter: (ChannelId, UserId), payload: WaitPayload) {
-    let waiter = if let Some(waiting) = ctx.data.read().await.get::<WaitForKey>() {
+    let waiter = if let Some(waiting) = ctx
+        .data
+        .read()
+        .await
+        .get::<WaitForKey>()
+    {
         if let Some(waiter) = waiting.get(&filter) {
             waiter.clone()
         } else {
@@ -161,13 +181,25 @@ async fn handle_waitfor(ctx: &Context, filter: (ChannelId, UserId), payload: Wai
         return;
     };
 
-    if waiter.handle(payload.clone()).await {
-        if let Some(waiting) = ctx.data.write().await.get_mut::<WaitForKey>() {
+    if waiter
+        .handle(payload.clone())
+        .await
+    {
+        if let Some(waiting) = ctx
+            .data
+            .write()
+            .await
+            .get_mut::<WaitForKey>()
+        {
             waiting.remove(&filter);
         }
         if let Some(message) = waiter.message {
-            let _ = message.delete(ctx).await;
+            let _ = message
+                .delete(ctx)
+                .await;
         }
-        let _ = payload.delete(ctx).await;
+        let _ = payload
+            .delete(ctx)
+            .await;
     }
 }

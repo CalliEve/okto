@@ -3,7 +3,11 @@ use std::{
     time::Duration,
 };
 
-use reqwest::header::AUTHORIZATION;
+use http::StatusCode;
+use reqwest::{
+    header::AUTHORIZATION,
+    Response,
+};
 use serenity::{
     async_trait,
     model::{
@@ -60,13 +64,24 @@ impl EventHandler for Handler {
             guilds: {}\n\
             CPUs: {}\n\
             ############",
-            ready.user.name,
-            ready.user.id,
-            ready.guilds.len(),
+            ready
+                .user
+                .name,
+            ready
+                .user
+                .id,
+            ready
+                .guilds
+                .len(),
             num_cpus::get()
         );
 
-        let content = format!("**OKTO** restarted\nServing {} servers", ready.guilds.len(),);
+        let content = format!(
+            "**OKTO** restarted\nServing {} servers",
+            ready
+                .guilds
+                .len(),
+        );
         let _ = ChannelId(448224720177856513)
             .send_message(&ctx.http, |m| m.content(content))
             .await;
@@ -74,21 +89,37 @@ impl EventHandler for Handler {
         tokio::spawn(async move {
             loop {
                 {
-                    let amount: usize = ctx.cache.guild_count().await;
+                    let amount: usize = ctx
+                        .cache
+                        .guild_count()
+                        .await;
                     let status = format!("{} servers", amount);
-                    ctx.set_activity(Activity::listening(&status)).await;
+                    ctx.set_activity(Activity::listening(&status))
+                        .await;
 
                     let mut map = HashMap::new();
                     map.insert("server_count", amount);
                     if let Err(e) = DEFAULT_CLIENT
-                        .post(format!("https://top.gg/api/bots/{}/stats", ready.user.id).as_str())
+                        .post(
+                            format!(
+                                "https://top.gg/api/bots/{}/stats",
+                                ready
+                                    .user
+                                    .id
+                            )
+                            .as_str(),
+                        )
                         .header(AUTHORIZATION, TOPGG_TOKEN.as_str())
                         .json(&map)
                         .send()
                         .await
-                        .and_then(|res| res.error_for_status())
+                        .and_then(Response::error_for_status)
                     {
-                        error_log(&ctx, &e.to_string()).await
+                        if e.status()
+                            .map_or(true, |s| s != StatusCode::FORBIDDEN)
+                        {
+                            error_log(&ctx, &e.to_string()).await
+                        }
                     }
                 }
                 tokio::time::sleep(Duration::from_secs(300)).await;
@@ -117,7 +148,11 @@ impl EventHandler for Handler {
 
     async fn guild_create(&self, ctx: Context, guild: Guild, is_new: bool) {
         if is_new {
-            if let Some(channel) = ctx.cache.guild_channel(755401788294955070).await {
+            if let Some(channel) = ctx
+                .cache
+                .guild_channel(755401788294955070)
+                .await
+            {
                 let content = format!(
                     "Joined a new guild: {} ({})\nIt has {} members",
                     guild.name, guild.id, guild.member_count
@@ -130,7 +165,11 @@ impl EventHandler for Handler {
     }
 
     async fn guild_delete(&self, ctx: Context, incomplete: GuildUnavailable, _full: Option<Guild>) {
-        if let Some(channel) = ctx.cache.guild_channel(755401788294955070).await {
+        if let Some(channel) = ctx
+            .cache
+            .guild_channel(755401788294955070)
+            .await
+        {
             let content = format!("Left the following guild: {}", incomplete.id);
             let _ = channel
                 .send_message(&ctx.http, |m| m.content(content))
