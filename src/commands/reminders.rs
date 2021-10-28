@@ -269,8 +269,8 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
         let result = em
             .show()
             .await;
-        if result.is_err() {
-            dbg!(result.unwrap_err());
+        if let Err(err) = result {
+            dbg!(err);
         }
     })
 }
@@ -386,8 +386,8 @@ fn reminders_page(
         let result = em
             .show()
             .await;
-        if result.is_err() {
-            dbg!(result.unwrap_err());
+        if let Err(err) = result {
+            dbg!(err);
         }
     })
 }
@@ -420,7 +420,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    }
+                    },
                     _ => "No agency filters have been set yet".to_owned(),
                 }
             },
@@ -437,7 +437,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    }
+                    },
                     _ => "No agency filters have been set yet".to_owned(),
                 }
             },
@@ -555,8 +555,8 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
         let result = em
             .show()
             .await;
-        if result.is_err() {
-            dbg!(result.unwrap_err());
+        if let Err(err) = result {
+            dbg!(err);
         }
     })
 }
@@ -593,7 +593,7 @@ fn allow_filters_page(
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    }
+                    },
                     _ => "No agency allow filters have been set yet".to_owned(),
                 }
             },
@@ -611,7 +611,7 @@ fn allow_filters_page(
                             text.push_str(&format!("\n`{}`", filter))
                         }
                         text
-                    }
+                    },
                     _ => "No agency allow filters have been set yet".to_owned(),
                 }
             },
@@ -729,8 +729,8 @@ fn allow_filters_page(
         let result = em
             .show()
             .await;
-        if result.is_err() {
-            dbg!(result.unwrap_err());
+        if let Err(err) = result {
+            dbg!(err);
         }
     })
 }
@@ -773,7 +773,7 @@ fn mentions_page(
                             }
                         }
                         text
-                    }
+                    },
                     _ => "No role mentions have been set yet".to_owned(),
                 }
             },
@@ -911,8 +911,8 @@ fn mentions_page(
         let result = em
             .show()
             .await;
-        if result.is_err() {
-            dbg!(result.unwrap_err());
+        if let Err(err) = result {
+            dbg!(err);
         }
     })
 }
@@ -1093,8 +1093,8 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
         let result = em
             .show()
             .await;
-        if result.is_err() {
-            dbg!(result.unwrap_err());
+        if let Err(err) = result {
+            dbg!(err);
         }
     })
 }

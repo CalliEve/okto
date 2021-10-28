@@ -3,11 +3,7 @@ use std::{
     time::Duration,
 };
 
-use http::StatusCode;
-use reqwest::{
-    header::AUTHORIZATION,
-    Response,
-};
+use reqwest::header::AUTHORIZATION;
 use serenity::{
     async_trait,
     model::{
@@ -44,12 +40,9 @@ use crate::{
             waitfor_reaction,
         },
     },
-    utils::{
-        constants::{
-            DEFAULT_CLIENT,
-            TOPGG_TOKEN,
-        },
-        error_log,
+    utils::constants::{
+        DEFAULT_CLIENT,
+        TOPGG_TOKEN,
     },
 };
 
@@ -99,7 +92,7 @@ impl EventHandler for Handler {
 
                     let mut map = HashMap::new();
                     map.insert("server_count", amount);
-                    if let Err(e) = DEFAULT_CLIENT
+                    let _ = DEFAULT_CLIENT
                         .post(
                             format!(
                                 "https://top.gg/api/bots/{}/stats",
@@ -112,15 +105,7 @@ impl EventHandler for Handler {
                         .header(AUTHORIZATION, TOPGG_TOKEN.as_str())
                         .json(&map)
                         .send()
-                        .await
-                        .and_then(Response::error_for_status)
-                    {
-                        if e.status()
-                            .map_or(true, |s| s != StatusCode::FORBIDDEN)
-                        {
-                            error_log(&ctx, &e.to_string()).await
-                        }
-                    }
+                        .await;
                 }
                 tokio::time::sleep(Duration::from_secs(300)).await;
             }
