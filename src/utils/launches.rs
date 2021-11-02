@@ -36,7 +36,7 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
                     link_obj
                         .title
                         .as_ref()
-                        .map_or("unknown url", |s| s.as_str()),
+                        .map_or("unknown url", String::as_str),
                     domain,
                     &link_obj.url
                 ));

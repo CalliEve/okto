@@ -78,9 +78,14 @@ impl EventHandler for Handler {
         let _ = ChannelId(448224720177856513)
             .send_message(&ctx.http, |m| m.content(content))
             .await;
+        
+        let status = format!("{} servers", ready.guilds.len());
+        ctx.set_activity(Activity::listening(&status))
+            .await;
 
         tokio::spawn(async move {
             loop {
+                tokio::time::sleep(Duration::from_secs(300)).await;
                 {
                     let amount: usize = ctx
                         .cache
@@ -107,7 +112,6 @@ impl EventHandler for Handler {
                         .send()
                         .await;
                 }
-                tokio::time::sleep(Duration::from_secs(300)).await;
             }
         });
     }
@@ -150,15 +154,17 @@ impl EventHandler for Handler {
     }
 
     async fn guild_delete(&self, ctx: Context, incomplete: GuildUnavailable, _full: Option<Guild>) {
-        if let Some(channel) = ctx
-            .cache
-            .guild_channel(755401788294955070)
-            .await
-        {
-            let content = format!("Left the following guild: {}", incomplete.id);
-            let _ = channel
-                .send_message(&ctx.http, |m| m.content(content))
-                .await;
+        if !incomplete.unavailable {
+            if let Some(channel) = ctx
+                .cache
+                .guild_channel(755401788294955070)
+                .await
+            {
+                let content = format!("Left the following guild: {}", incomplete.id);
+                let _ = channel
+                    .send_message(&ctx.http, |m| m.content(content))
+                    .await;
+            }
         }
     }
 }

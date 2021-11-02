@@ -24,6 +24,7 @@ use serenity::{
 
 use crate::models::caches::WaitForKey;
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug)]
 pub enum WaitPayload {
     Message(Message),
