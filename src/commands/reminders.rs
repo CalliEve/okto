@@ -102,7 +102,7 @@ async fn notifychannel(ctx: &Context, msg: &Message, args: Args) -> CommandResul
 
     let target_channel = if let Some(channel_id) = args
         .current()
-        .and_then(|c| parse_id(c))
+        .and_then(parse_id)
         .map(ChannelId)
     {
         channel_id
@@ -1222,9 +1222,7 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String, fil
         return;
     };
 
-    if !LAUNCH_AGENCIES.contains_key(filter.as_str()) {
-        panic!("agencies does not contain filter {}", &filter);
-    }
+    assert!(LAUNCH_AGENCIES.contains_key(filter.as_str()), "agencies does not contain filter {}", &filter);
 
     let collection: Collection<Document> = if id.guild_specific() {
         db.collection("guild_settings")

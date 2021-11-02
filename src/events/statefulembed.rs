@@ -76,7 +76,7 @@ impl StatefulEmbed {
     ) where
         F: Fn() -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
-        let full_name = format!("{} {}", emoji.to_string(), name);
+        let full_name = format!("{} {}", &emoji, name);
         self.inner
             .field(full_name, value, inline);
         self.options
