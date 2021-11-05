@@ -32,8 +32,7 @@ use serenity::{
     Error as SerenityError,
 };
 
-use crate::{
-    models::{
+use crate::{models::{
         launches::{
             LaunchData,
             LaunchStatus,
@@ -43,12 +42,7 @@ use crate::{
             ReminderSettings,
             UserSettings,
         },
-    },
-    utils::{
-        constants::LAUNCH_AGENCIES,
-        default_embed,
-    },
-};
+    }, utils::{constants::LAUNCH_AGENCIES, debug_log, default_embed}};
 
 async fn get_toggled<T>(db: &Database, collection: &str, toggled: &str) -> Vec<T>
 where
@@ -172,6 +166,8 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, old: LaunchData, new: L
         get_toggled(&db, "guild_settings", "scrub_notifications").await;
 
     let embed = scrub_embed(&old, &new);
+
+    debug_log(&http, &format!("sending scrub notification for {} to {} user and {} channels", old.vehicle, user_settings.len(), guild_settings.len())).await;
 
     send_user_notification(&http, user_settings, &new, &embed).await;
 

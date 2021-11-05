@@ -85,6 +85,8 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
         let launch_cache = cache
             .read()
             .await;
+        
+        println!("sending out scrub notifications");
         launches
             .iter()
             .filter_map(|nl| {
@@ -104,6 +106,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
             .collect::<Vec<_>>()
             .await;
 
+        println!("sending out outcome notifications");
         launches
             .iter()
             .filter(|nl| {
