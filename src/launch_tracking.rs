@@ -74,23 +74,19 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
         .await;
 
     // Update launch cache and free the lock
+    let old_launches = launch_cache.clone();
     *launch_cache = launches.clone();
     std::mem::drop(launch_cache);
-
     let five_minutes = Duration::minutes(5);
 
     // Send out notifications
     let notif_http = http.clone();
     let notif_res = tokio::spawn(async move {
-        let launch_cache = cache
-            .read()
-            .await;
-        
         println!("sending out scrub notifications");
         launches
             .iter()
             .filter_map(|nl| {
-                launch_cache
+                old_launches
                     .iter()
                     .find(|ol| nl.ll_id == ol.ll_id)
                     .and_then(|ol| {
@@ -116,7 +112,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
                 )
             })
             .filter(|nl| {
-                launch_cache
+                old_launches
                     .iter()
                     .find(|ol| nl.ll_id == ol.ll_id)
                     .map_or(false, |ol| {
