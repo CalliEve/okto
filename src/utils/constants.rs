@@ -113,6 +113,7 @@ fn agency_map() -> HashMap<&'static str, &'static str> {
     res.insert("casc", "China Aerospace Science and Technology Corporation");
     res.insert("casic", "China Aerospace Science and Industry Corporation");
     res.insert("cnsa", "China National Space Administration");
+    res.insert("astra", "Astra Space");
 
     res
 }
@@ -134,10 +135,7 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
         "angara",
         vec!["Angara-1.2pp", "Angara A5/Briz-M", "Angara 1.2"],
     );
-    res.insert(
-        "electron",
-        vec!["Falcon 9 Full Thrust", "Falcon 9 v1.1", "Falcon 9 Block 5"],
-    );
+    res.insert("astra", vec!["Astra Rocket 3"]);
     res.insert("falconheavy", vec!["Falcon Heavy"]);
     res.insert(
         "soyuz",
@@ -210,7 +208,7 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
     res.insert("vega", vec!["VEGA"]);
     res.insert(
         "antares",
-        vec!["Antares 110", "Antares 120", "Antares 130", "Antares 230"],
+        vec!["Antares 110", "Antares 120", "Antares 130", "Antares 230"],  
     );
     res.insert("epsilon", vec!["Epsilon"]);
     res.insert("proton", vec!["Proton-M/Briz-M"]);
