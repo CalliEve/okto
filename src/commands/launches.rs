@@ -45,6 +45,7 @@ use crate::{
         constants::*,
         default_embed,
         format_duration,
+        cutoff_on_last_dot,
         launches::*,
     },
 };
@@ -551,7 +552,13 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     );
                 }
 
-                e.field("Desciption:", &launch.mission_description, false);
+                let description = if launch.mission_description.len() > 1024 {
+                    format!("{} ...\nlength is too long for discord", cutoff_on_last_dot(&launch.mission_description, 980))
+                } else {
+                    launch.mission_description.clone()
+                };
+
+                e.field("Desciption:", description, false);
 
                 if let Some(img) = &launch.rocket_img {
                     e.thumbnail(img);
