@@ -106,10 +106,11 @@ async fn main() {
     intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
 
     // Login with a bot token from the environment
-    let mut client = Client::builder(&env::var("DISCORD_TOKEN").expect("no bot token"))
+    let token = env::var("DISCORD_TOKEN").expect("no bot token");
+    let mut client = Client::builder(&token)
         .framework(framework)
         .intents(intents)
-        .event_handler(Handler)
+        .event_handler(Handler::new(okto_framework::create_framework!(&token)))
         .await
         .expect("Error creating client");
 

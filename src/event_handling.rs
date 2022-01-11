@@ -21,13 +21,14 @@ use serenity::{
             GuildId,
             MessageId,
         },
-        prelude::Activity,
+        prelude::Activity, interactions::Interaction,
     },
     prelude::{
         Context,
         EventHandler,
     },
 };
+use okto_framework::Handler as InteractionHandler;
 
 use crate::{
     events::{
@@ -40,13 +41,19 @@ use crate::{
             waitfor_reaction,
         },
     },
-    utils::constants::{
+    utils::{constants::{
         DEFAULT_CLIENT,
         TOPGG_TOKEN,
-    },
+    }, error_log},
 };
 
-pub struct Handler;
+pub struct Handler(InteractionHandler);
+
+impl Handler {
+    pub fn new(interaction_handler: InteractionHandler) -> Self {
+        Self(interaction_handler)
+    }
+}
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -165,6 +172,17 @@ impl EventHandler for Handler {
                     .send_message(&ctx.http, |m| m.content(content))
                     .await;
             }
+        }
+    }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        let res = self.0.handle_interaction(&ctx, &interaction).await;
+        if let Err(e) = res {
+            error_log(
+                &ctx.http,
+                format!("An error happened in {}:\n```{:?}```", interaction.application_command().expect("not a command").data.name, e),
+            )
+            .await
         }
     }
 }

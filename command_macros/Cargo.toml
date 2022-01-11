@@ -1,0 +1,15 @@
+[package]
+name = "slash_command_macros"
+version = "0.1.0"
+authors = ["Calli <me@calli.dev>"]
+edition = "2021"
+description = "macros for creating slash-commands"
+license = "MIT"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quote = "^1.0"
+syn = { version = "^1.0", features = ["full", "derive", "extra-traits"] }
+proc-macro2 = "^1.0"

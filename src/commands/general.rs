@@ -13,7 +13,7 @@ use serenity::{
         CreateEmbedAuthor,
         CreateEmbedFooter,
         CreateMessage,
-        EditMessage,
+        EditMessage, CreateInteractionResponse, EditInteractionResponse,
     },
     framework::standard::{
         macros::{
@@ -25,6 +25,7 @@ use serenity::{
     },
     model::{
         channel::Message,
+        interactions::application_command::ApplicationCommandInteraction,
         ModelError,
     },
     prelude::Context,
@@ -39,30 +40,29 @@ use crate::{
 };
 
 #[group]
-#[commands(ping, invite, info, websites, peopleinspace, iss, exoplanet)]
+#[commands(invite, info, websites, peopleinspace, iss, exoplanet)]
 struct General;
 
-#[command]
-#[description("Get the ping of the bot")]
-async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
+#[okto_framework::macros::command]
+/// Get the ping of the bot
+async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let start = Utc::now();
-    let mut message = msg
-        .channel_id
-        .send_message(&ctx, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| e.description("\u{1f3d3} pong..."))
+    interaction.create_interaction_response(&ctx, |c: &mut CreateInteractionResponse| {
+            c.interaction_response_data(|d| {
+            d.create_embed(|e: &mut CreateEmbed| e.description("\u{1f3d3} pong..."))
+            })
         })
         .await?;
     let end = Utc::now();
 
     let round_trip = end - start;
     let ws_delay = start
-        - msg
+        - interaction
             .id
             .created_at();
 
-    message
-        .edit(ctx, |e: &mut EditMessage| {
-            e.embed(|e: &mut CreateEmbed| {
+    interaction.edit_original_interaction_response(ctx, |e: &mut EditInteractionResponse | {
+            e.create_embed(|e: &mut CreateEmbed| {
                 e.title("Pong!")
                     .description(format!(
                         "\u{1f3d3}\nws delay: {}ms\napi ping: {}ms",
