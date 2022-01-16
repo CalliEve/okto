@@ -12,7 +12,7 @@ use crate::structs::{
 };
 
 pub struct Handler {
-    cmds: Vec<Command>,
+    cmds: Vec<&'static Command>,
 }
 
 impl Handler {
@@ -22,9 +22,17 @@ impl Handler {
         }
     }
 
-    pub fn add_command(&mut self, cmd: Command) {
+    pub fn add_command(&mut self, cmd: &'static Command) -> std::result::Result<(), String> {
+        if cmd.options.description.is_empty() {
+            return Err(format!("Command {} has no description", &cmd.options.name));
+        } else if cmd.options.description.len() > 100 {
+            return Err(format!("Command {} has a description longer than 100 characters", &cmd.options.name));
+        }
+
         self.cmds
-            .push(cmd)
+            .push(cmd);
+
+        Ok(())
     }
 
     pub async fn handle_interaction(

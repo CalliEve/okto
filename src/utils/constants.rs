@@ -208,7 +208,7 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
     res.insert("vega", vec!["VEGA"]);
     res.insert(
         "antares",
-        vec!["Antares 110", "Antares 120", "Antares 130", "Antares 230"],  
+        vec!["Antares 110", "Antares 120", "Antares 130", "Antares 230"],
     );
     res.insert("epsilon", vec!["Epsilon"]);
     res.insert("proton", vec!["Proton-M/Briz-M"]);

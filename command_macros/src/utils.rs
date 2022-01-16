@@ -17,15 +17,14 @@ use syn::{
     },
     punctuated::Punctuated,
     token::{
-        Bracket,
-        Comma,
+        Comma, Brace, Bracket,
     },
     Expr,
     Ident,
     LitBool,
     LitInt,
     LitStr,
-    Token,
+    Token, LitFloat, bracketed
 };
 
 mod kw {
@@ -86,11 +85,9 @@ impl Parse for CommandAttributeContent {
                     .parse::<LitStr>()?
                     .value().trim().to_owned(),
             ));
-        } else if lookahead.peek(Bracket) {
-            let content;
-            syn::bracketed!(content in input);
+        } else if lookahead.peek(Brace) {
             return Ok(Self::Options(
-                content
+                input
                     .parse_terminated::<_, Token![,]>(CommandOption::parse)?
                     .into_iter()
                     .collect(),
@@ -105,7 +102,7 @@ impl Parse for CommandAttributeContent {
 }
 
 macro_rules! get_field {
-    ($name:literal, $map:expr, $res:ident) => {{
+    ($name:literal, $map:expr, $res:ty) => {{
         match $map.get($name) {
             Some(value) => syn::parse::<$res>(
                 value
@@ -120,7 +117,7 @@ macro_rules! get_field {
             },
         }
     }};
-    (false, $name:literal, $map:expr, $res:ident) => {{
+    (false, $name:literal, $map:expr, $res:ty) => {{
         match $map.get($name) {
             Some(value) => Some(syn::parse::<$res>(
                 value
@@ -137,7 +134,7 @@ pub struct CommandOption {
     pub name: String,
     pub description: String,
     pub required: bool,
-    //pub choices: Vec<CommandOptionChoice>,
+    pub choices: Option<List<CommandOptionChoice>>,
     //pub channel_types: Option<Vec<ChannelType>>,
     pub min_value: Option<i32>,
     pub max_value: Option<i32>,
@@ -147,14 +144,14 @@ impl Parse for CommandOption {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
         braced!(content in input);
-        let fields: HashMap<String, Expr> = content
+        let fields: HashMap<String, StructFieldValue> = content
             .parse_terminated::<_, Token![,]>(StructField::parse)?
             .into_iter()
             .map(|f| (f.name, f.value))
             .collect();
 
         Ok(Self {
-            option_type: get_field!("type", fields, CommandOptionType),
+            option_type: get_field!("option_type", fields, CommandOptionType),
             name: get_field!("name", fields, LitStr).value(),
             description: get_field!("description", fields, LitStr).value(),
             required: get_field!(false, "required", fields, LitBool).map_or(false, |v| v.value),
@@ -166,6 +163,7 @@ impl Parse for CommandOption {
                 v.base10_parse()
                     .unwrap()
             }),
+            choices: get_field!(false, "choices", fields, List<CommandOptionChoice>),
         })
     }
 }
@@ -179,26 +177,31 @@ impl ToTokens for CommandOption {
             required,
             min_value,
             max_value,
+            choices,
         } = self.clone();
         let min_value = tokenize_option(*min_value);
         let max_value = tokenize_option(*max_value);
+        let choices = tokenize_option(choices.clone());
 
         stream.extend(quote! {
-            CommandOption {
+            okto_framework::structs::CommandOption {
                 name: #name,
                 description: #description,
                 option_type: #option_type,
                 required: #required,
                 min_value: #min_value,
-                max_value: #max_value
+                max_value: #max_value,
+                choices: #choices,
+                channel_types: None
             }
         })
     }
 }
 
+#[derive(Debug, Clone)]
 struct StructField {
     name: String,
-    value: Expr,
+    value: StructFieldValue,
 }
 
 impl Parse for StructField {
@@ -207,7 +210,7 @@ impl Parse for StructField {
             .parse::<Ident>()?
             .to_string();
         input.parse::<Token![:]>()?;
-        let value = input.parse::<Expr>()?;
+        let value = input.parse::<StructFieldValue>()?;
         Ok(Self {
             name,
             value,
@@ -215,6 +218,50 @@ impl Parse for StructField {
     }
 }
 
+impl ToTokens for StructField {
+    fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
+        let Self { name, value } = self.clone();
+        let name = Ident::new(&name, Span::call_site());
+
+        stream.extend(quote! {#name: #value})
+    }
+}
+
+#[derive(Debug, Clone)]
+enum StructFieldValue {
+    Expr(Expr),
+    List(Punctuated<StructFieldValue, Comma>),
+    Map(Punctuated<StructField, Comma>)
+}
+
+impl Parse for StructFieldValue {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(Bracket) {
+            let content;
+            bracketed!(content in input);
+            Ok(StructFieldValue::List(content.parse_terminated::<_, Token![,]>(StructFieldValue::parse)?))
+        } else if lookahead.peek(Brace) {
+            let content;
+            braced!(content in input);
+            Ok(StructFieldValue::Map(content.parse_terminated::<_, Token![,]>(StructField::parse)?))
+        } else {
+            Ok(StructFieldValue::Expr(input.parse()?))
+        }
+    }
+}
+
+impl ToTokens for StructFieldValue {
+    fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
+        stream.extend(match self {
+            Self::Expr(e) => quote! {#e},
+            Self::List(l) => quote! {[#l]},
+            Self::Map(m) => quote! {{#m}},
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
 pub enum CommandOptionType {
     SubCommand,
     SubCommandGroup,
@@ -272,7 +319,104 @@ impl ToTokens for CommandOptionType {
             &Self::Number => "Number"
         }, Span::call_site());
 
-        stream.extend(quote! {#ident})
+        stream.extend(quote! {okto_framework::structs::CommandOptionType::#ident})
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CommandOptionChoice {
+    pub name: String,
+    pub value: Value
+}
+
+impl Parse for CommandOptionChoice {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let content;
+        braced!(content in input);
+        let fields: HashMap<String, StructFieldValue> = content
+            .parse_terminated::<_, Token![,]>(StructField::parse)?
+            .into_iter()
+            .map(|f| (f.name, f.value))
+            .collect();
+        Ok(
+            Self {
+                name: get_field!("name", fields, LitStr).value(),
+                value: get_field!("value", fields, Value)
+            }
+        )
+    }
+}
+
+impl ToTokens for CommandOptionChoice {
+    fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
+        let Self { name, value } = self.clone();
+
+        stream.extend(quote! {
+            okto_framework::structs::CommandOptionChoice {
+                name: #name,
+                value: #value
+            }
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Value {
+    String(String),
+    Integer(i32),
+    Double(f64)
+}
+
+impl Parse for Value {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(LitStr) {
+            Ok(Self::String(input.parse::<LitStr>()?.value()))
+        } else if lookahead.peek(LitInt) {
+            Ok(Self::Integer(input.parse::<LitInt>()?.base10_parse()?))
+        } else if lookahead.peek(LitFloat) {
+            Ok(Self::Double(input.parse::<LitFloat>()?.base10_parse()?))
+        }
+        else {Err(Error::new_spanned(
+            input.to_string(),
+            "Not a valid command option choice value",
+        ))}
+    }
+}
+
+impl ToTokens for Value {
+    fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
+        stream.extend(match self {
+            Self::String(s) => {
+                quote! {okto_framework::structs::CommandOptionValue::String(#s)}
+            },
+            Self::Integer(i) => {
+                quote! {okto_framework::structs::CommandOptionValue::Integer(#i)}
+            },
+            Self::Double(d) => {
+                quote! {okto_framework::structs::CommandOptionValue::Double(#d)}
+            }
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct List<T> {
+    inner: Punctuated<T, Comma>
+}
+
+impl<T: Parse> Parse for List<T> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
+        let content;
+        bracketed!(content in input);
+        Ok(List { inner: content.parse_terminated::<_, Token![,]>(T::parse)?})
+    }
+}
+
+impl<T: ToTokens> ToTokens for List<T> {
+    fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
+        let inner = &self.inner;
+        stream.extend(quote! {&[#inner]});
     }
 }
 

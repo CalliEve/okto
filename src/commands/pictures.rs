@@ -11,19 +11,13 @@ use serenity::{
         CreateEmbed,
         CreateEmbedAuthor,
         CreateEmbedFooter,
-        CreateMessage,
+        EditInteractionResponse,
     },
-    framework::standard::{
-        macros::{
-            command,
-            group,
-        },
-        Args,
-        CommandResult,
-    },
-    model::channel::Message,
+    framework::standard::CommandResult,
+    model::{interactions::{InteractionResponseType, application_command::ApplicationCommandInteraction}},
     prelude::Context,
 };
+use okto_framework::macros::command;
 
 use crate::{
     models::pictures::*,
@@ -34,34 +28,44 @@ use crate::{
     },
 };
 
-#[group]
-#[commands(earthpic, spacepic, spirit, opportunity, curiosity, perseverance)]
-struct Pictures;
 
 #[command]
-#[description("Get a picture of Earth from the NOAA DSCOVR spacecraft")]
-#[usage(
-    "Tell the command to provide the natural or enhanced version of the image, defaults to natural"
-)]
-async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let _ = msg
-        .channel_id
-        .broadcast_typing(&ctx.http)
-        .await;
-    let image_type = args
-        .quoted()
-        .current()
-        .map_or("natural", |t| {
-            if ["natural", "enhanced"].contains(
-                &t.to_lowercase()
-                    .as_str(),
-            ) {
-                t
-            } else {
-                "natural"
+/// Get a picture of Earth from the NOAA DSCOVR spacecraft
+#[options(
+    {
+        option_type: String,
+        name: "image-version",
+        description: "natural or enhanced version of the image of our planet earth",
+        choices: [
+            {
+                name: "natural",
+                value: "natural"
+            },
+            {
+                name: "enhanced",
+                value: "enhanced"
             }
+        ]
+    }
+)]
+async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction
+        .create_interaction_response(&ctx.http, |c| {
+            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
         })
-        .to_lowercase();
+        .await?;
+    let image_type = interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "image-version")
+        .and_then(|o| {
+            o.value
+                .clone()
+        })
+        .and_then(|v| {
+            v.as_str()
+                .map(|s| s.to_owned())}).unwrap_or_else(|| "natural".to_owned());
 
     let opposite = if image_type == "natural" {
         "enhanced"
@@ -80,9 +84,8 @@ async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
         .cloned()
         .ok_or("No image received from the EPIC image api")?;
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
+    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+        e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Earth Picture")
                         .icon_url(DEFAULT_ICON)
@@ -113,17 +116,31 @@ async fn earthpic(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult
 }
 
 #[command]
-#[description("Get an Astronomy Picture Of the Day")]
-#[usage("Picks a random picture, but can be told to get the one from today by giving the \"today\" argument")]
-async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let _ = msg
-        .channel_id
-        .broadcast_typing(&ctx.http)
-        .await;
+/// Get an Astronomy Picture Of the Day
+#[options(
+    {
+        option_type: Boolean,
+        name: "today",
+        description: "Get todays Astronomy Picture of the Day",
+        required: false,
+    }
+)]
+async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction
+        .create_interaction_response(&ctx.http, |c| {
+            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
+        })
+        .await?;
 
     let now = Utc::today();
 
-    let date = if let Some("today") = args.current() {
+    let date = if interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "today").and_then(|o| {
+            o.value.clone()
+        }).and_then(|v| v.as_bool()).unwrap_or(false) {
         now
     } else {
         let start = Utc.ymd(2000, 1, 1);
@@ -171,9 +188,8 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
             |e| cutoff_on_last_dot(&e, 2040).to_owned(),
         );
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
+    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+        e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Astronomy Picture of Today")
                         .icon_url(DEFAULT_ICON)
@@ -194,18 +210,18 @@ async fn spacepic(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 }
 
 #[command]
-#[description("Picks a random sol number and then grabs a random picture made by the Spirit rover on that sol.")]
-async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
-    let _ = msg
-        .channel_id
-        .broadcast_typing(&ctx.http)
-        .await;
+/// Picks a random sol number and then grabs a random picture made by the Spirit rover on that sol
+async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction
+        .create_interaction_response(&ctx.http, |c| {
+            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
+        })
+        .await?;
 
     let (pic, sol) = fetch_rover_camera_picture("spirit", 1..2186).await;
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
+    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+        e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Spirit mars rover")
                         .icon_url(DEFAULT_ICON)
@@ -233,18 +249,18 @@ async fn spirit(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-#[description("Picks a random sol number and then grabs a random picture made by the Opportunity rover on that sol.")]
-async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
-    let _ = msg
-        .channel_id
-        .broadcast_typing(&ctx.http)
-        .await;
+/// Picks a random sol number and then grabs a random picture made by the Opportunity rover on that sol
+async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction
+        .create_interaction_response(&ctx.http, |c| {
+            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
+        })
+        .await?;
 
     let (pic, sol) = fetch_rover_camera_picture("opportunity", 1..5112).await;
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
+    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+        e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Opportunity mars rover")
                         .icon_url(DEFAULT_ICON)
@@ -272,20 +288,20 @@ async fn opportunity(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-#[description("Picks a random sol number and then grabs a random picture made by the Curiosity rover on that sol.")]
-async fn curiosity(ctx: &Context, msg: &Message) -> CommandResult {
-    let _ = msg
-        .channel_id
-        .broadcast_typing(&ctx.http)
-        .await;
+/// Picks a random sol number and grabs a random picture made by the Curiosity rover on that sol
+async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction
+        .create_interaction_response(&ctx.http, |c| {
+            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
+        })
+        .await?;
 
     let max_sol = get_max_sol("curiosity").await?;
 
     let (pic, sol) = fetch_rover_camera_picture("curiosity", 1..max_sol).await;
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
+    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+        e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Curiosity mars rover")
                         .icon_url(DEFAULT_ICON)
@@ -313,20 +329,20 @@ async fn curiosity(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-#[description("Picks a random sol number and then grabs a random picture made by the Perseverance rover on that sol.")]
-async fn perseverance(ctx: &Context, msg: &Message) -> CommandResult {
-    let _ = msg
-        .channel_id
-        .broadcast_typing(&ctx.http)
-        .await;
+/// Picks a random sol number and grabs a random picture made by the Perseverance rover on that sol.
+async fn perseverance(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction
+        .create_interaction_response(&ctx.http, |c| {
+            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
+        })
+        .await?;
 
     let max_sol = get_max_sol("perseverance").await?;
 
     let (pic, sol) = fetch_rover_camera_picture("perseverance", 1..max_sol).await;
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
+    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+        e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Perseverance mars rover")
                         .icon_url(DEFAULT_ICON)

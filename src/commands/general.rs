@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use chrono::Utc;
 use itertools::Itertools;
+use okto_framework::macros::command;
 use rand::seq::SliceRandom;
 use serde::{
     Deserialize,
@@ -12,26 +13,16 @@ use serenity::{
         CreateEmbed,
         CreateEmbedAuthor,
         CreateEmbedFooter,
-        CreateMessage,
-        EditMessage, CreateInteractionResponse, EditInteractionResponse,
+        CreateInteractionResponse,
+        EditInteractionResponse,
     },
-    framework::standard::{
-        macros::{
-            command,
-            group,
-        },
-        Args,
-        CommandResult,
-    },
-    model::{
-        channel::Message,
-        interactions::application_command::ApplicationCommandInteraction,
-        ModelError,
+    framework::standard::CommandResult,
+    model::interactions::{
+        application_command::ApplicationCommandInteraction,
+        InteractionResponseType,
     },
     prelude::Context,
     utils::Colour,
-    Error,
-    Result,
 };
 
 use crate::{
@@ -39,17 +30,14 @@ use crate::{
     utils::constants::*,
 };
 
-#[group]
-#[commands(invite, info, websites, peopleinspace, iss, exoplanet)]
-struct General;
-
-#[okto_framework::macros::command]
+#[command]
 /// Get the ping of the bot
 async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let start = Utc::now();
-    interaction.create_interaction_response(&ctx, |c: &mut CreateInteractionResponse| {
+    interaction
+        .create_interaction_response(&ctx, |c: &mut CreateInteractionResponse| {
             c.interaction_response_data(|d| {
-            d.create_embed(|e: &mut CreateEmbed| e.description("\u{1f3d3} pong..."))
+                d.create_embed(|e: &mut CreateEmbed| e.description("\u{1f3d3} pong..."))
             })
         })
         .await?;
@@ -61,7 +49,8 @@ async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
             .id
             .created_at();
 
-    interaction.edit_original_interaction_response(ctx, |e: &mut EditInteractionResponse | {
+    interaction
+        .edit_original_interaction_response(ctx, |e: &mut EditInteractionResponse| {
             e.create_embed(|e: &mut CreateEmbed| {
                 e.title("Pong!")
                     .description(format!(
@@ -77,18 +66,18 @@ async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
 }
 
 #[command]
-#[description("Invite the bot to your server!")]
-async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
+/// Invite the bot to your server!
+async fn invite(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let user_id = ctx
         .cache
         .current_user()
         .await
         .id;
-    let msg_res: Result<Message> = msg.channel_id.send_message(&ctx.http, |m: &mut CreateMessage| {
-        m.content(format!(
+    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {c.content(format!(
             "**OKTO** | `3.0`\n{}, I hope you enjoy using me on your server!",
-            msg.author.name
-        )).embed(|e: &mut CreateEmbed| {
+            interaction.user.name
+        )).create_embed(|e: &mut CreateEmbed| {
             e.title("Invite Links")
             .description(
                 format!(
@@ -97,32 +86,22 @@ async fn invite(ctx: &Context, msg: &Message) -> CommandResult {
                     user_id
                 )
             )
-        })
-    }).await;
-
-    if let Err(Error::Model(ModelError::InvalidPermissions(perms))) = msg_res {
-        if perms.embed_links() {
-            msg.channel_id
-                .send_message(&ctx.http, |m| {
-                    m.content("\u{274c} You must give this bot embed permissions \u{274c}")
-                })
-                .await?;
-        }
-    }
+        })})
+    }).await?;
 
     Ok(())
 }
 
 #[command]
-#[description("Get some general information about the bot")]
-async fn info(ctx: &Context, msg: &Message) -> CommandResult {
+/// Get some general information about the bot
+async fn info(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let user_id = ctx
         .cache
         .current_user()
         .await
         .id;
-    msg.channel_id.send_message(&ctx.http, |m: &mut CreateMessage| {
-        m.embed(|e: &mut CreateEmbed| {
+    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {c.create_embed(|e: &mut CreateEmbed| {
             e.title("OKTO")
             .description(
                 format!(
@@ -148,27 +127,28 @@ async fn info(ctx: &Context, msg: &Message) -> CommandResult {
             })
             .thumbnail(DEFAULT_ICON)
             .color(DEFAULT_COLOR)
-        })
+        })})
     }).await?;
     Ok(())
 }
 
 #[command]
-#[description("Have some helpful websites")]
-async fn websites(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
-                e.field(
-                    "General launch information:",
-                    "**Spaceflight Insider:** http://www.spaceflightinsider.com/
+/// Have some helpful websites
+async fn websites(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction
+        .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {
+                c.create_embed(|e: &mut CreateEmbed| {
+                    e.field(
+                        "General launch information:",
+                        "**Spaceflight Insider:** http://www.spaceflightinsider.com/
                     **Rocket Watch:** https://rocket.watch/
                     **Go4LiftOff:** https://go4liftoff.com/",
-                    false,
-                )
-                .field(
-                    "Launch providers:",
-                    "**SpaceX:** http://www.spacex.com/
+                        false,
+                    )
+                    .field(
+                        "Launch providers:",
+                        "**SpaceX:** http://www.spacex.com/
                     **United Launch Alliance:** https://www.ulalaunch.com/
                     **Arianespace:** http://www.arianespace.com/
                     **Rocket Lab:** https://www.rocketlabusa.com/
@@ -176,13 +156,14 @@ async fn websites(ctx: &Context, msg: &Message) -> CommandResult {
                     **Orbital ATK:** https://www.orbitalatk.com/
                     **ISRO:** https://www.isro.gov.in/
                     **NASA:** https://www.nasa.gov/",
-                    false,
-                )
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Some websites with more information")
-                        .icon_url(DEFAULT_ICON)
+                        false,
+                    )
+                    .author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Some websites with more information")
+                            .icon_url(DEFAULT_ICON)
+                    })
+                    .color(DEFAULT_COLOR)
                 })
-                .color(DEFAULT_COLOR)
             })
         })
         .await?;
@@ -202,8 +183,11 @@ struct PeopleInSpaceResp {
 }
 
 #[command]
-#[description("Get a list of all humans currently in space")]
-async fn peopleinspace(ctx: &Context, msg: &Message) -> CommandResult {
+/// Get a list of all humans currently in space
+async fn peopleinspace(
+    ctx: &Context,
+    interaction: &ApplicationCommandInteraction,
+) -> CommandResult {
     let pis: PeopleInSpaceResp = DEFAULT_CLIENT
         .get("http://api.open-notify.org/astros.json")
         .send()
@@ -220,25 +204,27 @@ async fn peopleinspace(ctx: &Context, msg: &Message) -> CommandResult {
         text_vec.push(format!("{}: {}\n", person.name, person.craft));
     }
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
-                e.title(format!(
-                    "There are currently {} people in space",
-                    pis.number
-                ))
-                .description(
-                    text_vec
-                        .iter()
-                        .map(std::string::String::as_str)
-                        .collect::<String>(),
-                )
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("People in space")
-                        .icon_url(DEFAULT_ICON)
+    interaction
+        .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {
+                c.create_embed(|e: &mut CreateEmbed| {
+                    e.title(format!(
+                        "There are currently {} people in space",
+                        pis.number
+                    ))
+                    .description(
+                        text_vec
+                            .iter()
+                            .map(std::string::String::as_str)
+                            .collect::<String>(),
+                    )
+                    .author(|a: &mut CreateEmbedAuthor| {
+                        a.name("People in space")
+                            .icon_url(DEFAULT_ICON)
+                    })
+                    .timestamp(&Utc::now())
+                    .color(DEFAULT_COLOR)
                 })
-                .timestamp(&Utc::now())
-                .color(DEFAULT_COLOR)
             })
         })
         .await?;
@@ -255,19 +241,11 @@ struct ISSLocation {
 }
 
 #[command]
-#[description("Get the current location of the ISS")]
-async fn iss(ctx: &Context, msg: &Message) -> CommandResult {
-    let mut res_msg: Message = msg
-        .channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Position ISS")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .color(DEFAULT_COLOR)
-                .description("<a:typing:393848431413559296> loading position...")
-            })
+/// Get the current location of the ISS
+async fn iss(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction
+        .create_interaction_response(&ctx.http, |c| {
+            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
         })
         .await?;
 
@@ -305,8 +283,8 @@ async fn iss(ctx: &Context, msg: &Message) -> CommandResult {
         GOOGLE_KEY.as_str()
     );
 
-    res_msg.edit(&ctx.http, |m: &mut EditMessage| {
-        m.embed(|e: &mut CreateEmbed| {
+    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+        e.create_embed(|e: &mut CreateEmbed| {
             e.description(format!(
                 "**Latitude:** {0:.5}\n**Longitude:** {1:.5}\n**Altitude:** {2:.3}km\n**Velocity:** {3:.3}km/h",
                 iss_pos.latitude, iss_pos.longitude, iss_pos.altitude, iss_pos.velocity
@@ -325,28 +303,54 @@ async fn iss(ctx: &Context, msg: &Message) -> CommandResult {
 }
 
 #[command]
-#[description("Get information about an exoplanet or star")]
-#[usage(
-    "Provide the official name of an exoplanet or star, or leave blank to get a random exoplanet"
+#[options (
+        {
+            option_type: String,
+            name: "exoplanet",
+            description: "Name of the exoplanet to search for",
+            required: false
+        },
+        {
+            option_type: String,
+            name: "star",
+            description: "Name of the star to search for",
+            required: false
+        }
 )]
-async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    let mut res_msg: Message = msg
-        .channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Exoplanet/Star Information")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .color(DEFAULT_COLOR)
-                .description("<a:typing:393848431413559296> loading data...")
-            })
+/// Get information about an exoplanet or star
+async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction
+        .create_interaction_response(&ctx.http, |c| {
+            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
         })
         .await?;
 
-    let search_name = args
-        .current()
-        .map(std::borrow::ToOwned::to_owned);
+    let planet_name: Option<String> = interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "exoplanet")
+        .and_then(|o| {
+            o.value
+                .clone()
+        })
+        .and_then(|v| {
+            v.as_str()
+                .map(|s| s.to_owned())
+        });
+    let star_name = interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "star")
+        .and_then(|o| {
+            o.value
+                .clone()
+        })
+        .and_then(|v| {
+            v.as_str()
+                .map(|s| s.to_owned())
+        });
 
     match ctx
         .data
@@ -356,44 +360,44 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     {
         None => return Err("can't get picture cache".into()),
         Some(p)
-            if search_name.is_some()
+            if star_name.is_some()
                 && p.host_stars
                     .contains(
-                        &search_name
+                        &star_name
                             .clone()
                             .unwrap(),
                     ) =>
         {
             get_star(
                 ctx,
-                &mut res_msg,
-                &search_name
+                interaction,
+                &planet_name
                     .clone()
                     .unwrap(),
             )
             .await?
         },
         Some(p)
-            if search_name.is_some()
+            if planet_name.is_some()
                 && p.exoplanets
                     .contains(
-                        &search_name
+                        &planet_name
                             .clone()
                             .unwrap(),
                     ) =>
         {
             get_planet(
                 ctx,
-                &mut res_msg,
-                &search_name
+                interaction,
+                &planet_name
                     .clone()
                     .unwrap(),
             )
             .await?
         },
-        Some(_) if search_name.is_some() => {
-            res_msg.edit(&ctx.http, |m: &mut EditMessage| {
-                m.embed(|e: &mut CreateEmbed| {
+        Some(_) if planet_name.is_some() || star_name.is_some() => {
+            interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+        e.create_embed(|e: &mut CreateEmbed| {
                     e.description(
                         "The name you gave isn't in the NASA Exoplanet Archive <:kia:367734893796655113>
                         Please understand that NASA has a 'weird' way of naming the stars in their archive
@@ -416,7 +420,7 @@ async fn exoplanet(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     )
                     .ok_or("something went wrong while picking a planet")
             }?;
-            get_planet(ctx, &mut res_msg, rand_name).await?
+            get_planet(ctx, interaction, rand_name).await?
         },
     };
 
@@ -467,7 +471,11 @@ impl StarInfo {
     }
 }
 
-async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandResult {
+async fn get_star(
+    ctx: &Context,
+    interaction: &ApplicationCommandInteraction,
+    star_name: &str,
+) -> CommandResult {
     let mut params = HashMap::new();
     params.insert("format", "json".to_owned());
     params.insert("query", format!("select st_dens,hd_name,hostname,pl_letter,st_spectype,st_age,st_lum,st_mass,sy_pnum,st_rad,sy_dist from ps where hostname = '{}'", &star_name));
@@ -498,58 +506,59 @@ async fn get_star(ctx: &Context, msg: &mut Message, star_name: &str) -> CommandR
         .join(", ");
     let star = &res[0];
 
-    msg.edit(&ctx.http, |m: &mut EditMessage| {
-        m.embed(|e: &mut CreateEmbed| {
-            e.author(|a: &mut CreateEmbedAuthor| {
-                a.name("Star Information")
-                    .icon_url(DEFAULT_ICON)
-            })
-            .color(DEFAULT_COLOR)
-            .title(star_name)
-            .timestamp(&Utc::now())
-            .field(
-                "System Data",
-                format!(
-                    "**Number of planets in system:** {}\n\
+    interaction
+        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+            e.create_embed(|e: &mut CreateEmbed| {
+                e.author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Star Information")
+                        .icon_url(DEFAULT_ICON)
+                })
+                .color(DEFAULT_COLOR)
+                .title(star_name)
+                .timestamp(&Utc::now())
+                .field(
+                    "System Data",
+                    format!(
+                        "**Number of planets in system:** {}\n\
                         **Letters used to designate planets in the system:** {}\n\
                         **Distance from us in lightyears:** {}\n\
                         **Distance from us in parsecs:** {}",
-                    star.sy_pnum,
-                    planets,
-                    star.get_lightyears_dist(),
-                    star.sy_dist
-                        .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
-                ),
-                false,
-            )
-            .field(
-                "Star Data",
-                format!(
-                    "**Stellar Age:** {}\n\
+                        star.sy_pnum,
+                        planets,
+                        star.get_lightyears_dist(),
+                        star.sy_dist
+                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
+                    ),
+                    false,
+                )
+                .field(
+                    "Star Data",
+                    format!(
+                        "**Stellar Age:** {}\n\
                         **Spectral Type:** {}\n\
                         **Henry Draper Catalog Name:** {}\n\
                         **Radius Star:** {}\n\
                         **Mass of the star:** {}\n\
                         **Stellar Density:** {}",
-                    star.get_age(),
-                    star.st_spectype
-                        .as_ref()
-                        .cloned()
-                        .unwrap_or_else(|| "unknown".to_owned()),
-                    star.hd_name
-                        .as_ref()
-                        .cloned()
-                        .unwrap_or_else(|| "unknown".to_owned()),
-                    star.get_rad(),
-                    star.get_mass(),
-                    star.st_dens
-                        .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
-                ),
-                false,
-            )
+                        star.get_age(),
+                        star.st_spectype
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_else(|| "unknown".to_owned()),
+                        star.hd_name
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_else(|| "unknown".to_owned()),
+                        star.get_rad(),
+                        star.get_mass(),
+                        star.st_dens
+                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
+                    ),
+                    false,
+                )
+            })
         })
-    })
-    .await?;
+        .await?;
 
     Ok(())
 }
@@ -574,7 +583,11 @@ struct PlanetInfo {
     pub pl_name: String,
 }
 
-async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> CommandResult {
+async fn get_planet(
+    ctx: &Context,
+    interaction: &ApplicationCommandInteraction,
+    planet_name: &str,
+) -> CommandResult {
     let mut params = HashMap::new();
     params.insert("format", "json".to_owned());
     params.insert("query", format!("select pl_name,pl_masse,pl_massj,pl_eqt,disc_telescope,disc_locale,pl_rade,pl_radj,pl_dens,pl_orbeccen,pl_orbincl,pl_orbper,hostname,pl_orbsmax,disc_year,discoverymethod from ps where pl_name = '{}'", &planet_name));
@@ -595,104 +608,106 @@ async fn get_planet(ctx: &Context, msg: &mut Message, planet_name: &str) -> Comm
         .next()
         .ok_or("No planet like this found")?;
 
-    msg.edit(&ctx.http, |m: &mut EditMessage| {
-        m.embed(|e: &mut CreateEmbed| {
-            e.author(|a: &mut CreateEmbedAuthor| {
-                a.name("Planet Information")
-                    .icon_url(DEFAULT_ICON)
-            })
-            .color(DEFAULT_COLOR)
-            .title(planet_name)
-            .timestamp(&Utc::now())
-            .field(
-                "Planet Data",
-                format!(
-                    "**Planet Radius compared to Jupiter:** {}\n\
+    interaction
+        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+            e.create_embed(|e: &mut CreateEmbed| {
+                e.author(|a: &mut CreateEmbedAuthor| {
+                    a.name("Planet Information")
+                        .icon_url(DEFAULT_ICON)
+                })
+                .color(DEFAULT_COLOR)
+                .title(planet_name)
+                .timestamp(&Utc::now())
+                .field(
+                    "Planet Data",
+                    format!(
+                        "**Planet Radius compared to Jupiter:** {}\n\
                     **Planet Radius compared to Earth:** {}\n\
                     **Planet Density:** {}\n\
                     **Planet Mass compared to Jupiter:** {}\n\
                     **Planet Mass compared to Earth:** {}\n\
                     **Planet Equilibrium Temperature:** {}",
-                    planet
-                        .pl_radj
-                        .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
-                    planet
-                        .pl_rade
-                        .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
-                    planet
-                        .pl_dens
-                        .map_or_else(|| "unknown".to_owned(), |n| format!("{}g/cm\u{b3}", n)),
-                    planet
-                        .pl_massj
-                        .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
-                    planet
-                        .pl_masse
-                        .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
-                    planet
-                        .pl_eqt
-                        .map_or_else(|| "unknown".to_owned(), |n| format!("{}K", n)),
-                ),
-                false,
-            )
-            .field(
-                "Orbit Data",
-                format!(
-                    "**Eccentricity:** {}\n\
+                        planet
+                            .pl_radj
+                            .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
+                        planet
+                            .pl_rade
+                            .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
+                        planet
+                            .pl_dens
+                            .map_or_else(|| "unknown".to_owned(), |n| format!("{}g/cm\u{b3}", n)),
+                        planet
+                            .pl_massj
+                            .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
+                        planet
+                            .pl_masse
+                            .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
+                        planet
+                            .pl_eqt
+                            .map_or_else(|| "unknown".to_owned(), |n| format!("{}K", n)),
+                    ),
+                    false,
+                )
+                .field(
+                    "Orbit Data",
+                    format!(
+                        "**Eccentricity:** {}\n\
                     **Inclination:** {}\n\
                     **Orbital Period:** {} days\n\
                     **Orbit Semi-Major Axis:** {}\n\
                     **Host Star:** {}",
-                    planet
-                        .pl_orbeccen
-                        .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
-                    planet
-                        .pl_orbincl
-                        .map_or_else(|| "unknown".to_owned(), |n| format!("{} degrees", n)),
-                    planet
-                        .pl_orbper
-                        .map_or_else(|| "unknown".to_owned(), |n| format!("{}K", n)),
-                    planet
-                        .pl_orbsmax
-                        .map_or_else(|| "unknown".to_owned(), |n| format!("{}AU", n)),
-                    planet
-                        .hostname
-                        .as_ref()
-                        .cloned()
-                        .unwrap_or_else(|| "unknown".to_owned()),
-                ),
-                false,
-            )
-            .field(
-                "Discovery Info",
-                format!(
-                    "**Year of Discovery:** {}\n\
+                        planet
+                            .pl_orbeccen
+                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
+                        planet
+                            .pl_orbincl
+                            .map_or_else(|| "unknown".to_owned(), |n| format!("{} degrees", n)),
+                        planet
+                            .pl_orbper
+                            .map_or_else(|| "unknown".to_owned(), |n| format!("{}K", n)),
+                        planet
+                            .pl_orbsmax
+                            .map_or_else(|| "unknown".to_owned(), |n| format!("{}AU", n)),
+                        planet
+                            .hostname
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_else(|| "unknown".to_owned()),
+                    ),
+                    false,
+                )
+                .field(
+                    "Discovery Info",
+                    format!(
+                        "**Year of Discovery:** {}\n\
                     **Discovery Method:** {}\n\
                     **Location of observation of planet discovery:** {}\n\
                     **Name of telescoped used:** {}",
-                    planet
-                        .disc_year
-                        .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
-                    planet
-                        .discoverymethod
-                        .as_ref()
-                        .cloned()
-                        .unwrap_or_else(|| "unknown".to_owned()),
-                    planet
-                        .disc_locale
-                        .as_ref()
-                        .cloned()
-                        .unwrap_or_else(|| "unknown".to_owned()),
-                    planet
-                        .disc_telescope
-                        .as_ref()
-                        .cloned()
-                        .unwrap_or_else(|| "unknown".to_owned()),
-                ),
-                false,
-            )
+                        planet
+                            .disc_year
+                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
+                        planet
+                            .discoverymethod
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_else(|| "unknown".to_owned()),
+                        planet
+                            .disc_locale
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_else(|| "unknown".to_owned()),
+                        planet
+                            .disc_telescope
+                            .as_ref()
+                            .cloned()
+                            .unwrap_or_else(|| "unknown".to_owned()),
+                    ),
+                    false,
+                )
+            })
         })
-    })
-    .await?;
+        .await?;
 
     Ok(())
 }
+

@@ -82,7 +82,6 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
     // Send out notifications
     let notif_http = http.clone();
     let notif_res = tokio::spawn(async move {
-        println!("sending out scrub notifications");
         launches
             .iter()
             .filter_map(|nl| {
@@ -102,7 +101,6 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
             .collect::<Vec<_>>()
             .await;
 
-        println!("sending out outcome notifications");
         launches
             .iter()
             .filter(|nl| {

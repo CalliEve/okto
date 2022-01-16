@@ -61,11 +61,12 @@ fn command_inner(item: TokenStream) -> TokenStream {
         }
     }
 
-    if description.len() < 3 {
-        panic!(
-            "No description longer than 3 characters has been provided for the {} command, while descriptions are required by discord",
-            command_name
-        )
+    if description.len() < 1 {
+        let error = format!("No description has been provided for the {} command", command_name);
+        return quote! {compile_error!(#error);}
+    } else if description.len() > 100 {
+        let error = format!("The description of the {} command is longer than 100 characters", command_name);
+        return quote! {compile_error!(#error);}
     }
 
     let fun_name = command_fun
@@ -82,7 +83,7 @@ fn command_inner(item: TokenStream) -> TokenStream {
     let command_struct_path = quote!(okto_framework::structs::Command);
     let details_struct_path = quote!(okto_framework::structs::CommandDetails);
 
-    (quote! {
+    quote! {
         #(#details_cooked)*
         pub static #details_struct_name: #details_struct_path = #details_struct_path {
             name: #command_name,
@@ -98,8 +99,7 @@ fn command_inner(item: TokenStream) -> TokenStream {
         };
 
         #command_fun
-    })
-    .into()
+    }
 }
 
 #[cfg(test)]
@@ -110,14 +110,32 @@ mod tests {
     fn test() {
         let stream: TokenStream = "
         /// just testing this stuff
+        #[options(
+            {
+                option_type: String,
+                name: \"image-version\",
+                description: \"natural or enhanced version of the image of our planet earth\",
+                choices: [
+                    {
+                        name: \"natural\",
+                        value: \"natural\"
+                    },
+                    {
+                        name: \"enhanced\",
+                        value: \"enhanced\"
+                    }
+                ]
+            }
+        )]
         async fn ping(ctx: &Context) -> Result<()> {
             ctx.reply(\"test\").await;
-        }".parse().unwrap();
+        }".parse::<TokenStream>().map_err(|e| e.to_string()).unwrap();
 
         let out = command_inner(stream);
         println!("{}", out.to_string());
 
         assert!(!out.to_string().starts_with("compile_error"));
+        panic!("show")
     }
 }
 

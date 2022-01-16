@@ -10,16 +10,14 @@ pub use handler::Handler;
 
 #[macro_export]
 macro_rules! create_framework {
-    ($token:expr $(, $c:expr )*) => {
+    ($token:expr, $id:expr $(, $c:ident )*) => {
         {
             okto_framework::paste_expr! {
                 let mut fr = okto_framework::Handler::new();
                 $(
-                     fr.add_command(&(&[<$c _COMMAND>]));
+                     fr.add_command(&[<$c _COMMAND>]).unwrap();
                 )*
-                let mut http = serenity::http::Http::new_with_token($token);
-                let u = http.get_current_user().await.expect("Can't get current user");
-                http.application_id = u.id.0;
+                let mut http = serenity::http::Http::new_with_token_application_id($token, $id);
                 fr.upload_commands(http).await.expect("Can't upload commands");
                 fr
             }

@@ -70,9 +70,6 @@ async fn main() {
             .prefixes(&["<@!429306620439166977> ", "<@429306620439166977> "])
             .case_insensitivity(true)
         })
-        .group(&GENERAL_GROUP)
-        .group(&PICTURES_GROUP)
-        .group(&LAUNCHES_GROUP)
         .group(&REMINDERS_GROUP)
         .group(&SETTINGS_GROUP)
         .help(&HELP_CMD)
@@ -107,10 +104,35 @@ async fn main() {
 
     // Login with a bot token from the environment
     let token = env::var("DISCORD_TOKEN").expect("no bot token");
+    let application_id: u64 = env::var("DISCORD_ID")
+        .expect("no application id")
+        .parse()
+        .expect("provided application id is not an integer");
     let mut client = Client::builder(&token)
+        .application_id(application_id)
         .framework(framework)
         .intents(intents)
-        .event_handler(Handler::new(okto_framework::create_framework!(&token)))
+        .event_handler(Handler::new(okto_framework::create_framework!(
+            &token,
+            application_id,
+            ping,
+            invite,
+            info,
+            websites,
+            peopleinspace,
+            iss,
+            exoplanet,
+            earthpic,
+            spacepic,
+            spirit,
+            opportunity,
+            curiosity,
+            perseverance,
+            nextlaunch,
+            listlaunches,
+            launchinfo,
+            filtersinfo
+        )))
         .await
         .expect("Error creating client");
 

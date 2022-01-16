@@ -5,34 +5,24 @@ use serenity::{
     builder::{
         CreateEmbed,
         CreateEmbedAuthor,
-        CreateEmbedFooter,
-        CreateMessage,
+        CreateEmbedFooter, CreateInteractionResponse,
     },
-    framework::standard::{
-        macros::{
-            command,
-            group,
-        },
-        Args,
-        CommandResult,
-    },
+    framework::standard::CommandResult,
     model::{
-        channel::{
-            Message,
-            ReactionType,
-        },
-        id::EmojiId,
+        channel::ReactionType,
+        id::EmojiId, interactions::{InteractionApplicationCommandCallbackDataFlags, application_command::ApplicationCommandInteraction, message_component::ButtonStyle},
     },
     prelude::{
         Context,
         RwLock,
     },
 };
+use okto_framework::macros::command;
 
 use crate::{
     events::statefulembed::{
         EmbedSession,
-        StatefulEmbed,
+        StatefulEmbed, ButtonType,
     },
     models::{
         caches::LaunchesCacheKey,
@@ -43,22 +33,30 @@ use crate::{
     },
     utils::{
         constants::*,
+        cutoff_on_last_dot,
         default_embed,
         format_duration,
-        cutoff_on_last_dot,
         launches::*,
     },
 };
 
-#[group]
-#[commands(nextlaunch, listlaunches, launchinfo, filtersinfo)]
-struct Launches;
-
 #[command]
-#[aliases(nl)]
-#[description("Get information about the next launch that has been marked as certain")]
-#[usage("Provide the name of a rocket or lsp to filter the launches on, see filtersinfo for more information")]
-async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+/// Get information about the next launch that has been marked as certain
+#[options(
+    {
+        option_type: String,
+        name: "lsp",
+        description: "Launch Service Provider to filter the launches on",
+        required: false
+    },
+    {
+        option_type: String,
+        name: "rocket",
+        description: "Rocket name to filter the launches on",
+        required: false
+    }
+)]
+async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx
             .data
@@ -79,27 +77,25 @@ async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     .collect();
 
     if launches.is_empty() {
-        msg.channel_id
-            .send_message(&ctx.http, |m: &mut CreateMessage| {
-                m.embed(|e: &mut CreateEmbed| {
+        interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL).create_embed(|e: &mut CreateEmbed| {
                     default_embed(
                         e,
                         "I found no upcoming launches that have been marked as certain :(",
                         false,
                     )
                 })
-            })
+            })})
             .await?;
         return Ok(());
     }
 
-    launches = match filter_launches(launches, &args) {
+    launches = match filter_launches(launches, interaction) {
         Ok(ls) => ls,
         Err(err) => {
-            msg.channel_id
-                .send_message(&ctx.http, |m: &mut CreateMessage| {
-                    m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
-                })
+            interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL).create_embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
+                })})
                 .await?;
             return Ok(());
         },
@@ -107,9 +103,8 @@ async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let launch = &launches[0];
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
+    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {c.create_embed(|e: &mut CreateEmbed| {
                 let mut window = format_duration(launch.launch_window, true);
                 if window.is_empty() {
                     window.push_str("instantaneous")
@@ -163,7 +158,7 @@ async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
                 e
             })
-        })
+        })})
         .await?;
 
     Ok(())
@@ -246,7 +241,7 @@ fn list_page(
         if page_num > 0 {
             let first_page_launches = list.clone();
             let first_page_session = session.clone();
-            em.add_option(&ReactionType::from(FIRST_PAGE_EMOJI), move || {
+            em.add_option(&StandardButton::First.to_button(), move || {
                 let first_page_session = first_page_session.clone();
                 let first_page_launches = first_page_launches.clone();
                 Box::pin(async move {
@@ -264,7 +259,7 @@ fn list_page(
         if page_num > 0 {
             let last_page_launches = list.clone();
             let last_page_session = session.clone();
-            em.add_option(&ReactionType::from(LAST_PAGE_EMOJI), move || {
+            em.add_option(&StandardButton::Back.to_button(), move || {
                 let last_page_launches = last_page_launches.clone();
                 let last_page_session = last_page_session.clone();
                 Box::pin(async move {
@@ -287,11 +282,14 @@ fn list_page(
             let certain_page_launches = list.clone();
             let certain_page_session = session.clone();
             em.add_option(
-                &ReactionType::Custom {
+                &ButtonType{
+                    label: "Only certain launches".to_owned(),
+                    style: ButtonStyle::Primary,
+                emoji: Some(ReactionType::Custom {
                     animated: false,
                     name: Some("certain".to_owned()),
                     id: EmojiId::from(CERTAIN_EMOJI),
-                },
+                })},
                 move || {
                     let certain_page_session = certain_page_session.clone();
                     let certain_page_launches = certain_page_launches.clone();
@@ -310,11 +308,14 @@ fn list_page(
             let uncertain_page_launches = list.clone();
             let uncertain_page_session = session.clone();
             em.add_option(
-                &ReactionType::Custom {
+                &ButtonType{
+                    label: "Include uncertain launches".to_owned(),
+                    style: ButtonStyle::Primary,
+                emoji: Some(ReactionType::Custom {
                     animated: false,
                     name: Some("uncertain".to_owned()),
                     id: EmojiId::from(UNCERTAIN_EMOJI),
-                },
+                })},
                 move || {
                     let uncertain_page_session = uncertain_page_session.clone();
                     let uncertain_page_launches = uncertain_page_launches.clone();
@@ -334,7 +335,7 @@ fn list_page(
         if page_num < max_page {
             let next_page_launches = list.clone();
             let next_page_session = session.clone();
-            em.add_option(&ReactionType::from(NEXT_PAGE_EMOJI), move || {
+            em.add_option(&StandardButton::Forward.to_button(), move || {
                 let next_page_launches = next_page_launches.clone();
                 let next_page_session = next_page_session.clone();
                 Box::pin(async move {
@@ -352,7 +353,7 @@ fn list_page(
         if page_num < max_page {
             let final_page_launches = list;
             let final_page_session = session.clone();
-            em.add_option(&ReactionType::from(FINAL_PAGE_EMOJI), move || {
+            em.add_option(&StandardButton::Last.to_button(), move || {
                 let final_page_launches = final_page_launches.clone();
                 let final_page_session = final_page_session.clone();
                 Box::pin(async move {
@@ -367,20 +368,13 @@ fn list_page(
             });
         }
 
-        em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
+        em.add_option(&StandardButton::Exit.to_button(), move || {
             let session = session.clone();
             Box::pin(async move {
                 let lock = session
                     .read()
                     .await;
-                if let Some(m) = lock
-                    .message
-                    .as_ref()
-                {
-                    let _ = m
-                        .delete(&lock.http)
-                        .await;
-                };
+                lock.interaction.delete_original_interaction_response(&lock.http).await;
             })
         });
 
@@ -394,10 +388,20 @@ fn list_page(
 }
 
 #[command]
-#[aliases(ll)]
-#[description("Get a list of the next 100 upcoming launches")]
-#[usage("Provide the name of a rocket or lsp to filter the launches on, see filtersinfo for more information")]
-async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+/// Get a list of the next 100 upcoming launches
+#[options(
+    {
+        option_type: String,
+        name: "lsp",
+        description: "Launch Service Provider to filter the launches on"
+    },
+    {
+        option_type: String,
+        name: "rocket",
+        description: "Rocket name to filter the launches on"
+    }
+)]
+async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx
             .data
@@ -418,13 +422,12 @@ async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         return Err("No launches found".into());
     }
 
-    launches = match filter_launches(launches, &args) {
+    launches = match filter_launches(launches, interaction) {
         Ok(ls) => ls,
         Err(err) => {
-            msg.channel_id
-                .send_message(&ctx.http, |m: &mut CreateMessage| {
-                    m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
-                })
+            interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL).create_embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
+                })})
                 .await?;
             return Ok(());
         },
@@ -432,9 +435,7 @@ async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 
     let session = EmbedSession::new(
         ctx,
-        msg.channel_id,
-        msg.author
-            .id,
+        interaction.clone(),
     );
 
     list_page(session, launches, 0, true).await;
@@ -443,10 +444,14 @@ async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 }
 
 #[command]
-#[aliases(li)]
-#[description("Get more detailed information about a launch")]
-#[usage("Provide the number of the launch, or the LaunchLibrary ID")]
-async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+/// Get more detailed information about a launch
+#[options({
+    option_type: Integer,
+    name: "launch",
+    description: "The number of the launch to get more information about",
+    required: true,
+})]
+async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx
             .data
@@ -467,52 +472,36 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return Err("No launches found".into());
     }
 
-    let launch = match args
-        .current()
-        .map(str::parse::<i32>)
-    {
-        Some(Ok(id)) => {
-            if let Some(l) = launches
-                .into_iter()
-                .find(|l| l.id == id)
-            {
-                l
-            } else {
-                msg.channel_id
-                    .send_message(&ctx.http, |m: &mut CreateMessage| {
-                        m.embed(|e: &mut CreateEmbed| {
-                            default_embed(e, "No launch was found with that ID :(", false)
-                        })
-                    })
-                    .await?;
-                return Ok(());
-            }
-        },
-        Some(_) => {
-            if let Ok(l) = request_launch(
-                args.current()
-                    .expect("no arg supplied while it should have been"),
-            )
-            .await
-            {
-                l
-            } else {
-                msg.channel_id
-                    .send_message(&ctx.http, |m: &mut CreateMessage| {
-                        m.embed(|e: &mut CreateEmbed| {
-                            default_embed(e, "No launch was found with that ID :(", false)
-                        })
-                    })
-                    .await?;
-                return Ok(());
-            }
-        },
-        None => launches[0].clone(),
-    };
+    let launch_id = interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "launch")
+        .and_then(|o| {
+            o.value
+                .clone()
+        })
+        .and_then(|v| {
+            v.as_i64().map(|i| i as i32)
+        }).ok_or("No launch id provided while it was a required argument")?;
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
+    let launch = if let Some(l) = launches
+                .into_iter()
+                .find(|l| l.id == launch_id)
+            {
+                l
+            } else {
+                interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL).create_embed(|e: &mut CreateEmbed| {
+                            default_embed(e, "No launch was found with that ID :(", false)
+                        })})
+                    })
+                    .await?;
+                return Ok(());
+            };
+
+    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {c.create_embed(|e: &mut CreateEmbed| {
                 let mut window = format_duration(launch.launch_window, true);
                 if window.is_empty() {
                     window.push_str("instantaneous")
@@ -578,18 +567,17 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     ),
                     false,
                 )
-            })
+            })})
         }).await?;
 
     Ok(())
 }
 
 #[command]
-#[description("Get a list of all things you can filter launches on")]
-async fn filtersinfo(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
+/// Get a list of all things you can filter launches on
+async fn filtersinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {c.create_embed(|e: &mut CreateEmbed| {
                 e.color(DEFAULT_COLOR)
                     .author(|a: &mut CreateEmbedAuthor| {
                         a.name("Filters Info")
@@ -616,7 +604,7 @@ async fn filtersinfo(ctx: &Context, msg: &Message) -> CommandResult {
                         false,
                     )
             })
-        })
+        })})
         .await?;
 
     Ok(())

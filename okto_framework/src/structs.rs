@@ -1,6 +1,6 @@
 use futures::future::BoxFuture;
 use serde::Serialize;
-use serde_json::Value;
+use serde_repr::Serialize_repr;
 use serenity::{
     client::Context,
     framework::standard::CommandResult,
@@ -10,6 +10,7 @@ use serenity::{
     },
 };
 
+#[derive(Clone)]
 pub struct Command {
     pub options: &'static CommandDetails,
     pub func: CommandFunc,
@@ -30,11 +31,12 @@ pub struct CommandDetails {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct CommandOption {
+    #[serde(rename = "type")]
     pub option_type: CommandOptionType,
     pub name: &'static str,
     pub description: &'static str,
     pub required: bool,
-    pub choices: &'static [CommandOptionChoice],
+    pub choices: Option<&'static [CommandOptionChoice]>,
     pub channel_types: Option<&'static [ChannelType]>,
     pub min_value: Option<i32>,
     pub max_value: Option<i32>,
@@ -42,18 +44,28 @@ pub struct CommandOption {
 
 #[derive(Debug, Clone, Serialize)]
 pub struct CommandOptionChoice {
-    pub name: String,
-    pub value: Value,
+    pub name: &'static str,
+    pub value: CommandOptionValue,
 }
 
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub enum CommandOptionValue {
+    String(&'static str),
+    Integer(i32),
+    Double(f64)
+}
+
+#[derive(Debug, Clone, Copy, Serialize_repr)]
+#[repr(u8)]
 pub enum CommandType {
     ChatInput = 1,
     User = 2,
     Message = 3,
 }
 
-#[derive(Debug, Clone, Copy, Serialize)]
+#[derive(Debug, Clone, Copy, Serialize_repr)]
+#[repr(u8)]
 pub enum CommandOptionType {
     SubCommand = 1,
     SubCommandGroup = 2,

@@ -1222,7 +1222,11 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String, fil
         return;
     };
 
-    assert!(LAUNCH_AGENCIES.contains_key(filter.as_str()), "agencies does not contain filter {}", &filter);
+    assert!(
+        LAUNCH_AGENCIES.contains_key(filter.as_str()),
+        "agencies does not contain filter {}",
+        &filter
+    );
 
     let collection: Collection<Document> = if id.guild_specific() {
         db.collection("guild_settings")
