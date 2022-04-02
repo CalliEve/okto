@@ -6,12 +6,12 @@ use quote::{
     quote,
     ToTokens,
 };
-use syn::Lifetime;
 use syn::parse::{
     Parse,
     ParseStream,
     Result,
 };
+use syn::Lifetime;
 use syn::{
     braced,
     Attribute,
@@ -56,7 +56,11 @@ impl Parse for CommandFunc {
                         "description",
                         Span::call_site(),
                     )));
-                    let ts: TokenStream2 = a.tokens.into_iter().skip(1).collect();
+                    let ts: TokenStream2 = a
+                        .tokens
+                        .into_iter()
+                        .skip(1)
+                        .collect();
                     a.tokens = quote! {(#ts)};
                     a
                 } else {
@@ -77,7 +81,10 @@ impl Parse for CommandFunc {
         let ParenthesisedItems(mut args) = input.parse::<ParenthesisedItems<FnArg>>()?;
         for arg in args.iter_mut() {
             if let FnArg::Typed(tped) = arg {
-                if let Type::Reference(r) = tped.ty.deref_mut() {
+                if let Type::Reference(r) = tped
+                    .ty
+                    .deref_mut()
+                {
                     r.lifetime = Some(Lifetime::new("'fut", Span::call_site()))
                 }
             }

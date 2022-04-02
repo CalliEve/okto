@@ -1,25 +1,55 @@
+use std::collections::HashMap;
+
+use serde::Serialize;
 use serenity::{
     client::Context,
     framework::standard::CommandResult,
     http::Http,
-    model::interactions::Interaction,
+    model::{interactions::{Interaction, application_command::ApplicationCommandPermissionType}, id::CommandId, Permissions},
     Result,
 };
 
-use crate::structs::{
+use crate::{structs::{
     Command,
     CommandDetails,
-};
+}, utils::{get_all_guilds, get_roles_with_permission}};
 
+#[derive(Clone, Debug)]
+struct DiscordCommand {
+    id: CommandId,
+    name: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct CommandPermission {
+    id: CommandId,
+    permissions: Vec<CommandPermissionEntry>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct CommandPermissionEntry {
+    id: u64,
+    #[serde(rename = "type")]
+    kind: ApplicationCommandPermissionType,
+    permission: bool,
+}
+
+#[derive(Clone)]
 pub struct Handler {
-    cmds: Vec<&'static Command>,
+    cmds: HashMap<String, &'static Command>,
+    d_cmds: Vec<DiscordCommand>
 }
 
 impl Handler {
     pub fn new() -> Self {
         Self {
-            cmds: Vec::new(),
+            cmds: HashMap::new(),
+            d_cmds: Vec::new(),
         }
+    }
+
+    pub fn get_command_list(&self) -> Vec<&'static Command> {
+        self.cmds.values().map(|v| *v).collect()
     }
 
     pub fn add_command(&mut self, cmd: &'static Command) -> std::result::Result<(), String> {
@@ -29,8 +59,7 @@ impl Handler {
             return Err(format!("Command {} has a description longer than 100 characters", &cmd.options.name));
         }
 
-        self.cmds
-            .push(cmd);
+        self.cmds.insert(cmd.options.name.to_owned(), cmd);
 
         Ok(())
     }
@@ -41,34 +70,84 @@ impl Handler {
         interaction: &Interaction,
     ) -> CommandResult {
         if let Interaction::ApplicationCommand(cmd_interaction) = interaction {
-            for cmd in &self.cmds {
-                if cmd
-                    .options
-                    .name
-                    == cmd_interaction
-                        .data
-                        .name
-                {
-                    return (cmd.func)(ctx, cmd_interaction).await;
-                }
+            if let Some(cmd) = self.cmds.get(&cmd_interaction.data.name) {
+                return (cmd.func)(ctx, cmd_interaction).await;
             }
         }
-        return Ok(());
+        
+        Ok(())
     }
 
-    pub async fn upload_commands(&self, http: impl AsRef<Http>) -> Result<()> {
+    pub async fn upload_commands(&mut self, http: impl AsRef<Http>) -> Result<()> {
         let body = serde_json::to_value(
             &self
                 .cmds
-                .iter()
+                .values()
                 .map(|c| c.options)
                 .collect::<Vec<&CommandDetails>>(),
         )?;
 
-        http.as_ref()
+        self.d_cmds = http.as_ref()
             .create_global_application_commands(&body)
-            .await?;
+            .await?.into_iter().map(|c| DiscordCommand { id: c.id, name: c.name }).collect();
+
+        Ok(())
+    }
+
+    pub async fn upload_permissions(&self, http: impl AsRef<Http>) -> Result<()> {
+        let http = http.as_ref();
+        let guilds = get_all_guilds(http).await?;
+
+        for g in guilds {
+            let mut permissions = Vec::new();
+
+            for c in &self.d_cmds {
+                if let Some(cmd) = self.cmds.get(&c.name) {
+                    if cmd.perms.is_empty() {
+                        continue;
+                    }
+
+                    let discord_perms = cmd.perms.iter().fold(Permissions::empty(), |acc, p| acc.union(*p));
+                    
+                    let mut c_perms = Vec::new();
+                    for role in get_roles_with_permission(&g, discord_perms) {
+                        c_perms.push(CommandPermissionEntry {
+                            kind: ApplicationCommandPermissionType::Role,
+                            permission: true,
+                            id: role.id.0
+                        })
+                    }
+                    
+                    c_perms.push(CommandPermissionEntry {
+                        id: g.owner_id.0,
+                        permission: true,
+                        kind: ApplicationCommandPermissionType::User
+                    });
+                    if !c_perms.is_empty() {
+                        permissions.push(CommandPermission {
+                            id: c.id,
+                            permissions: c_perms
+                        });
+                    }
+                }
+            }
+
+            if permissions.is_empty() {
+                break;
+            }
+
+            let body = serde_json::to_value(permissions)?;
+
+            http.edit_guild_application_commands_permissions(g.id.0, &body).await?;
+        }
 
         Ok(())
     }
 }
+
+impl Default for Handler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+

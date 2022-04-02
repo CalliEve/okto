@@ -710,4 +710,3 @@ async fn get_planet(
 
     Ok(())
 }
-

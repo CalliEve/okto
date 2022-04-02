@@ -34,8 +34,8 @@ use serenity::{
 use crate::{
     events::{
         statefulembed::{
-            on_message_delete as embed_delete,
             on_button_click as embed_button_click,
+            on_message_delete as embed_delete,
         },
         waitfor::{
             waitfor_message,
@@ -201,7 +201,8 @@ impl EventHandler for Handler {
                     e
                 ),
             )
-            .await
+            .await;
+            return;
         };
         embed_button_click(&ctx, &interaction).await;
     }

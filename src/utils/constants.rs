@@ -21,7 +21,10 @@ use reqwest::{
 use serenity::{
     model::{
         channel::ReactionType,
-        id::EmojiId,
+        id::{
+            EmojiId,
+            UserId,
+        },
     },
     prelude::Mutex,
 };
@@ -81,6 +84,7 @@ lazy_static! {
             .iter()
             .map(|e| ReactionType::Unicode((*e).to_string()))
             .collect();
+    pub static ref OWNERS: Vec<UserId> = vec![247745860979392512.into()];
 }
 
 fn agency_map() -> HashMap<&'static str, &'static str> {

@@ -27,26 +27,29 @@ use mongodb::{
     Collection,
     Database,
 };
+use okto_framework::macros::command;
 use serenity::{
     builder::{
         CreateEmbed,
         CreateEmbedAuthor,
+        CreateInteractionResponse,
     },
-    framework::standard::{
-        macros::{
-            command,
-            group,
-        },
-        Args,
-        CommandResult,
-    },
+    framework::standard::CommandResult,
     model::{
-        channel::Message,
+        channel::ReactionType,
         id::{
             ChannelId,
             GuildId,
             RoleId,
             UserId,
+        },
+        interactions::{
+            application_command::{
+                ApplicationCommandInteraction,
+                ApplicationCommandInteractionDataOptionValue,
+            },
+            message_component::ButtonStyle,
+            InteractionApplicationCommandCallbackDataFlags,
         },
     },
     prelude::{
@@ -58,6 +61,7 @@ use serenity::{
 use crate::{
     events::{
         statefulembed::{
+            ButtonType,
             EmbedSession,
             StatefulEmbed,
         },
@@ -72,6 +76,7 @@ use crate::{
     },
     utils::{
         constants::*,
+        default_embed,
         format_duration,
         parse_duration,
         parse_id,
@@ -80,51 +85,75 @@ use crate::{
             get_user_settings,
         },
         temp_message,
+        StandardButton,
     },
 };
 
-#[group]
-#[commands(notifychannel, notifyme)]
-struct Reminders;
-
 #[command]
-#[only_in(guild)]
 #[required_permissions(MANAGE_GUILD)]
-#[usage("Run with channel mention as argument to have the bot post reminders to that channel, defaults to current channel")]
-#[description("Manage the reminders and notifications posted by the bot in this server")]
-async fn notifychannel(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
-    if msg
+#[default_permission(false)]
+#[options(
+    {
+        option_type: Channel,
+        name: "target_channel",
+        description: "Channel to set reminders for instead of channel this command was ran in"
+    }
+)]
+/// Manage the reminders and notifications posted by the bot in this server
+async fn notifychannel(
+    ctx: &Context,
+    interaction: &ApplicationCommandInteraction,
+) -> CommandResult {
+    if interaction
         .guild_id
         .is_none()
     {
+        interaction
+            .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+                m.interaction_response_data(|c| {
+                    c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                        .create_embed(|e: &mut CreateEmbed| {
+                            default_embed(e, "This command can only be ran in a server.", false)
+                        })
+                })
+            })
+            .await?;
+
         return Ok(());
     }
 
-    let target_channel = if let Some(channel_id) = args
-        .current()
-        .and_then(parse_id)
-        .map(ChannelId)
+    let target_channel = if let Some(channel_id) = interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "target_channel")
     {
         channel_id
+            .resolved
+            .clone()
+            .and_then(|v| {
+                if let ApplicationCommandInteractionDataOptionValue::Channel(c) = v {
+                    Some(c.id)
+                } else {
+                    None
+                }
+            })
+            .ok_or("Invalid argument given")?
             .to_channel_cached(&ctx)
             .await
-            .map_or(msg.channel_id, |channel| channel.id())
+            .map_or(interaction.channel_id, |channel| channel.id())
     } else {
-        msg.channel_id
+        interaction.channel_id
     };
 
-    let ses = EmbedSession::new(
-        ctx,
-        msg.channel_id,
-        msg.author
-            .id,
-    );
+    let ses = EmbedSession::new(ctx, interaction.clone(), false).await?;
 
     main_menu(
         ses,
         ID::Channel((
             target_channel,
-            msg.guild_id
+            interaction
+                .guild_id
                 .unwrap(),
         )),
     )
@@ -134,31 +163,15 @@ async fn notifychannel(ctx: &Context, msg: &Message, args: Args) -> CommandResul
 }
 
 #[command]
-#[description("Setup reminders and notifications from the bot in your DMs")]
-async fn notifyme(ctx: &Context, msg: &Message) -> CommandResult {
-    let dm = if msg
-        .guild_id
-        .is_some()
-    {
-        msg.author
-            .create_dm_channel(&ctx)
-            .await?
-            .id
-    } else {
-        msg.channel_id
-    };
-
-    let ses = EmbedSession::new(
-        ctx,
-        dm,
-        msg.author
-            .id,
-    );
+/// Setup reminders and notifications from the bot in your DMs
+async fn notifyme(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    let ses = EmbedSession::new(ctx, interaction.clone(), true).await?;
 
     main_menu(
         ses,
         ID::User(
-            msg.author
+            interaction
+                .user
                 .id,
         ),
     )
@@ -185,7 +198,11 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             "Reminders",
             "Set at which times you want to get launch reminders",
             false,
-            &'⏰'.into(),
+            &ButtonType {
+                emoji: Some('⏰'.into()),
+                style: ButtonStyle::Primary,
+                label: "Reminders".to_owned(),
+            },
             move || {
                 let reminder_ses = reminder_ses.clone();
                 Box::pin(async move { reminders_page(reminder_ses.clone(), id).await })
@@ -197,7 +214,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             "Filters",
             "Set which agencies to filter out of launch reminders, making you not get any reminders for these agencies again",
             false,
-            &'📝'.into(),
+            &ButtonType{ emoji: Some('📝'.into()), style: ButtonStyle::Primary, label: "Filters".to_owned()},
             move || {
                 let filters_ses = filters_ses.clone();
                 Box::pin(async move { filters_page(filters_ses.clone(), id).await })
@@ -209,7 +226,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             "Allow Filters",
             "Set which agencies to filter launch reminders for, making you get only reminders for these agencies",
             false,
-            &'🔍'.into(),
+            &ButtonType{ emoji: Some('🔍'.into()), style: ButtonStyle::Primary, label: "Allow Filters".to_owned()},
             move || {
                 let allow_filters_ses = allow_filters_ses.clone();
                 Box::pin(async move { allow_filters_page(allow_filters_ses.clone(), id).await })
@@ -222,7 +239,11 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
                 "Mentions",
                 "Set which roles should be mentioned when posting reminders",
                 false,
-                &'🔔'.into(),
+                &ButtonType {
+                    emoji: Some('🔔'.into()),
+                    style: ButtonStyle::Primary,
+                    label: "Mentions".to_owned(),
+                },
                 move || {
                     let mention_ses = mention_ses.clone();
                     Box::pin(async move { mentions_page(mention_ses.clone(), id).await })
@@ -235,7 +256,11 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             "Other",
             "Enable other notifications",
             false,
-            &'🛎'.into(),
+            &ButtonType {
+                emoji: Some('🛎'.into()),
+                style: ButtonStyle::Primary,
+                label: "Other".to_owned(),
+            },
             move || {
                 let other_ses = other_ses.clone();
                 Box::pin(async move { other_page(other_ses.clone(), id).await })
@@ -247,21 +272,19 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             "Close",
             "Close this menu",
             false,
-            &'❌'.into(),
+            &StandardButton::Exit.to_button(),
             move || {
                 let close_ses = close_ses.clone();
                 Box::pin(async move {
                     let lock = close_ses
                         .read()
                         .await;
-                    if let Some(m) = lock
-                        .message
-                        .as_ref()
-                    {
-                        let _ = m
-                            .delete(&lock.http)
-                            .await;
-                    };
+                    let r = lock.interaction
+                        .delete_original_interaction_response(&lock.http)
+                        .await;
+                    if let Err(e) = r {
+                        dbg!(e);
+                    }
                 })
             },
         );
@@ -306,16 +329,17 @@ fn reminders_page(
         });
 
         let add_ses = ses.clone();
-        em.add_field(
-        "Add Reminder",
-        "Add a new reminder",
-        false,
-        &PROGRADE,
+        em.add_option(
+        &ButtonType {
+                label: "Add reminder".to_owned(),
+                style: ButtonStyle::Primary,
+                emoji: Some(ReactionType::from(PROGRADE.clone()))
+            },
         move || Box::pin({
             let add_ses = add_ses.clone();
             async move {
                 let inner_ses = add_ses.clone();
-                let channel_id = inner_ses.read().await.channel;
+                let channel_id = inner_ses.read().await.interaction.channel_id;
                 let user_id = inner_ses.read().await.author;
                 let wait_ses = add_ses.clone();
 
@@ -341,16 +365,17 @@ fn reminders_page(
         }));
 
         let remove_ses = ses.clone();
-        em.add_field(
-        "Remove Reminder",
-        "Remove a reminder",
-        false,
-        &RETROGRADE,
+        em.add_option(
+        &ButtonType {
+                label: "Remove reminder".to_owned(),
+                style: ButtonStyle::Primary,
+                emoji: Some(ReactionType::from(RETROGRADE.clone()))
+            },
         move || {
             let remove_ses = remove_ses.clone();
             Box::pin(async move {
                 let inner_ses = remove_ses.clone();
-                let channel_id = inner_ses.read().await.channel;
+                let channel_id = inner_ses.read().await.interaction.channel_id;
                 let user_id = inner_ses.read().await.author;
                 let wait_ses = remove_ses.clone();
 
@@ -372,11 +397,12 @@ fn reminders_page(
             })
         });
 
-        em.add_field(
-            "Back",
-            "Go back to main menu",
-            false,
-            &'❌'.into(),
+        em.add_option(
+            &ButtonType {
+                label: "Back to main menu".to_owned(),
+                style: ButtonStyle::Danger,
+                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+            },
             move || {
                 let ses = ses.clone();
                 Box::pin(async move { main_menu(ses.clone(), id).await })
@@ -454,16 +480,17 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
         });
 
         let add_ses = ses.clone();
-        em.add_field(
-            "Add Filter",
-            "Add a new filter",
-            false,
-            &PROGRADE,
+        em.add_option(
+            &ButtonType {
+                label: "Add filter".to_owned(),
+                style: ButtonStyle::Primary,
+                emoji: Some(ReactionType::from(PROGRADE.clone()))
+            },
             move || {
                 let add_ses = add_ses.clone();
                 Box::pin(async move {
                     let inner_ses = add_ses.clone();
-                    let channel_id = inner_ses.read().await.channel;
+                    let channel_id = inner_ses.read().await.interaction.channel_id;
                     let user_id = inner_ses.read().await.author;
                     let wait_ses = add_ses.clone();
 
@@ -476,7 +503,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                                     add_filter(&wait_ses.clone(), id, content, "filters").await;
                                 } else {
                                     temp_message(
-                                        wait_ses.read().await.channel,
+                                        wait_ses.read().await.interaction.channel_id,
                                         &wait_ses.read().await.http,
                                         "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
                                         Duration::seconds(5)
@@ -498,16 +525,17 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
         );
 
         let remove_ses = ses.clone();
-        em.add_field(
-            "Remove Filter",
-            "Remove a filter",
-            false,
-            &RETROGRADE,
+        em.add_option(
+            &ButtonType {
+                label: "Remove filter".to_owned(),
+                style: ButtonStyle::Primary,
+                emoji: Some(ReactionType::from(RETROGRADE.clone()))
+            },
             move || {
                 let remove_ses = remove_ses.clone();
                 Box::pin(async move {
                     let inner_ses = remove_ses.clone();
-                    let channel_id = inner_ses.read().await.channel;
+                    let channel_id = inner_ses.read().await.interaction.channel_id;
                     let user_id = inner_ses.read().await.author;
                     let wait_ses = remove_ses.clone();
 
@@ -520,7 +548,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                                     remove_filter(&wait_ses.clone(), id, content, "filters").await;
                                 } else {
                                     temp_message(
-                                        wait_ses.read().await.channel,
+                                        wait_ses.read().await.interaction.channel_id,
                                         &wait_ses.read().await.http,
                                         "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
                                         Duration::seconds(5)
@@ -541,11 +569,12 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
             },
         );
 
-        em.add_field(
-            "Back",
-            "Go back to main menu",
-            false,
-            &'❌'.into(),
+        em.add_option(
+            &ButtonType {
+                label: "Back to main menu".to_owned(),
+                style: ButtonStyle::Danger,
+                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+            },
             move || {
                 let ses = ses.clone();
                 Box::pin(async move { main_menu(ses.clone(), id).await })
@@ -628,16 +657,17 @@ fn allow_filters_page(
         });
 
         let add_ses = ses.clone();
-        em.add_field(
-            "Add Allow Filter",
-            "Add a new allow filter",
-            false,
-            &PROGRADE,
+        em.add_option(
+            &ButtonType {
+                label: "Add allow filter".to_owned(),
+                style: ButtonStyle::Primary,
+                emoji: Some(ReactionType::from(PROGRADE.clone()))
+            },
             move || {
                 let add_ses = add_ses.clone();
                 Box::pin(async move {
                     let inner_ses = add_ses.clone();
-                    let channel_id = inner_ses.read().await.channel;
+                    let channel_id = inner_ses.read().await.interaction.channel_id;
                     let user_id = inner_ses.read().await.author;
                     let wait_ses = add_ses.clone();
 
@@ -650,7 +680,7 @@ fn allow_filters_page(
                                     add_filter(&wait_ses.clone(), id, content, "allow_filters").await;
                                 } else {
                                     temp_message(
-                                        wait_ses.read().await.channel,
+                                        wait_ses.read().await.interaction.channel_id,
                                         &wait_ses.read().await.http,
                                         "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
                                         Duration::seconds(5)
@@ -672,16 +702,17 @@ fn allow_filters_page(
         );
 
         let remove_ses = ses.clone();
-        em.add_field(
-            "Remove Allow Filter",
-            "Remove an allow filter",
-            false,
-            &RETROGRADE,
+        em.add_option(
+            &ButtonType {
+                label: "Remove allow filter".to_owned(),
+                style: ButtonStyle::Primary,
+                emoji: Some(ReactionType::from(RETROGRADE.clone()))
+            },
             move || {
                 let remove_ses = remove_ses.clone();
                 Box::pin(async move {
                     let inner_ses = remove_ses.clone();
-                    let channel_id = inner_ses.read().await.channel;
+                    let channel_id = inner_ses.read().await.interaction.channel_id;
                     let user_id = inner_ses.read().await.author;
                     let wait_ses = remove_ses.clone();
 
@@ -694,7 +725,7 @@ fn allow_filters_page(
                                     remove_filter(&wait_ses.clone(), id, content, "allow_filters").await;
                                 } else {
                                     temp_message(
-                                        wait_ses.read().await.channel,
+                                        wait_ses.read().await.interaction.channel_id,
                                         &wait_ses.read().await.http,
                                         "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
                                         Duration::seconds(5)
@@ -715,11 +746,12 @@ fn allow_filters_page(
             },
         );
 
-        em.add_field(
-            "Back",
-            "Go back to main menu",
-            false,
-            &'❌'.into(),
+        em.add_option(
+            &ButtonType {
+                label: "Back to main menu".to_owned(),
+                style: ButtonStyle::Danger,
+                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+            },
             move || {
                 let ses = ses.clone();
                 Box::pin(async move { main_menu(ses.clone(), id).await })
@@ -791,11 +823,12 @@ fn mentions_page(
         });
 
         let add_ses = ses.clone();
-        em.add_field(
-            "Add Mention",
-            "Add a new role to mention",
-            false,
-            &PROGRADE,
+        em.add_option(
+            &ButtonType {
+                label: "Add mention".to_owned(),
+                style: ButtonStyle::Primary,
+                emoji: Some(ReactionType::from(PROGRADE.clone())),
+            },
             move || {
                 let add_ses = add_ses.clone();
                 Box::pin(async move {
@@ -803,7 +836,8 @@ fn mentions_page(
                     let channel_id = inner_ses
                         .read()
                         .await
-                        .channel;
+                        .interaction
+                        .channel_id;
                     let user_id = inner_ses
                         .read()
                         .await
@@ -855,16 +889,17 @@ fn mentions_page(
         );
 
         let remove_ses = ses.clone();
-        em.add_field(
-        "Remove Mention",
-        "Remove a role to mention",
-        false,
-        &RETROGRADE,
+        em.add_option(
+            &ButtonType {
+                label: "Remove mention".to_owned(),
+                style: ButtonStyle::Primary,
+                emoji: Some(ReactionType::from(RETROGRADE.clone()))
+            },
         move || {
             let remove_ses = remove_ses.clone();
             Box::pin(async move {
                 let inner_ses = remove_ses.clone();
-                let channel_id = inner_ses.read().await.channel;
+                let channel_id = inner_ses.read().await.interaction.channel_id;
                 let user_id = inner_ses.read().await.author;
                 let wait_ses = remove_ses.clone();
 
@@ -897,11 +932,12 @@ fn mentions_page(
         },
     );
 
-        em.add_field(
-            "Back",
-            "Go back to main menu",
-            false,
-            &'❌'.into(),
+        em.add_option(
+            &ButtonType {
+                label: "Back to main menu".to_owned(),
+                style: ButtonStyle::Danger,
+                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+            },
             move || {
                 let ses = ses.clone();
                 Box::pin(async move { main_menu(ses.clone(), id).await })
@@ -986,7 +1022,11 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
             "Toggle Scrub Notifications",
             &format!("Toggle scrub notifications on and off\nThese notifications notify you when a launch gets delayed.\nThis is currently **{}**", scrub_notifications),
             false,
-            &'🛑'.into(),
+            &ButtonType {
+                emoji: Some('🛑'.into()),
+                style: ButtonStyle::Primary,
+                label: "Toggle Scrubs".to_owned(),
+            },
             move || {
                 let scrub_ses = scrub_ses.clone();
                 Box::pin(async move {
@@ -1003,7 +1043,11 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
             "Toggle Outcome Notifications",
             &format!("Toggle outcome notifications on and off\nThese notifications notify you about the outcome of a launch.\nThis is currently **{}**", outcome_notifications),
             false,
-            &'🌍'.into(),
+            &ButtonType {
+                emoji: Some('🌍'.into()),
+                style: ButtonStyle::Primary,
+                label: "Toggle Outcomes".to_owned(),
+            },
             move || {
                 let outcome_ses = outcome_ses.clone();
                 Box::pin(async move {
@@ -1023,7 +1067,11 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                 mentions
             ),
             false,
-            &'🔔'.into(),
+            &ButtonType {
+                emoji: Some('🔔'.into()),
+                style: ButtonStyle::Primary,
+                label: "Toggle Mentions".to_owned(),
+            },
             move || {
                 let mentions_ses = mentions_ses.clone();
                 Box::pin(async move {
@@ -1040,12 +1088,16 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                 "Set Notification Channel",
                 "Set the channel to receive scrub and outcome notifications in, this can only be one per server",
                 false,
-                &'📩'.into(),
+                &ButtonType {
+                    emoji: Some('📩'.into()),
+                    style: ButtonStyle::Primary,
+                    label: "Set Notification Channel".to_owned(),
+                },
                 move || {
                     let chan_ses = chan_ses.clone();
                     Box::pin(async move {
                         let inner_ses = chan_ses.clone();
-                        let channel_id = inner_ses.read().await.channel;
+                        let channel_id = inner_ses.read().await.interaction.channel_id;
                         let user_id = inner_ses.read().await.author;
                         let wait_ses = chan_ses.clone();
 
@@ -1079,11 +1131,12 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
             );
         }
 
-        em.add_field(
-            "Back",
-            "Go back to main menu",
-            false,
-            &'❌'.into(),
+        em.add_option(
+            &ButtonType {
+                label: "Back to main menu".to_owned(),
+                style: ButtonStyle::Danger,
+                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+            },
             move || {
                 let ses = ses.clone();
                 Box::pin(async move { main_menu(ses.clone(), id).await })

@@ -3,17 +3,19 @@ use serde::Serialize;
 use serde_repr::Serialize_repr;
 use serenity::{
     client::Context,
-    framework::standard::CommandResult,
+    framework::standard::{CommandResult, OnlyIn},
     model::{
         channel::ChannelType,
-        interactions::application_command::ApplicationCommandInteraction,
+        interactions::application_command::ApplicationCommandInteraction, Permissions,
     },
 };
 
 #[derive(Clone)]
 pub struct Command {
     pub options: &'static CommandDetails,
+    pub perms: &'static [Permissions],
     pub func: CommandFunc,
+    pub info: &'static CommandInfo
 }
 
 pub type CommandFunc = for<'fut> fn(
@@ -48,6 +50,12 @@ pub struct CommandOptionChoice {
     pub value: CommandOptionValue,
 }
 
+#[derive(Debug, Clone)]
+pub struct CommandInfo {
+    pub file: &'static str,
+    pub only_in: OnlyIn
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(untagged)]
 pub enum CommandOptionValue {
@@ -77,4 +85,10 @@ pub enum CommandOptionType {
     Role = 8,
     Mentionable = 9,
     Number = 10,
+}
+
+impl Command {
+    pub fn only_in(&self) -> OnlyIn {
+        self.info.only_in
+    }
 }

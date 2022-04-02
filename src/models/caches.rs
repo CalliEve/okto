@@ -4,6 +4,7 @@ use std::{
 };
 
 use mongodb::Database;
+use okto_framework::structs::Command;
 use serenity::{
     model::id::{
         ChannelId,
@@ -60,4 +61,10 @@ pub struct DatabaseKey;
 
 impl TypeMapKey for DatabaseKey {
     type Value = Database;
+}
+
+pub struct CommandListKey;
+
+impl TypeMapKey for CommandListKey {
+    type Value = Vec<&'static Command>;
 }

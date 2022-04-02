@@ -1,28 +1,35 @@
 use std::sync::Arc;
 
 use chrono::Utc;
+use okto_framework::macros::command;
 use serenity::{
     builder::{
         CreateEmbed,
         CreateEmbedAuthor,
-        CreateEmbedFooter, CreateInteractionResponse,
+        CreateEmbedFooter,
+        CreateInteractionResponse,
     },
     framework::standard::CommandResult,
     model::{
         channel::ReactionType,
-        id::EmojiId, interactions::{InteractionApplicationCommandCallbackDataFlags, application_command::ApplicationCommandInteraction, message_component::ButtonStyle},
+        id::EmojiId,
+        interactions::{
+            application_command::ApplicationCommandInteraction,
+            message_component::ButtonStyle,
+            InteractionApplicationCommandCallbackDataFlags,
+        },
     },
     prelude::{
         Context,
         RwLock,
     },
 };
-use okto_framework::macros::command;
 
 use crate::{
     events::statefulembed::{
+        ButtonType,
         EmbedSession,
-        StatefulEmbed, ButtonType,
+        StatefulEmbed,
     },
     models::{
         caches::LaunchesCacheKey,
@@ -36,7 +43,9 @@ use crate::{
         cutoff_on_last_dot,
         default_embed,
         format_duration,
+
         launches::*,
+        StandardButton,
     },
 };
 
@@ -77,15 +86,19 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
     .collect();
 
     if launches.is_empty() {
-        interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL).create_embed(|e: &mut CreateEmbed| {
-                    default_embed(
-                        e,
-                        "I found no upcoming launches that have been marked as certain :(",
-                        false,
-                    )
+        interaction
+            .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+                m.interaction_response_data(|c| {
+                    c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                        .create_embed(|e: &mut CreateEmbed| {
+                            default_embed(
+                                e,
+                                "I found no upcoming launches that have been marked as certain :(",
+                                false,
+                            )
+                        })
                 })
-            })})
+            })
             .await?;
         return Ok(());
     }
@@ -93,9 +106,13 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
     launches = match filter_launches(launches, interaction) {
         Ok(ls) => ls,
         Err(err) => {
-            interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL).create_embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
-                })})
+            interaction
+                .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+                    m.interaction_response_data(|c| {
+                        c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                            .create_embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
+                    })
+                })
                 .await?;
             return Ok(());
         },
@@ -103,62 +120,65 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
 
     let launch = &launches[0];
 
-    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.create_embed(|e: &mut CreateEmbed| {
-                let mut window = format_duration(launch.launch_window, true);
-                if window.is_empty() {
-                    window.push_str("instantaneous")
-                }
+    interaction
+        .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {
+                c.create_embed(|e: &mut CreateEmbed| {
+                    let mut window = format_duration(launch.launch_window, true);
+                    if window.is_empty() {
+                        window.push_str("instantaneous")
+                    }
 
-                e.color(DEFAULT_COLOR)
-                    .author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Next Launch")
-                            .icon_url(DEFAULT_ICON)
-                    })
-                    .timestamp(
-                        launch
-                            .net
-                            .format("%Y-%m-%dT%H:%M:%S")
-                            .to_string(),
-                    )
-                    .title(format!(
-                        "{}\nStatus: {}",
-                        &launch.vehicle,
-                        launch
-                            .status
-                            .as_str()
-                    ))
-                    .description(format!(
-                        "**Payload:** {}\n\
+                    e.color(DEFAULT_COLOR)
+                        .author(|a: &mut CreateEmbedAuthor| {
+                            a.name("Next Launch")
+                                .icon_url(DEFAULT_ICON)
+                        })
+                        .timestamp(
+                            launch
+                                .net
+                                .format("%Y-%m-%dT%H:%M:%S")
+                                .to_string(),
+                        )
+                        .title(format!(
+                            "{}\nStatus: {}",
+                            &launch.vehicle,
+                            launch
+                                .status
+                                .as_str()
+                        ))
+                        .description(format!(
+                            "**Payload:** {}\n\
                         **NET:** <t:{}>\n\
                         **Provider:** {}\n\
                         **Location:** {}\n\
                         **Launch Window:** {}",
-                        &launch.payload,
-                        launch
-                            .net
-                            .timestamp(),
-                        &launch.lsp,
-                        &launch.location,
-                        window
-                    ))
-                    .field(
-                        "Time until launch:",
-                        format_duration(launch.net - Utc::now().naive_utc(), true),
-                        false,
-                    );
+                            &launch.payload,
+                            launch
+                                .net
+                                .timestamp(),
+                            &launch.lsp,
+                            &launch.location,
+                            window
+                        ))
+                        .field(
+                            "Time until launch:",
+                            format_duration(launch.net - Utc::now().naive_utc(), true),
+                            false,
+                        );
 
-                if let Some(img) = &launch.rocket_img {
-                    e.thumbnail(img);
-                }
+                    if let Some(img) = &launch.rocket_img {
+                        e.thumbnail(img);
+                    }
 
-                if let Some(links) = format_links(&launch.vid_urls) {
-                    e.field("links", links, false);
-                }
+                    if let Some(links) = format_links(&launch.vid_urls) {
+                        e.field("links", links, false);
+                    }
 
-                e
+                    e
+                })
             })
-        })})
+        })
         .await?;
 
     Ok(())
@@ -282,14 +302,15 @@ fn list_page(
             let certain_page_launches = list.clone();
             let certain_page_session = session.clone();
             em.add_option(
-                &ButtonType{
+                &ButtonType {
                     label: "Only certain launches".to_owned(),
                     style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::Custom {
-                    animated: false,
-                    name: Some("certain".to_owned()),
-                    id: EmojiId::from(CERTAIN_EMOJI),
-                })},
+                    emoji: Some(ReactionType::Custom {
+                        animated: false,
+                        name: Some("certain".to_owned()),
+                        id: EmojiId::from(CERTAIN_EMOJI),
+                    }),
+                },
                 move || {
                     let certain_page_session = certain_page_session.clone();
                     let certain_page_launches = certain_page_launches.clone();
@@ -308,14 +329,15 @@ fn list_page(
             let uncertain_page_launches = list.clone();
             let uncertain_page_session = session.clone();
             em.add_option(
-                &ButtonType{
+                &ButtonType {
                     label: "Include uncertain launches".to_owned(),
                     style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::Custom {
-                    animated: false,
-                    name: Some("uncertain".to_owned()),
-                    id: EmojiId::from(UNCERTAIN_EMOJI),
-                })},
+                    emoji: Some(ReactionType::Custom {
+                        animated: false,
+                        name: Some("uncertain".to_owned()),
+                        id: EmojiId::from(UNCERTAIN_EMOJI),
+                    }),
+                },
                 move || {
                     let uncertain_page_session = uncertain_page_session.clone();
                     let uncertain_page_launches = uncertain_page_launches.clone();
@@ -374,7 +396,9 @@ fn list_page(
                 let lock = session
                     .read()
                     .await;
-                lock.interaction.delete_original_interaction_response(&lock.http).await;
+                let _ = lock.interaction
+                    .delete_original_interaction_response(&lock.http)
+                    .await;
             })
         });
 
@@ -425,18 +449,19 @@ async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction
     launches = match filter_launches(launches, interaction) {
         Ok(ls) => ls,
         Err(err) => {
-            interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL).create_embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
-                })})
+            interaction
+                .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+                    m.interaction_response_data(|c| {
+                        c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                            .create_embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
+                    })
+                })
                 .await?;
             return Ok(());
         },
     };
 
-    let session = EmbedSession::new(
-        ctx,
-        interaction.clone(),
-    );
+    let session = EmbedSession::new(ctx, interaction.clone(), false).await?;
 
     list_page(session, launches, 0, true).await;
 
@@ -482,23 +507,29 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
                 .clone()
         })
         .and_then(|v| {
-            v.as_i64().map(|i| i as i32)
-        }).ok_or("No launch id provided while it was a required argument")?;
+            v.as_i64()
+                .map(|i| i as i32)
+        })
+        .ok_or("No launch id provided while it was a required argument")?;
 
     let launch = if let Some(l) = launches
-                .into_iter()
-                .find(|l| l.id == launch_id)
-            {
-                l
-            } else {
-                interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL).create_embed(|e: &mut CreateEmbed| {
+        .into_iter()
+        .find(|l| l.id == launch_id)
+    {
+        l
+    } else {
+        interaction
+            .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+                m.interaction_response_data(|c| {
+                    c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                        .create_embed(|e: &mut CreateEmbed| {
                             default_embed(e, "No launch was found with that ID :(", false)
-                        })})
-                    })
-                    .await?;
-                return Ok(());
-            };
+                        })
+                })
+            })
+            .await?;
+        return Ok(());
+    };
 
     interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
             m.interaction_response_data(|c| {c.create_embed(|e: &mut CreateEmbed| {
@@ -576,35 +607,38 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
 #[command]
 /// Get a list of all things you can filter launches on
 async fn filtersinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
-    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.create_embed(|e: &mut CreateEmbed| {
-                e.color(DEFAULT_COLOR)
-                    .author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Filters Info")
-                            .icon_url(DEFAULT_ICON)
-                    })
-                    .timestamp(&Utc::now())
-                    .title("The following filters can be used to filter launches:")
-                    .field(
-                        "Vehicles:",
-                        LAUNCH_VEHICLES
-                            .keys()
-                            .copied()
-                            .collect::<Vec<&str>>()
-                            .join(", "),
-                        false,
-                    )
-                    .field(
-                        "Launch Service Provider abbreviations with their full names:",
-                        LAUNCH_AGENCIES
-                            .iter()
-                            .map(|(k, v)| format!("{}: {}", k, v))
-                            .collect::<Vec<String>>()
-                            .join("\n"),
-                        false,
-                    )
+    interaction
+        .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {
+                c.create_embed(|e: &mut CreateEmbed| {
+                    e.color(DEFAULT_COLOR)
+                        .author(|a: &mut CreateEmbedAuthor| {
+                            a.name("Filters Info")
+                                .icon_url(DEFAULT_ICON)
+                        })
+                        .timestamp(&Utc::now())
+                        .title("The following filters can be used to filter launches:")
+                        .field(
+                            "Vehicles:",
+                            LAUNCH_VEHICLES
+                                .keys()
+                                .copied()
+                                .collect::<Vec<&str>>()
+                                .join(", "),
+                            false,
+                        )
+                        .field(
+                            "Launch Service Provider abbreviations with their full names:",
+                            LAUNCH_AGENCIES
+                                .iter()
+                                .map(|(k, v)| format!("{}: {}", k, v))
+                                .collect::<Vec<String>>()
+                                .join("\n"),
+                            false,
+                        )
+                })
             })
-        })})
+        })
         .await?;
 
     Ok(())

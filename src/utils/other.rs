@@ -10,16 +10,28 @@ use serenity::{
         CreateEmbedAuthor,
     },
     http::Http,
-    model::id::ChannelId,
+    model::{
+        channel::ReactionType,
+        id::ChannelId,
+        interactions::message_component::ButtonStyle,
+    },
     utils::Colour,
 };
 
 use super::constants::{
     DEFAULT_COLOR,
     DEFAULT_ICON,
+    EXIT_EMOJI,
+    FINAL_PAGE_EMOJI,
+    FIRST_PAGE_EMOJI,
     ID_REGEX,
+    LAST_PAGE_EMOJI,
     MENTION_REGEX,
+    NEXT_PAGE_EMOJI,
+    PROGRADE,
+    RETROGRADE,
 };
+use crate::events::statefulembed::ButtonType;
 
 lazy_static! {
     static ref WEEK_REGEX: Regex = Regex::new(r"(^|\b)([0-9]+)[wW]").unwrap();
@@ -235,4 +247,58 @@ pub async fn error_log(http: impl AsRef<Http>, text: impl AsRef<str>) {
             })
         })
         .await;
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
+pub enum StandardButton {
+    First,
+    Last,
+    Forward,
+    Back,
+    Exit,
+    Prograde,
+    Retrograde,
+}
+
+impl StandardButton {
+    pub fn to_button(&self) -> ButtonType {
+        match *self {
+            Self::Last => ButtonType {
+                label: "Last page".to_owned(),
+                style: ButtonStyle::Secondary,
+                emoji: Some(ReactionType::from(FINAL_PAGE_EMOJI)),
+            },
+            Self::First => ButtonType {
+                label: "First page".to_owned(),
+                style: ButtonStyle::Secondary,
+                emoji: Some(ReactionType::from(FIRST_PAGE_EMOJI)),
+            },
+            Self::Forward => ButtonType {
+                label: "Forward one page".to_owned(),
+                style: ButtonStyle::Secondary,
+                emoji: Some(ReactionType::from(NEXT_PAGE_EMOJI)),
+            },
+            Self::Back => ButtonType {
+                label: "Back one page".to_owned(),
+                style: ButtonStyle::Secondary,
+                emoji: Some(ReactionType::from(LAST_PAGE_EMOJI)),
+            },
+            Self::Exit => ButtonType {
+                label: "Exit".to_owned(),
+                style: ButtonStyle::Danger,
+                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+            },
+            Self::Prograde => ButtonType {
+                label: "Next".to_owned(),
+                style: ButtonStyle::Secondary,
+                emoji: Some(ReactionType::from(PROGRADE.clone())),
+            },
+            Self::Retrograde => ButtonType {
+                label: "Back".to_owned(),
+                style: ButtonStyle::Secondary,
+                emoji: Some(ReactionType::from(RETROGRADE.clone())),
+            },
+        }
+    }
 }

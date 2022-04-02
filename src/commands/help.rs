@@ -1,12 +1,14 @@
-use std::{
-    collections::HashSet,
-    sync::Arc,
-};
+use std::sync::Arc;
 
+use itertools::Itertools;
 use mongodb::bson::{
     doc,
     document::Document,
     from_bson,
+};
+use okto_framework::{
+    macros::command,
+    structs::Command,
 };
 use serenity::{
     builder::{
@@ -14,22 +16,22 @@ use serenity::{
         CreateEmbedAuthor,
     },
     framework::standard::{
-        macros::{
-            help,
-            hook,
-        },
-        Args,
-        CommandGroup,
+        macros::hook,
+        CommandError,
         CommandResult,
-        CommonOptions,
-        HelpOptions,
         OnlyIn,
     },
     model::prelude::{
         Channel,
         Message,
         ReactionType,
-        UserId,
+    },
+    model::{
+        interactions::{
+            application_command::ApplicationCommandInteraction,
+            message_component::ButtonStyle,
+        },
+        Permissions,
     },
     prelude::{
         Context,
@@ -39,11 +41,15 @@ use serenity::{
 
 use crate::{
     events::statefulembed::{
+        ButtonType,
         EmbedSession,
         StatefulEmbed,
     },
     models::{
-        caches::DatabaseKey,
+        caches::{
+            CommandListKey,
+            DatabaseKey,
+        },
         settings::GuildSettings,
     },
     utils::constants::{
@@ -51,26 +57,23 @@ use crate::{
         DEFAULT_ICON,
         EXIT_EMOJI,
         NUMBER_EMOJIS,
+        OWNERS,
     },
 };
 
-#[help]
-async fn help_cmd(
-    ctx: &Context,
-    msg: &Message,
-    _args: Args,
-    _help_options: &'static HelpOptions,
-    groups: &[&'static CommandGroup],
-    owners: HashSet<UserId>,
-) -> CommandResult {
-    let ses = EmbedSession::new(
-        ctx,
-        msg.channel_id,
-        msg.author
-            .id,
-    );
+#[command]
+#[options(
+    {
+        option_type: String,
+        name: "command",
+        description: "Get information about a specific command"
+    }
+)]
+/// Get information about the commands within the bot
+async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    let ses = EmbedSession::new(ctx, interaction.clone(), false).await?;
 
-    help_menu(ses, ctx.clone(), msg.clone(), groups.to_vec(), owners).await;
+    help_menu(ses, ctx.clone(), interaction.clone()).await;
 
     Ok(())
 }
@@ -78,15 +81,9 @@ async fn help_cmd(
 fn help_menu(
     ses: Arc<RwLock<EmbedSession>>,
     ctx: Context,
-    msg: Message,
-    groups: Vec<&'static CommandGroup>,
-    owners: HashSet<UserId>,
+    interaction: ApplicationCommandInteraction,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let prefix = calc_prefix(&ctx, &msg)
-            .await
-            .unwrap_or_else(|| ";".to_owned());
-
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
             .author(
@@ -94,26 +91,51 @@ fn help_menu(
             ).description("Use the reactions to get the descriptions for the commands in that group.\nCurrently available commands:")
         });
 
-        for (i, group) in groups
-            .iter()
+        let grouped = ctx
+            .data
+            .read()
+            .await
+            .get::<CommandListKey>()
+            .unwrap()
+            .into_iter()
+            .group_by(|c| {
+                c.info
+                    .file
+            })
+            .into_iter()
+            .fold(
+                Vec::<(&str, Vec<&'static Command>)>::new(),
+                |mut acc, (k, g)| {
+                    acc.push((
+                        k,
+                        g.into_iter()
+                            .map(|c| *c)
+                            .collect(),
+                    ));
+                    acc
+                },
+            );
+
+        for (i, (key, group)) in grouped
+            .into_iter()
             .enumerate()
         {
-            if allowed(&ctx, &group.options, &msg, &owners).await {
+            if allowed(&ctx, &group, &interaction)
+                .await
+                .unwrap_or(false)
+            {
                 let mut cmds = String::new();
 
-                for command in group
-                    .options
-                    .commands
-                {
-                    if allowed(&ctx, &command.options, &msg, &owners).await {
+                for command in &group {
+                    if allowed(&ctx, &[command], &interaction)
+                        .await
+                        .unwrap_or(false)
+                    {
                         cmds.push_str(&format!(
-                            "\n- **{}{}**",
-                            &prefix,
+                            "\n- **/{}**",
                             command
                                 .options
-                                .names
-                                .first()
-                                .expect("no command name")
+                                .name
                         ));
                     }
                 }
@@ -124,47 +146,60 @@ fn help_menu(
 
                 let details_ses = ses.clone();
                 let details_ctx = ctx.clone();
-                let details_msg = msg.clone();
-                let details_owners = owners.clone();
-                let all_groups = groups.clone();
-                let group = *group;
-                em.add_field(group.name, &cmds, true, &NUMBER_EMOJIS[i], move || {
-                    let details_ses = details_ses.clone();
-                    let details_ctx = details_ctx.clone();
-                    let details_msg = details_msg.clone();
-                    let details_owners = details_owners.clone();
-                    let all_groups = all_groups.clone();
-                    Box::pin(async move {
-                        command_details(
-                            details_ses.clone(),
-                            details_ctx,
-                            details_msg,
-                            all_groups,
-                            details_owners,
-                            group,
-                        )
-                        .await
-                    })
-                });
+                let details_interaction = interaction.clone();
+                let group_name = key
+                    .split_once('.')
+                    .unwrap()
+                    .0
+                    .to_owned();
+                em.add_field(
+                    &group_name.clone(),
+                    &cmds,
+                    true,
+                    &ButtonType {
+                        label: group_name.clone(),
+                        style: ButtonStyle::Danger,
+                        emoji: Some(NUMBER_EMOJIS[i].clone()),
+                    },
+                    move || {
+                        let details_ses = details_ses.clone();
+                        let details_ctx = details_ctx.clone();
+                        let details_group = group.clone();
+                        let details_interaction = details_interaction.clone();
+                        let group_name = group_name.clone();
+                        Box::pin(async move {
+                            command_details(
+                                details_ses.clone(),
+                                details_ctx,
+                                details_interaction,
+                                details_group,
+                                group_name,
+                            )
+                            .await
+                        })
+                    },
+                );
             }
         }
 
-        em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
-            let ses = ses.clone();
-            Box::pin(async move {
-                let lock = ses
-                    .read()
-                    .await;
-                if let Some(m) = lock
-                    .message
-                    .as_ref()
-                {
-                    let _ = m
-                        .delete(&lock.http)
+        em.add_option(
+            &ButtonType {
+                label: "Exit Help".to_owned(),
+                style: ButtonStyle::Danger,
+                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+            },
+            move || {
+                let close_ses = ses.clone();
+                Box::pin(async move {
+                    let lock = close_ses
+                        .read()
                         .await;
-                };
-            })
-        });
+                    let _ = lock.interaction
+                        .delete_original_interaction_response(&lock.http)
+                        .await;
+                })
+            },
+        );
 
         let show_res = em
             .show()
@@ -178,65 +213,56 @@ fn help_menu(
 fn command_details(
     ses: Arc<RwLock<EmbedSession>>,
     ctx: Context,
-    msg: Message,
-    groups: Vec<&'static CommandGroup>,
-    owners: HashSet<UserId>,
-    selected_group: &'static CommandGroup,
+    interaction: ApplicationCommandInteraction,
+    selected_group: Vec<&'static Command>,
+    group_name: String,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let prefix = calc_prefix(&ctx, &msg)
-            .await
-            .unwrap_or_else(|| ";".to_owned());
-
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
                 .author(|a: &mut CreateEmbedAuthor| {
-                    a.name(format!("{} Commands", selected_group.name))
+                    a.name(format!("{} Commands", &group_name))
                         .icon_url(&DEFAULT_ICON)
                 })
                 .description("More Detailed information about the commands in this group")
         });
 
-        for command in selected_group
-            .options
-            .commands
-        {
-            if allowed(&ctx, &command.options, &msg, &owners).await {
-                let aliases: Vec<&str> = command
+        for command in &selected_group {
+            if allowed(&ctx, &[command], &interaction)
+                .await
+                .unwrap_or(false)
+            {
+                let args = command
                     .options
-                    .names
+                    .options
                     .iter()
-                    .skip(1)
-                    .copied()
-                    .collect();
-                let aliases = if aliases.is_empty() {
-                    None
-                } else {
-                    Some(aliases)
-                };
+                    .fold("".to_owned(), |acc, opt| {
+                        let name = if opt.required {
+                            format!("<{}>", opt.name)
+                        } else {
+                            format!("[{}]", opt.name)
+                        };
+                        acc + &name
+                    });
 
                 em.inner
                     .field(
-                        command
-                            .options
-                            .names
-                            .first()
-                            .map(|s| format!("{}{}", &prefix, s))
-                            .expect("no command name"),
                         format!(
-                            "{}{}{}",
-                            aliases.map_or("".to_owned(), |a| format!(
-                                "**Aliases**: {}",
-                                a.join(", ")
-                            )),
+                            "/{}",
                             command
                                 .options
-                                .desc
-                                .map_or("".to_owned(), |d| format!("\n**Description:** {}", d)),
+                                .name
+                        ),
+                        format!(
+                            "**Description:** {}{}",
                             command
                                 .options
-                                .usage
-                                .map_or("".to_owned(), |u| format!("\n{}", u))
+                                .description,
+                            if args.is_empty() {
+                                "".to_owned()
+                            } else {
+                                format!("\n**Arguments:** {args}")
+                            }
                         ),
                         false,
                     );
@@ -247,16 +273,16 @@ fn command_details(
             "Back",
             "Back to help menu",
             false,
-            &ReactionType::Unicode("◀️".into()),
+            &ButtonType {
+                label: "Back".to_owned(),
+                style: ButtonStyle::Danger,
+                emoji: Some('◀'.into()),
+            },
             move || {
                 let back_ses = ses.clone();
                 let back_ctx = ctx.clone();
-                let back_msg = msg.clone();
-                let back_groups = groups.clone();
-                let back_owners = owners.clone();
-                Box::pin(async move {
-                    help_menu(back_ses, back_ctx, back_msg, back_groups, back_owners).await
-                })
+                let back_interaction = interaction.clone();
+                Box::pin(async move { help_menu(back_ses, back_ctx, back_interaction).await })
             },
         );
 
@@ -271,73 +297,91 @@ fn command_details(
 
 async fn allowed(
     ctx: &Context,
-    options: &impl CommonOptions,
-    msg: &Message,
-    owners: &HashSet<UserId>,
-) -> bool {
-    if options.owners_only()
-        && !owners.contains(
-            &msg.author
-                .id,
-        )
+    cmds: &[&'static Command],
+    interaction: &ApplicationCommandInteraction,
+) -> Result<bool, CommandError> {
+    if OWNERS.contains(
+        &interaction
+            .user
+            .id,
+    ) {
+        return Ok(true);
+    }
+
+    let channel = interaction
+        .channel_id
+        .to_channel(&ctx)
+        .await?;
+
+    if cmds
+        .iter()
+        .all(|c| c.only_in() == OnlyIn::Dm)
+        && channel
+            .clone()
+            .private()
+            .is_none()
     {
-        return false;
+        return Ok(false);
     }
 
-    if options.only_in() == OnlyIn::Dm && !msg.is_private() {
-        return false;
+    if cmds
+        .iter()
+        .all(|c| c.only_in() == OnlyIn::Guild)
+        && channel
+            .clone()
+            .private()
+            .is_some()
+    {
+        return Ok(false);
     }
 
-    if options.only_in() == OnlyIn::Guild && msg.is_private() {
-        return false;
-    }
-
-    let req_perms = *options.required_permissions();
+    let req_perms = cmds
+        .iter()
+        .map(|c| c.perms)
+        .flatten()
+        .copied()
+        .collect::<Permissions>();
 
     if !req_perms.is_empty() {
-        if let Some(Channel::Guild(channel)) = msg
-            .channel(&ctx)
-            .await
-        {
-            let guild = if let Some(guild) = msg
-                .guild(&ctx)
+        if let Channel::Guild(channel) = &channel {
+            let guild = if let Some(guild) = interaction
+                .guild_id
+                .unwrap()
+                .to_guild_cached(&ctx)
                 .await
             {
                 guild
             } else {
-                return false;
+                return Ok(false);
             };
 
-            if msg
-                .author
+            if interaction
+                .user
                 .id
                 == guild.owner_id
             {
-                return true;
+                return Ok(true);
             }
 
-            let member = if let Ok(member) = msg
-                .member(&ctx)
-                .await
-            {
+            let member = if let Some(member) = &interaction.member {
                 member
             } else {
-                return false;
+                return Ok(false);
             };
 
-            if let Ok(perms) = guild.user_permissions_in(&channel, &member) {
+            if let Ok(perms) = guild.user_permissions_in(&channel, member) {
                 if !perms.contains(req_perms) {
-                    return false;
+                    return Ok(false);
                 }
             } else {
-                return false;
+                return Ok(false);
             }
         } else {
-            return false;
+            return Ok(false);
         }
     }
 
-    true
+    Ok(true)
 }
 
 #[hook]

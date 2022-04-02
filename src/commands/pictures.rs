@@ -5,6 +5,7 @@ use chrono::{
     TimeZone,
     Utc,
 };
+use okto_framework::macros::command;
 use rand::Rng;
 use serenity::{
     builder::{
@@ -14,10 +15,12 @@ use serenity::{
         EditInteractionResponse,
     },
     framework::standard::CommandResult,
-    model::{interactions::{InteractionResponseType, application_command::ApplicationCommandInteraction}},
+    model::interactions::{
+        application_command::ApplicationCommandInteraction,
+        InteractionResponseType,
+    },
     prelude::Context,
 };
-use okto_framework::macros::command;
 
 use crate::{
     models::pictures::*,
@@ -27,7 +30,6 @@ use crate::{
         pictures::*,
     },
 };
-
 
 #[command]
 /// Get a picture of Earth from the NOAA DSCOVR spacecraft
@@ -65,7 +67,9 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         })
         .and_then(|v| {
             v.as_str()
-                .map(|s| s.to_owned())}).unwrap_or_else(|| "natural".to_owned());
+                .map(|s| s.to_owned())
+        })
+        .unwrap_or_else(|| "natural".to_owned());
 
     let opposite = if image_type == "natural" {
         "enhanced"
@@ -84,8 +88,9 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         .cloned()
         .ok_or("No image received from the EPIC image api")?;
 
-    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-        e.create_embed(|e: &mut CreateEmbed| {
+    interaction
+        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+            e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Earth Picture")
                         .icon_url(DEFAULT_ICON)
@@ -138,9 +143,14 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         .data
         .options
         .iter()
-        .find(|o| o.name == "today").and_then(|o| {
-            o.value.clone()
-        }).and_then(|v| v.as_bool()).unwrap_or(false) {
+        .find(|o| o.name == "today")
+        .and_then(|o| {
+            o.value
+                .clone()
+        })
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
         now
     } else {
         let start = Utc.ymd(2000, 1, 1);
@@ -188,8 +198,9 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
             |e| cutoff_on_last_dot(&e, 2040).to_owned(),
         );
 
-    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-        e.create_embed(|e: &mut CreateEmbed| {
+    interaction
+        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+            e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Astronomy Picture of Today")
                         .icon_url(DEFAULT_ICON)
@@ -210,7 +221,8 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
 }
 
 #[command]
-/// Picks a random sol number and then grabs a random picture made by the Spirit rover on that sol
+/// Picks a random sol number and then grabs a random picture made by the Spirit
+/// rover on that sol
 async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     interaction
         .create_interaction_response(&ctx.http, |c| {
@@ -220,8 +232,9 @@ async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> C
 
     let (pic, sol) = fetch_rover_camera_picture("spirit", 1..2186).await;
 
-    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-        e.create_embed(|e: &mut CreateEmbed| {
+    interaction
+        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+            e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Spirit mars rover")
                         .icon_url(DEFAULT_ICON)
@@ -249,7 +262,8 @@ async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> C
 }
 
 #[command]
-/// Picks a random sol number and then grabs a random picture made by the Opportunity rover on that sol
+/// Picks a random sol number and then grabs a random picture made by the
+/// Opportunity rover on that sol
 async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     interaction
         .create_interaction_response(&ctx.http, |c| {
@@ -259,8 +273,9 @@ async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction)
 
     let (pic, sol) = fetch_rover_camera_picture("opportunity", 1..5112).await;
 
-    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-        e.create_embed(|e: &mut CreateEmbed| {
+    interaction
+        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+            e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Opportunity mars rover")
                         .icon_url(DEFAULT_ICON)
@@ -288,7 +303,8 @@ async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction)
 }
 
 #[command]
-/// Picks a random sol number and grabs a random picture made by the Curiosity rover on that sol
+/// Picks a random sol number and grabs a random picture made by the Curiosity
+/// rover on that sol
 async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     interaction
         .create_interaction_response(&ctx.http, |c| {
@@ -300,8 +316,9 @@ async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -
 
     let (pic, sol) = fetch_rover_camera_picture("curiosity", 1..max_sol).await;
 
-    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-        e.create_embed(|e: &mut CreateEmbed| {
+    interaction
+        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+            e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Curiosity mars rover")
                         .icon_url(DEFAULT_ICON)
@@ -329,7 +346,8 @@ async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -
 }
 
 #[command]
-/// Picks a random sol number and grabs a random picture made by the Perseverance rover on that sol.
+/// Picks a random sol number and grabs a random picture made by the
+/// Perseverance rover on that sol.
 async fn perseverance(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     interaction
         .create_interaction_response(&ctx.http, |c| {
@@ -341,8 +359,9 @@ async fn perseverance(ctx: &Context, interaction: &ApplicationCommandInteraction
 
     let (pic, sol) = fetch_rover_camera_picture("perseverance", 1..max_sol).await;
 
-    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-        e.create_embed(|e: &mut CreateEmbed| {
+    interaction
+        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
+            e.create_embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Perseverance mars rover")
                         .icon_url(DEFAULT_ICON)
