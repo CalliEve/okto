@@ -14,6 +14,7 @@ use serenity::{
     builder::{
         CreateEmbed,
         CreateEmbedAuthor,
+        EditInteractionResponse,
     },
     framework::standard::{
         macros::hook,
@@ -53,6 +54,7 @@ use crate::{
         settings::GuildSettings,
     },
     utils::constants::{
+        BACK_EMOJI,
         DEFAULT_COLOR,
         DEFAULT_ICON,
         EXIT_EMOJI,
@@ -73,6 +75,80 @@ use crate::{
 async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let ses = EmbedSession::new(ctx, interaction.clone(), false).await?;
 
+    if let Some(command_name) = interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "command")
+        .and_then(|o| {
+            o.value
+                .clone()
+        })
+        .and_then(|v| {
+            v.as_str()
+                .map(|s| s.to_owned())
+        })
+    {
+        let command = if let Some(cmd) = ctx
+            .data
+            .read()
+            .await
+            .get::<CommandListKey>()
+            .unwrap()
+            .iter()
+            .find(|c| {
+                c.options
+                    .name
+                    == command_name
+            }) {
+            *cmd
+        } else {
+            return Ok(());
+        };
+
+        interaction
+            .edit_original_interaction_response(&ctx.http, |i: &mut EditInteractionResponse| {
+                let args = command
+                    .options
+                    .options
+                    .iter()
+                    .fold("".to_owned(), |acc, opt| {
+                        let name = if opt.required {
+                            format!("<{}> ", opt.name)
+                        } else {
+                            format!("[{}] ", opt.name)
+                        };
+                        acc + &name
+                    });
+
+                i.create_embed(|e: &mut CreateEmbed| {
+                    e.author(|a: &mut CreateEmbedAuthor| {
+                        a.name(format!(
+                            "Help /{}",
+                            command
+                                .options
+                                .name
+                        ))
+                        .icon_url(DEFAULT_ICON)
+                    })
+                    .color(DEFAULT_COLOR)
+                    .description(format!(
+                        "**Description:** {}{}",
+                        command
+                            .options
+                            .description,
+                        if args.is_empty() {
+                            "".to_owned()
+                        } else {
+                            format!("\n**Arguments:** {args}")
+                        }
+                    ))
+                })
+            })
+            .await?;
+        return Ok(());
+    }
+
     help_menu(ses, ctx.clone(), interaction.clone()).await;
 
     Ok(())
@@ -88,7 +164,7 @@ fn help_menu(
             e.color(DEFAULT_COLOR)
             .author(
                 |a: &mut CreateEmbedAuthor| a.name("Help Menu").icon_url(&DEFAULT_ICON)
-            ).description("Use the reactions to get the descriptions for the commands in that group.\nCurrently available commands:")
+            ).description("Use the buttons to get the descriptions for the commands in that group.\nCurrently available commands:")
         });
 
         let grouped = ctx
@@ -98,6 +174,10 @@ fn help_menu(
             .get::<CommandListKey>()
             .unwrap()
             .into_iter()
+            .sorted_by_key(|c| {
+                c.info
+                    .file
+            })
             .group_by(|c| {
                 c.info
                     .file
@@ -120,6 +200,18 @@ fn help_menu(
             .into_iter()
             .enumerate()
         {
+            let group_name = key
+                .split_once('.')
+                .unwrap()
+                .0
+                .split('/')
+                .last()
+                .unwrap()
+                .to_owned();
+            if group_name == "help" {
+                continue;
+            }
+
             if allowed(&ctx, &group, &interaction)
                 .await
                 .unwrap_or(false)
@@ -147,18 +239,13 @@ fn help_menu(
                 let details_ses = ses.clone();
                 let details_ctx = ctx.clone();
                 let details_interaction = interaction.clone();
-                let group_name = key
-                    .split_once('.')
-                    .unwrap()
-                    .0
-                    .to_owned();
                 em.add_field(
                     &group_name.clone(),
                     &cmds,
                     true,
                     &ButtonType {
                         label: group_name.clone(),
-                        style: ButtonStyle::Danger,
+                        style: ButtonStyle::Primary,
                         emoji: Some(NUMBER_EMOJIS[i].clone()),
                     },
                     move || {
@@ -184,7 +271,7 @@ fn help_menu(
 
         em.add_option(
             &ButtonType {
-                label: "Exit Help".to_owned(),
+                label: "Exit".to_owned(),
                 style: ButtonStyle::Danger,
                 emoji: Some(ReactionType::from(EXIT_EMOJI)),
             },
@@ -194,7 +281,8 @@ fn help_menu(
                     let lock = close_ses
                         .read()
                         .await;
-                    let _ = lock.interaction
+                    let _ = lock
+                        .interaction
                         .delete_original_interaction_response(&lock.http)
                         .await;
                 })
@@ -238,9 +326,9 @@ fn command_details(
                     .iter()
                     .fold("".to_owned(), |acc, opt| {
                         let name = if opt.required {
-                            format!("<{}>", opt.name)
+                            format!("<{}> ", opt.name)
                         } else {
-                            format!("[{}]", opt.name)
+                            format!("[{}] ", opt.name)
                         };
                         acc + &name
                     });
@@ -276,7 +364,7 @@ fn command_details(
             &ButtonType {
                 label: "Back".to_owned(),
                 style: ButtonStyle::Danger,
-                emoji: Some('◀'.into()),
+                emoji: Some(BACK_EMOJI.into()),
             },
             move || {
                 let back_ses = ses.clone();
@@ -385,12 +473,12 @@ async fn allowed(
 }
 
 #[hook]
-pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
+pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
     if msg
         .guild_id
         .is_none()
     {
-        return Some(";".to_owned());
+        return ";".to_owned();
     }
 
     let db = if let Some(db) = ctx
@@ -402,7 +490,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
         db.clone()
     } else {
         println!("No database found");
-        return Some(";".to_owned());
+        return ";".to_owned();
     };
 
     let res = db
@@ -412,7 +500,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
 
     if res.is_err() {
         println!("Error in getting prefix: {:?}", res.unwrap_err());
-        return Some(";".to_owned());
+        return ";".to_owned();
     }
 
     res.unwrap()
@@ -425,5 +513,23 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
             let settings = settings.unwrap();
             Some(settings)
         })
-        .map_or_else(|| Some(";".to_owned()), |s| Some(s.prefix))
+        .map_or_else(|| ";".to_owned(), |s| s.prefix)
+}
+
+pub async fn slash_command_message(ctx: &Context, msg: &Message) {
+    let prefix = calc_prefix(ctx, msg).await;
+
+    if !(msg
+        .content
+        .starts_with(&(prefix + "help"))
+        || msg
+            .content
+            .starts_with("<@429306620439166977> "))
+    {
+        return;
+    }
+
+    let _ = msg
+        .reply_ping(&ctx, "Hi! OKTO has moved over to using slash-commands.\nThis means that you should use / as the prefix, for example `/help`.")
+        .await;
 }

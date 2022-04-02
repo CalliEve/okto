@@ -279,7 +279,8 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
                     let lock = close_ses
                         .read()
                         .await;
-                    let r = lock.interaction
+                    let r = lock
+                        .interaction
                         .delete_original_interaction_response(&lock.http)
                         .await;
                     if let Err(e) = r {
@@ -401,7 +402,7 @@ fn reminders_page(
             &ButtonType {
                 label: "Back to main menu".to_owned(),
                 style: ButtonStyle::Danger,
-                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+                emoji: Some(ReactionType::from(BACK_EMOJI)),
             },
             move || {
                 let ses = ses.clone();
@@ -573,7 +574,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
             &ButtonType {
                 label: "Back to main menu".to_owned(),
                 style: ButtonStyle::Danger,
-                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+                emoji: Some(ReactionType::from(BACK_EMOJI)),
             },
             move || {
                 let ses = ses.clone();
@@ -750,7 +751,7 @@ fn allow_filters_page(
             &ButtonType {
                 label: "Back to main menu".to_owned(),
                 style: ButtonStyle::Danger,
-                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+                emoji: Some(ReactionType::from(BACK_EMOJI)),
             },
             move || {
                 let ses = ses.clone();
@@ -936,7 +937,7 @@ fn mentions_page(
             &ButtonType {
                 label: "Back to main menu".to_owned(),
                 style: ButtonStyle::Danger,
-                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+                emoji: Some(ReactionType::from(BACK_EMOJI)),
             },
             move || {
                 let ses = ses.clone();
@@ -1135,7 +1136,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
             &ButtonType {
                 label: "Back to main menu".to_owned(),
                 style: ButtonStyle::Danger,
-                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+                emoji: Some(ReactionType::from(BACK_EMOJI)),
             },
             move || {
                 let ses = ses.clone();

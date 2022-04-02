@@ -22,7 +22,6 @@ use serenity::{
             application_command::ApplicationCommandInteraction,
             message_component::ButtonStyle,
             Interaction,
-            
             InteractionApplicationCommandCallbackDataFlags,
             InteractionResponseType,
         },
@@ -121,40 +120,44 @@ impl StatefulEmbed {
     fn get_components(&self) -> CreateComponents {
         let mut components = CreateComponents::default();
 
-        for option_batch in &self.options.iter().chunks(5) {
-        components.create_action_row(|r: &mut CreateActionRow| {
-            for option in option_batch {
-                r.create_button(|b: &mut CreateButton| {
-                    b.style(
-                        option
-                            .button
-                            .style,
-                    )
-                    .label(
-                        option
-                            .button
-                            .label
-                            .to_string(),
-                    )
-                    .custom_id(
-                        option
-                            .button
-                            .label
-                            .to_string(),
-                    );
+        for option_batch in &self
+            .options
+            .iter()
+            .chunks(5)
+        {
+            components.create_action_row(|r: &mut CreateActionRow| {
+                for option in option_batch {
+                    r.create_button(|b: &mut CreateButton| {
+                        b.style(
+                            option
+                                .button
+                                .style,
+                        )
+                        .label(
+                            option
+                                .button
+                                .label
+                                .to_string(),
+                        )
+                        .custom_id(
+                            option
+                                .button
+                                .label
+                                .to_string(),
+                        );
 
-                    if let Some(e) = &option
-                        .button
-                        .emoji
-                    {
-                        b.emoji(e.to_owned());
-                    }
+                        if let Some(e) = &option
+                            .button
+                            .emoji
+                        {
+                            b.emoji(e.to_owned());
+                        }
 
-                    b
-                });
-            }
-            r
-        });
+                        b
+                    });
+                }
+                r
+            });
         }
 
         components

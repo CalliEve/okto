@@ -1,3 +1,5 @@
+use std::fmt;
+
 use futures::future::BoxFuture;
 use serde::Serialize;
 use serde_repr::Serialize_repr;
@@ -5,8 +7,8 @@ use serenity::{
     client::Context,
     framework::standard::{CommandResult, OnlyIn},
     model::{
-        channel::ChannelType,
-        interactions::application_command::ApplicationCommandInteraction, Permissions,
+        channel::ChannelType, interactions::application_command::ApplicationCommandInteraction,
+        Permissions,
     },
 };
 
@@ -15,7 +17,7 @@ pub struct Command {
     pub options: &'static CommandDetails,
     pub perms: &'static [Permissions],
     pub func: CommandFunc,
-    pub info: &'static CommandInfo
+    pub info: &'static CommandInfo,
 }
 
 pub type CommandFunc = for<'fut> fn(
@@ -53,7 +55,7 @@ pub struct CommandOptionChoice {
 #[derive(Debug, Clone)]
 pub struct CommandInfo {
     pub file: &'static str,
-    pub only_in: OnlyIn
+    pub only_in: OnlyIn,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -61,7 +63,7 @@ pub struct CommandInfo {
 pub enum CommandOptionValue {
     String(&'static str),
     Integer(i32),
-    Double(f64)
+    Double(f64),
 }
 
 #[derive(Debug, Clone, Copy, Serialize_repr)]
@@ -89,6 +91,17 @@ pub enum CommandOptionType {
 
 impl Command {
     pub fn only_in(&self) -> OnlyIn {
-        self.info.only_in
+        self.info
+            .only_in
+    }
+}
+
+impl fmt::Debug for Command {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("Command")
+            .field("options", self.options)
+            .field("perms", &self.perms)
+            .field("info", self.info)
+            .finish()
     }
 }

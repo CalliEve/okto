@@ -43,7 +43,6 @@ use crate::{
         cutoff_on_last_dot,
         default_embed,
         format_duration,
-
         launches::*,
         StandardButton,
     },
@@ -396,7 +395,8 @@ fn list_page(
                 let lock = session
                     .read()
                     .await;
-                let _ = lock.interaction
+                let _ = lock
+                    .interaction
                     .delete_original_interaction_response(&lock.http)
                     .await;
             })

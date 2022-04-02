@@ -7,10 +7,7 @@ extern crate proc_macro;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{parse2, Path};
-use utils::{
-    add_suffix,
-    CommandAttributeContent,
-};
+use utils::{add_suffix, CommandAttributeContent};
 
 use crate::structs::CommandFunc;
 
@@ -61,9 +58,12 @@ fn command_inner(item: TokenStream) -> TokenStream {
                             .get_string())
                 },
                 "description" => {
-                    description =
-                        propagate_err!(propagate_err!(attr.parse_args::<CommandAttributeContent>())
-                            .get_string())
+                    description = description
+                        + " "
+                        + &propagate_err!(propagate_err!(
+                            attr.parse_args::<CommandAttributeContent>()
+                        )
+                        .get_string())
                 },
                 "default_permission" => {
                     default_permission =
@@ -81,14 +81,18 @@ fn command_inner(item: TokenStream) -> TokenStream {
                             .get_permissions())
                 },
                 "only_in" => {
-                    let tmp = propagate_err!(propagate_err!(attr.parse_args::<CommandAttributeContent>())
-                            .get_string());
+                    let tmp = propagate_err!(propagate_err!(
+                        attr.parse_args::<CommandAttributeContent>()
+                    )
+                    .get_string());
                     match tmp.as_str() {
                         "Dm" => only_in = quote! {::serenity::framework::standard::OnlyIn::Dm},
-                        "Guild" => only_in = quote! {::serenity::framework::standard::OnlyIn::Guild},
+                        "Guild" => {
+                            only_in = quote! {::serenity::framework::standard::OnlyIn::Guild}
+                        },
                         _ => {
                             return quote! {compile_error!("The value of only_in can only be `Dm` or `Guild`");};
-                        }
+                        },
                     }
                 },
                 _ => (),

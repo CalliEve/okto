@@ -36,6 +36,7 @@ pub const NEXT_PAGE_EMOJI: char = '▶';
 pub const LAST_PAGE_EMOJI: char = '◀';
 pub const FIRST_PAGE_EMOJI: char = '⏮';
 pub const EXIT_EMOJI: char = '❌';
+pub const BACK_EMOJI: char = '◀';
 pub const CERTAIN_EMOJI: u64 = 447805610482728964;
 pub const UNCERTAIN_EMOJI: u64 = 447805624923717642;
 pub const LAUNCH_LIBRARY_URL: &str = "https://thespacedevs.com";

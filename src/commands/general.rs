@@ -75,7 +75,7 @@ async fn invite(ctx: &Context, interaction: &ApplicationCommandInteraction) -> C
         .id;
     interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
             m.interaction_response_data(|c| {c.content(format!(
-            "**OKTO** | `3.0`\n{}, I hope you enjoy using me on your server!",
+            "**OKTO** | `4.0`\n{}, I hope you enjoy using me on your server!",
             interaction.user.name
         )).create_embed(|e: &mut CreateEmbed| {
             e.title("Invite Links")
@@ -107,7 +107,7 @@ async fn info(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
                 format!(
                     "This is a bot to show upcoming launches and provide additional information on everything to do with spaceflight\n\
                     **Author:** Calli#3141\n\
-                    **Version:** 3.0 \"rewrite it in rust\"\n\
+                    **Version:** 4.0 \"slash-commands\"\n\
                     **Source Code:** [GitHub link](https://github.com/callieve/okto)\n\
                     **Library:** [Serenity](https://github.com/serenity-rs/serenity)\n\
                     <:RustRainbow:752508751675654204>\n\
@@ -360,31 +360,31 @@ async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -
     {
         None => return Err("can't get picture cache".into()),
         Some(p)
-            if star_name.is_some()
-                && p.host_stars
-                    .contains(
-                        &star_name
-                            .clone()
-                            .unwrap(),
-                    ) =>
+            if star_name
+                .clone()
+                .filter(|name| {
+                    p.host_stars
+                        .contains(name)
+                })
+                .is_some() =>
         {
             get_star(
                 ctx,
                 interaction,
-                &planet_name
+                &star_name
                     .clone()
                     .unwrap(),
             )
             .await?
         },
         Some(p)
-            if planet_name.is_some()
-                && p.exoplanets
-                    .contains(
-                        &planet_name
-                            .clone()
-                            .unwrap(),
-                    ) =>
+            if planet_name
+                .clone()
+                .filter(|name| {
+                    p.exoplanets
+                        .contains(name)
+                })
+                .is_some() =>
         {
             get_planet(
                 ctx,
@@ -402,7 +402,7 @@ async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -
                         "The name you gave isn't in the NASA Exoplanet Archive <:kia:367734893796655113>
                         Please understand that NASA has a 'weird' way of naming the stars in their archive
                         Here is a link to the list of all the stars in the archive: \
-                        [star list](https://exoplanetarchive.ipac.caltech.edu/cgi-bin/nstedAPI/nph-nstedAPI?table=exoplanets&format=json&select=pl_hostname)"
+                        [star list](https://exoplanetarchive.ipac.caltech.edu/TAP/sync?format=csv&query=select%20hostname%20from%20ps"
                     )
                     .title("planet/star not found!")
                     .color(Colour::RED)

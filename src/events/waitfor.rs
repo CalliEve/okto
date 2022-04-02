@@ -149,14 +149,14 @@ impl WaitFor {
     }
 }
 
-pub async fn waitfor_message(ctx: &Context, message: Message) {
+pub async fn waitfor_message(ctx: &Context, message: &Message) {
     let filter = (
         message.channel_id,
         message
             .author
             .id,
     );
-    handle_waitfor(ctx, filter, WaitPayload::Message(message)).await
+    handle_waitfor(ctx, filter, WaitPayload::Message(message.clone())).await
 }
 
 pub async fn waitfor_reaction(ctx: &Context, reaction: Reaction) {

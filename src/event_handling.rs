@@ -32,6 +32,7 @@ use serenity::{
 };
 
 use crate::{
+    commands::help::slash_command_message,
     events::{
         statefulembed::{
             on_button_click as embed_button_click,
@@ -147,7 +148,9 @@ impl EventHandler for Handler {
     }
 
     async fn message(&self, ctx: Context, message: Message) {
-        waitfor_message(&ctx, message).await
+        waitfor_message(&ctx, &message).await;
+
+        slash_command_message(&ctx, &message).await;
     }
 
     async fn guild_create(&self, ctx: Context, guild: Guild, is_new: bool) {

@@ -81,40 +81,29 @@ async fn main() {
         "mongodb://mongo:27017".to_owned()
     };
 
-    let framework = StandardFramework::new()
-        .configure(|c| {
-            c.owners(
-                vec![247745860979392512.into()]
-                    .into_iter()
-                    .collect(),
-            )
-            .dynamic_prefix(calc_prefix)
-            .prefixes(&["<@!429306620439166977> ", "<@429306620439166977> "])
-            .case_insensitivity(true)
+    let framework = StandardFramework::new().after(|ctx, msg, cmd_name, error| {
+        Box::pin(async move {
+            //  Print out an error if it happened
+            if let Err(why) = error {
+                let _ = msg
+                    .channel_id
+                    .send_message(&ctx.http, |m| {
+                        m.content("Oh no, an error happened.\nPlease try again at a later time")
+                    })
+                    .await;
+                error_log(
+                    &ctx.http,
+                    format!("An error happened in {}:\n```{:?}```", cmd_name, why),
+                )
+                .await
+            }
         })
-        .after(|ctx, msg, cmd_name, error| {
-            Box::pin(async move {
-                //  Print out an error if it happened
-                if let Err(why) = error {
-                    let _ = msg
-                        .channel_id
-                        .send_message(&ctx.http, |m| {
-                            m.content("Oh no, an error happened.\nPlease try again at a later time")
-                        })
-                        .await;
-                    error_log(
-                        &ctx.http,
-                        format!("An error happened in {}:\n```{:?}```", cmd_name, why),
-                    )
-                    .await
-                }
-            })
-        });
+    });
 
     let slash_framework = okto_framework::create_framework!(
         &token,
         application_id,
-        
+        // the commands:
         help,
         ping,
         invite,

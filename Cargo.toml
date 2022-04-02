@@ -1,6 +1,6 @@
 [package]
 name = "okto"
-version = "1.1.1"
+version = "2.0.0"
 authors = ["Calli <me@calli.dev>"]
 edition = "2021"
 license = "MIT"
