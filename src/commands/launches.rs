@@ -89,7 +89,7 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
             .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
                 m.interaction_response_data(|c| {
                     c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
-                        .create_embed(|e: &mut CreateEmbed| {
+                        .embed(|e: &mut CreateEmbed| {
                             default_embed(
                                 e,
                                 "I found no upcoming launches that have been marked as certain :(",
@@ -109,7 +109,7 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
                 .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
                     m.interaction_response_data(|c| {
                         c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
-                            .create_embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
+                            .embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
                     })
                 })
                 .await?;
@@ -122,7 +122,7 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
     interaction
         .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
             m.interaction_response_data(|c| {
-                c.create_embed(|e: &mut CreateEmbed| {
+                c.embed(|e: &mut CreateEmbed| {
                     let mut window = format_duration(launch.launch_window, true);
                     if window.is_empty() {
                         window.push_str("instantaneous")
@@ -214,7 +214,7 @@ fn list_page(
                     a.icon_url(DEFAULT_ICON)
                         .name("List of upcoming launches")
                 })
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
                 .footer(|f: &mut CreateEmbedFooter| {
                     f.text(format!("Source: {}", LAUNCH_LIBRARY_URL))
                 });
@@ -453,7 +453,7 @@ async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction
                 .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
                     m.interaction_response_data(|c| {
                         c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
-                            .create_embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
+                            .embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
                     })
                 })
                 .await?;
@@ -522,7 +522,7 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
             .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
                 m.interaction_response_data(|c| {
                     c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
-                        .create_embed(|e: &mut CreateEmbed| {
+                        .embed(|e: &mut CreateEmbed| {
                             default_embed(e, "No launch was found with that ID :(", false)
                         })
                 })
@@ -532,7 +532,7 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
     };
 
     interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.create_embed(|e: &mut CreateEmbed| {
+            m.interaction_response_data(|c| {c.embed(|e: &mut CreateEmbed| {
                 let mut window = format_duration(launch.launch_window, true);
                 if window.is_empty() {
                     window.push_str("instantaneous")
@@ -610,13 +610,13 @@ async fn filtersinfo(ctx: &Context, interaction: &ApplicationCommandInteraction)
     interaction
         .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
             m.interaction_response_data(|c| {
-                c.create_embed(|e: &mut CreateEmbed| {
+                c.embed(|e: &mut CreateEmbed| {
                     e.color(DEFAULT_COLOR)
                         .author(|a: &mut CreateEmbedAuthor| {
                             a.name("Filters Info")
                                 .icon_url(DEFAULT_ICON)
                         })
-                        .timestamp(&Utc::now())
+                        .timestamp(Utc::now())
                         .title("The following filters can be used to filter launches:")
                         .field(
                             "Vehicles:",

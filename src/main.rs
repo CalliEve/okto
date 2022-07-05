@@ -44,10 +44,8 @@ use models::caches::{
 use mongodb::Client as MongoClient;
 use reminder_tracking::reminder_tracking;
 use serenity::{
-    client::{
-        bridge::gateway::GatewayIntents,
-        Client,
-    },
+    client::Client,
+    model::gateway::GatewayIntents,
     framework::standard::StandardFramework,
     prelude::{
         RwLock,
@@ -144,19 +142,13 @@ async fn main() {
     };
 
     // create the intents for the gateway
-    let mut intents = GatewayIntents::all();
-    intents.remove(GatewayIntents::GUILD_MEMBERS);
-    intents.remove(GatewayIntents::GUILD_PRESENCES);
-    intents.remove(GatewayIntents::GUILD_VOICE_STATES);
-    intents.remove(GatewayIntents::GUILD_BANS);
-    intents.remove(GatewayIntents::GUILD_INVITES);
-    intents.remove(GatewayIntents::GUILD_MESSAGE_TYPING);
-    intents.remove(GatewayIntents::DIRECT_MESSAGE_TYPING);
+    let mut intents = GatewayIntents::empty();
+    intents.insert(GatewayIntents::GUILDS);
+    intents.insert(GatewayIntents::DIRECT_MESSAGES);
 
-    let mut client = Client::builder(&token)
+    let mut client = Client::builder(&token, intents)
         .application_id(application_id)
         .framework(framework)
-        .intents(intents)
         .type_map(data_map)
         .event_handler(Handler::new(slash_framework))
         .await

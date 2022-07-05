@@ -90,7 +90,7 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
 
     interaction
         .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.create_embed(|e: &mut CreateEmbed| {
+            e.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Earth Picture")
                         .icon_url(DEFAULT_ICON)
@@ -112,7 +112,7 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
                     get_date_epic_image(&epic_image_data.date),
                     epic_image_data.image
                 ))
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
             })
         })
         .await?;
@@ -200,7 +200,7 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
 
     interaction
         .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.create_embed(|e: &mut CreateEmbed| {
+            e.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Astronomy Picture of Today")
                         .icon_url(DEFAULT_ICON)
@@ -212,7 +212,7 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
                     f.text(format!("APOD of {}", date.format("%Y-%m-%d")))
                 })
                 .image(apod_image.url)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
             })
         })
         .await?;
@@ -234,7 +234,7 @@ async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> C
 
     interaction
         .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.create_embed(|e: &mut CreateEmbed| {
+            e.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Spirit mars rover")
                         .icon_url(DEFAULT_ICON)
@@ -253,7 +253,7 @@ async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> C
                 )
                 .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
                 .image(pic.img_src)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
             })
         })
         .await?;
@@ -275,7 +275,7 @@ async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction)
 
     interaction
         .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.create_embed(|e: &mut CreateEmbed| {
+            e.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Opportunity mars rover")
                         .icon_url(DEFAULT_ICON)
@@ -294,7 +294,7 @@ async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction)
                 )
                 .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
                 .image(pic.img_src)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
             })
         })
         .await?;
@@ -318,7 +318,7 @@ async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -
 
     interaction
         .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.create_embed(|e: &mut CreateEmbed| {
+            e.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Curiosity mars rover")
                         .icon_url(DEFAULT_ICON)
@@ -337,7 +337,7 @@ async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -
                 )
                 .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
                 .image(pic.img_src)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
             })
         })
         .await?;
@@ -361,7 +361,7 @@ async fn perseverance(ctx: &Context, interaction: &ApplicationCommandInteraction
 
     interaction
         .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.create_embed(|e: &mut CreateEmbed| {
+            e.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Random Picture made by the Perseverance mars rover")
                         .icon_url(DEFAULT_ICON)
@@ -380,7 +380,7 @@ async fn perseverance(ctx: &Context, interaction: &ApplicationCommandInteraction
                 )
                 .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
                 .image(pic.img_src)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
             })
         })
         .await?;

@@ -76,7 +76,7 @@ pub fn default_embed<'a>(
             },
         )
         .description(content)
-        .timestamp(&Utc::now())
+        .timestamp(Utc::now())
 }
 
 pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
@@ -243,7 +243,7 @@ pub async fn error_log(http: impl AsRef<Http>, text: impl AsRef<str>) {
             m.embed(|em| {
                 em.description(text.as_ref())
                     .color(Colour::RED)
-                    .timestamp(&Utc::now())
+                    .timestamp(Utc::now())
             })
         })
         .await;

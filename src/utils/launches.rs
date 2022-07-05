@@ -71,12 +71,12 @@ pub fn filter_launches(
                 );
             }
             return Ok(filtered);
-        } else {
-            return Err(
-                "This is not a valid filter, please take a look at those listed in `/filtersinfo`"
-                    .to_owned(),
-            );
         }
+
+        return Err(
+            "This is not a valid filter, please take a look at those listed in `/filtersinfo`"
+                .to_owned(),
+        )
     }
 
     let rocket_filter = interaction
@@ -108,12 +108,12 @@ pub fn filter_launches(
                 return Err("this launch vehicle does not have any upcoming launches :(".to_owned());
             }
             return Ok(filtered);
-        } else {
-            return Err(
-                "This is not a valid filter, please take a look at those listed in `/filtersinfo`"
-                    .to_owned(),
-            );
         }
+
+        return Err(
+            "This is not a valid filter, please take a look at those listed in `/filtersinfo`"
+                .to_owned(),
+        );
     }
 
     Ok(launches)

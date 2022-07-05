@@ -121,7 +121,7 @@ async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
                         acc + &name
                     });
 
-                i.create_embed(|e: &mut CreateEmbed| {
+                i.embed(|e: &mut CreateEmbed| {
                     e.author(|a: &mut CreateEmbedAuthor| {
                         a.name(format!(
                             "Help /{}",
@@ -436,7 +436,6 @@ async fn allowed(
                 .guild_id
                 .unwrap()
                 .to_guild_cached(&ctx)
-                .await
             {
                 guild
             } else {

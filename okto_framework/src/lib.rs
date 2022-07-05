@@ -17,7 +17,7 @@ macro_rules! create_framework {
                 $(
                      fr.add_command(&[<$c _COMMAND>]).unwrap();
                 )*
-                let mut http = serenity::http::Http::new_with_token_application_id($token, $id);
+                let mut http = serenity::http::Http::new_with_application_id($token, $id);
                 fr.upload_commands(&http).await.expect("Can't upload commands");
                 fr.upload_permissions(&http).await.expect("Can't upload command permissions");
                 fr

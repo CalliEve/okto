@@ -15,7 +15,7 @@ use serenity::{
         gateway::Ready,
         guild::{
             Guild,
-            GuildUnavailable,
+            UnavailableGuild,
         },
         id::{
             ChannelId,
@@ -106,8 +106,7 @@ impl EventHandler for Handler {
                 {
                     let amount: usize = ctx
                         .cache
-                        .guild_count()
-                        .await;
+                        .guild_count();
                     let status = format!("{} servers", amount);
                     ctx.set_activity(Activity::listening(&status))
                         .await;
@@ -158,7 +157,6 @@ impl EventHandler for Handler {
             if let Some(channel) = ctx
                 .cache
                 .guild_channel(755401788294955070)
-                .await
             {
                 let content = format!(
                     "Joined a new guild: {} ({})\nIt has {} members",
@@ -171,12 +169,11 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn guild_delete(&self, ctx: Context, incomplete: GuildUnavailable, _full: Option<Guild>) {
+    async fn guild_delete(&self, ctx: Context, incomplete: UnavailableGuild, _full: Option<Guild>) {
         if !incomplete.unavailable {
             if let Some(channel) = ctx
                 .cache
                 .guild_channel(755401788294955070)
-                .await
             {
                 let content = format!("Left the following guild: {}", incomplete.id);
                 let _ = channel

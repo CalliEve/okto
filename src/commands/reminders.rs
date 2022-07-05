@@ -112,7 +112,7 @@ async fn notifychannel(
             .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
                 m.interaction_response_data(|c| {
                     c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
-                        .create_embed(|e: &mut CreateEmbed| {
+                        .embed(|e: &mut CreateEmbed| {
                             default_embed(e, "This command can only be ran in a server.", false)
                         })
                 })
@@ -140,7 +140,6 @@ async fn notifychannel(
             })
             .ok_or("Invalid argument given")?
             .to_channel_cached(&ctx)
-            .await
             .map_or(interaction.channel_id, |channel| channel.id())
     } else {
         interaction.channel_id
@@ -186,7 +185,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
     Box::pin(async move {
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
                 .author(|a: &mut CreateEmbedAuthor| {
                     a.name("Launch Reminder Settings")
                         .icon_url(DEFAULT_ICON)
@@ -321,7 +320,7 @@ fn reminders_page(
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
                 .author(|a: &mut CreateEmbedAuthor| {
                     a.name("Launch Reminders")
                         .icon_url(DEFAULT_ICON)
@@ -472,7 +471,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
                 .author(|a: &mut CreateEmbedAuthor| {
                     a.name("Launch Agency Filters")
                         .icon_url(DEFAULT_ICON)
@@ -649,7 +648,7 @@ fn allow_filters_page(
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
                 .author(|a: &mut CreateEmbedAuthor| {
                     a.name("Launch Agency Allow Filters")
                         .icon_url(DEFAULT_ICON)
@@ -660,8 +659,8 @@ fn allow_filters_page(
         let add_ses = ses.clone();
         em.add_option(
             &ButtonType {
-                label: "Add allow filter".to_owned(),
                 style: ButtonStyle::Primary,
+                label: "Add allow filter".to_owned(),
                 emoji: Some(ReactionType::from(PROGRADE.clone()))
             },
             move || {
@@ -797,8 +796,7 @@ fn mentions_page(
                                         .await
                                         .cache
                                         .clone(),
-                                )
-                                .await;
+                                );
                             if let Some(role) = role_opt {
                                 text.push_str(&format!("\n`{}`", role.name))
                             } else {
@@ -815,7 +813,7 @@ fn mentions_page(
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
                 .author(|a: &mut CreateEmbedAuthor| {
                     a.name("Role Mentions")
                         .icon_url(DEFAULT_ICON)
@@ -1010,7 +1008,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
                 .author(|a: &mut CreateEmbedAuthor| {
                     a.name("Other Options")
                         .icon_url(DEFAULT_ICON)

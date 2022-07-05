@@ -8,7 +8,7 @@ pub async fn get_all_guilds(http: &Http) -> Result<Vec<PartialGuild>> {
         let guilds: Vec<GuildInfo> = http.fire(RequestBuilder::new(RouteInfo::GetGuilds {
                 before: None,
                 after: res.last().map(|g| g.id.0),
-                limit: 200
+                limit: Some(200)
             }).build()).await?;
         
         let mut p_guilds: Vec<PartialGuild> = Vec::with_capacity(guilds.len());

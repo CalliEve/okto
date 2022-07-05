@@ -37,7 +37,7 @@ async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
     interaction
         .create_interaction_response(&ctx, |c: &mut CreateInteractionResponse| {
             c.interaction_response_data(|d| {
-                d.create_embed(|e: &mut CreateEmbed| e.description("\u{1f3d3} pong..."))
+                d.embed(|e: &mut CreateEmbed| e.description("\u{1f3d3} pong..."))
             })
         })
         .await?;
@@ -45,13 +45,13 @@ async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
 
     let round_trip = end - start;
     let ws_delay = start
-        - interaction
+        - *interaction
             .id
             .created_at();
 
     interaction
         .edit_original_interaction_response(ctx, |e: &mut EditInteractionResponse| {
-            e.create_embed(|e: &mut CreateEmbed| {
+            e.embed(|e: &mut CreateEmbed| {
                 e.title("Pong!")
                     .description(format!(
                         "\u{1f3d3}\nws delay: {}ms\napi ping: {}ms",
@@ -71,13 +71,12 @@ async fn invite(ctx: &Context, interaction: &ApplicationCommandInteraction) -> C
     let user_id = ctx
         .cache
         .current_user()
-        .await
         .id;
     interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
             m.interaction_response_data(|c| {c.content(format!(
             "**OKTO** | `4.0`\n{}, I hope you enjoy using me on your server!",
             interaction.user.name
-        )).create_embed(|e: &mut CreateEmbed| {
+        )).embed(|e: &mut CreateEmbed| {
             e.title("Invite Links")
             .description(
                 format!(
@@ -98,10 +97,9 @@ async fn info(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
     let user_id = ctx
         .cache
         .current_user()
-        .await
         .id;
     interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.create_embed(|e: &mut CreateEmbed| {
+            m.interaction_response_data(|c| {c.embed(|e: &mut CreateEmbed| {
             e.title("OKTO")
             .description(
                 format!(
@@ -138,7 +136,7 @@ async fn websites(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
     interaction
         .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
             m.interaction_response_data(|c| {
-                c.create_embed(|e: &mut CreateEmbed| {
+                c.embed(|e: &mut CreateEmbed| {
                     e.field(
                         "General launch information:",
                         "**Spaceflight Insider:** http://www.spaceflightinsider.com/
@@ -207,7 +205,7 @@ async fn peopleinspace(
     interaction
         .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
             m.interaction_response_data(|c| {
-                c.create_embed(|e: &mut CreateEmbed| {
+                c.embed(|e: &mut CreateEmbed| {
                     e.title(format!(
                         "There are currently {} people in space",
                         pis.number
@@ -222,7 +220,7 @@ async fn peopleinspace(
                         a.name("People in space")
                             .icon_url(DEFAULT_ICON)
                     })
-                    .timestamp(&Utc::now())
+                    .timestamp(Utc::now())
                     .color(DEFAULT_COLOR)
                 })
             })
@@ -284,7 +282,7 @@ async fn iss(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Comm
     );
 
     interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-        e.create_embed(|e: &mut CreateEmbed| {
+        e.embed(|e: &mut CreateEmbed| {
             e.description(format!(
                 "**Latitude:** {0:.5}\n**Longitude:** {1:.5}\n**Altitude:** {2:.3}km\n**Velocity:** {3:.3}km/h",
                 iss_pos.latitude, iss_pos.longitude, iss_pos.altitude, iss_pos.velocity
@@ -293,7 +291,7 @@ async fn iss(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Comm
             .image(detail_url)
             .thumbnail(global_url)
             .footer(|f: &mut CreateEmbedFooter| f.text("source: wheretheiss.at"))
-            .timestamp(&Utc::now())
+            .timestamp(Utc::now())
             .color(DEFAULT_COLOR)
         })
     })
@@ -397,7 +395,7 @@ async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -
         },
         Some(_) if planet_name.is_some() || star_name.is_some() => {
             interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-        e.create_embed(|e: &mut CreateEmbed| {
+        e.embed(|e: &mut CreateEmbed| {
                     e.description(
                         "The name you gave isn't in the NASA Exoplanet Archive <:kia:367734893796655113>
                         Please understand that NASA has a 'weird' way of naming the stars in their archive
@@ -508,14 +506,14 @@ async fn get_star(
 
     interaction
         .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.create_embed(|e: &mut CreateEmbed| {
+            e.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Star Information")
                         .icon_url(DEFAULT_ICON)
                 })
                 .color(DEFAULT_COLOR)
                 .title(star_name)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
                 .field(
                     "System Data",
                     format!(
@@ -610,14 +608,14 @@ async fn get_planet(
 
     interaction
         .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.create_embed(|e: &mut CreateEmbed| {
+            e.embed(|e: &mut CreateEmbed| {
                 e.author(|a: &mut CreateEmbedAuthor| {
                     a.name("Planet Information")
                         .icon_url(DEFAULT_ICON)
                 })
                 .color(DEFAULT_COLOR)
                 .title(planet_name)
-                .timestamp(&Utc::now())
+                .timestamp(Utc::now())
                 .field(
                     "Planet Data",
                     format!(
