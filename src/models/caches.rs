@@ -22,8 +22,8 @@ use super::{
     pictures::MarsRoverPicture,
 };
 use crate::events::{
+    interaction_handler::InteractionHandler,
     statefulembed::EmbedSession,
-    waitfor::WaitFor,
 };
 
 #[derive(Debug, Clone)]
@@ -51,11 +51,13 @@ impl TypeMapKey for EmbedSessionsKey {
     type Value = HashMap<MessageId, Arc<RwLock<EmbedSession>>>;
 }
 
-pub struct WaitForKey;
+pub struct InteractionKey;
 
-impl TypeMapKey for WaitForKey {
-    type Value = HashMap<(ChannelId, UserId), WaitFor>;
+impl TypeMapKey for InteractionKey {
+    type Value = InteractionHandlerHolder;
 }
+
+pub struct InteractionHandlerHolder(pub Vec<InteractionHandler>);
 
 pub struct DatabaseKey;
 

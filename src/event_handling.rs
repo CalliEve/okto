@@ -8,10 +8,7 @@ use reqwest::header::AUTHORIZATION;
 use serenity::{
     async_trait,
     model::{
-        channel::{
-            Message,
-            Reaction,
-        },
+        channel::Message,
         gateway::Ready,
         guild::{
             Guild,
@@ -34,13 +31,10 @@ use serenity::{
 use crate::{
     commands::help::slash_command_message,
     events::{
+        interaction_handler::handle_interaction,
         statefulembed::{
             on_button_click as embed_button_click,
             on_message_delete as embed_delete,
-        },
-        waitfor::{
-            waitfor_message,
-            waitfor_reaction,
         },
     },
     utils::{
@@ -132,10 +126,6 @@ impl EventHandler for Handler {
         });
     }
 
-    async fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
-        waitfor_reaction(&ctx, add_reaction.clone()).await;
-    }
-
     async fn message_delete(
         &self,
         ctx: Context,
@@ -147,8 +137,6 @@ impl EventHandler for Handler {
     }
 
     async fn message(&self, ctx: Context, message: Message) {
-        waitfor_message(&ctx, &message).await;
-
         slash_command_message(&ctx, &message).await;
     }
 
@@ -204,6 +192,10 @@ impl EventHandler for Handler {
             .await;
             return;
         };
-        embed_button_click(&ctx, &interaction).await;
+
+        futures::join!(
+            embed_button_click(&ctx, &interaction),
+            handle_interaction(&ctx, &interaction)
+        );
     }
 }

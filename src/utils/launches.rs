@@ -76,7 +76,7 @@ pub fn filter_launches(
         return Err(
             "This is not a valid filter, please take a look at those listed in `/filtersinfo`"
                 .to_owned(),
-        )
+        );
     }
 
     let rocket_filter = interaction

@@ -48,7 +48,10 @@ use serenity::{
                 ApplicationCommandInteraction,
                 ApplicationCommandInteractionDataOptionValue,
             },
-            message_component::ButtonStyle,
+            message_component::{
+                ButtonStyle,
+                ComponentType,
+            },
             InteractionApplicationCommandCallbackDataFlags,
         },
     },
@@ -60,18 +63,18 @@ use serenity::{
 
 use crate::{
     events::{
+        interaction_handler::InteractionHandler,
         statefulembed::{
             ButtonType,
             EmbedSession,
             StatefulEmbed,
         },
-        waitfor::{
-            WaitFor,
-            WaitPayload,
-        },
     },
     models::{
-        caches::DatabaseKey,
+        caches::{
+            DatabaseKey,
+            InteractionKey,
+        },
         reminders::Reminder,
     },
     utils::{
@@ -342,6 +345,21 @@ fn reminders_page(
                 let channel_id = inner_ses.read().await.interaction.channel_id;
                 let user_id = inner_ses.read().await.author;
                 let wait_ses = add_ses.clone();
+
+                let interaction_handler = InteractionHandler::builder(|_i| todo!("welp"))
+                    .set_channel(channel_id)
+                    .set_user(user_id)
+                    .set_component_type(ComponentType::SelectMenu)
+                    .build()
+                    .unwrap();
+
+                if let Some(waiting) = inner_ses.read().await.data
+                    .write()
+                    .await
+                    .get_mut::<InteractionKey>()
+                {
+                    waiting.0.push(interaction_handler);
+                }
 
                 WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
                     let wait_ses = wait_ses.clone();
@@ -790,13 +808,12 @@ fn mentions_page(
                         let mut text =
                             "The following roles have been set to be mentioned:".to_owned();
                         for role_id in &settings.mentions {
-                            let role_opt = role_id
-                                .to_role_cached(
-                                    ses.read()
-                                        .await
-                                        .cache
-                                        .clone(),
-                                );
+                            let role_opt = role_id.to_role_cached(
+                                ses.read()
+                                    .await
+                                    .cache
+                                    .clone(),
+                            );
                             if let Some(role) = role_opt {
                                 text.push_str(&format!("\n`{}`", role.name))
                             } else {

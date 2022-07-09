@@ -37,16 +37,16 @@ use launch_tracking::launch_tracking;
 use models::caches::{
     DatabaseKey,
     EmbedSessionsKey,
+    InteractionKey,
     LaunchesCacheKey,
     PictureCacheKey,
-    WaitForKey,
 };
 use mongodb::Client as MongoClient;
 use reminder_tracking::reminder_tracking;
 use serenity::{
     client::Client,
-    model::gateway::GatewayIntents,
     framework::standard::StandardFramework,
+    model::gateway::GatewayIntents,
     prelude::{
         RwLock,
         TypeMap,
@@ -129,7 +129,7 @@ async fn main() {
         let mut data = TypeMap::new();
         data.insert::<CommandListKey>(slash_framework.get_command_list());
         data.insert::<EmbedSessionsKey>(HashMap::new());
-        data.insert::<WaitForKey>(HashMap::new());
+        data.insert::<InteractionKey>(models::caches::InteractionHandlerHolder(Vec::new()));
         data.insert::<PictureCacheKey>(preload_data().await);
         data.insert::<LaunchesCacheKey>(Arc::new(RwLock::new(Vec::new())));
         data.insert::<DatabaseKey>(
