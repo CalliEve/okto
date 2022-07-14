@@ -6,11 +6,7 @@ use std::{
 use mongodb::Database;
 use okto_framework::structs::Command;
 use serenity::{
-    model::id::{
-        ChannelId,
-        MessageId,
-        UserId,
-    },
+    model::id::MessageId,
     prelude::{
         RwLock,
         TypeMapKey,

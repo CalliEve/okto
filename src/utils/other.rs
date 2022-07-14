@@ -24,9 +24,7 @@ use super::constants::{
     EXIT_EMOJI,
     FINAL_PAGE_EMOJI,
     FIRST_PAGE_EMOJI,
-    ID_REGEX,
     LAST_PAGE_EMOJI,
-    MENTION_REGEX,
     NEXT_PAGE_EMOJI,
     PROGRADE,
     RETROGRADE,
@@ -187,42 +185,6 @@ pub fn parse_duration(text: &str) -> Duration {
     }
 
     dur
-}
-
-pub fn parse_id(text: &str) -> Option<u64> {
-    if ID_REGEX.is_match(text) {
-        return text
-            .parse()
-            .ok();
-    }
-
-    if let Some(captures) = MENTION_REGEX.captures(text) {
-        return captures
-            .get(1)
-            .unwrap()
-            .as_str()
-            .parse()
-            .ok();
-    }
-
-    None
-}
-
-pub async fn temp_message(channel: ChannelId, http: impl AsRef<Http>, text: &str, delay: Duration) {
-    if let Ok(message) = channel
-        .send_message(&http, |m| m.content(text))
-        .await
-    {
-        tokio::time::sleep(
-            delay
-                .to_std()
-                .unwrap(),
-        )
-        .await;
-        let _ = channel
-            .delete_message(http, message.id)
-            .await;
-    }
 }
 
 #[allow(dead_code)]

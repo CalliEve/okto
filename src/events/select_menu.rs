@@ -19,10 +19,13 @@ use serenity::{
     Error,
 };
 
-use super::interaction_handler::InteractionHandler;
+use super::interaction_handler::{
+    respond_to_interaction,
+    InteractionHandler,
+};
 use crate::models::caches::InteractionKey;
 
-type Handler = Arc<Box<dyn Fn(String) -> BoxFuture<'static, ()> + Send + Sync>>;
+type Handler = Arc<Box<dyn Fn((String, String)) -> BoxFuture<'static, ()> + Send + Sync>>;
 
 #[derive(Clone)]
 pub struct SelectMenu {
@@ -50,25 +53,22 @@ impl SelectMenu {
             .options
             .clone();
         let mut interaction_handler = InteractionHandler::builder(move |interaction| {
-            let handler = handler.clone();
-            let options = options.clone();
-            Box::pin(async move {
-                let data = interaction
-                    .clone()
-                    .message_component()
-                    .expect("Didn't get a message component in select menu");
-                let key = data
-                    .data
-                    .values
-                    .first()
-                    .expect("No values returned from select menu");
+            let data = interaction
+                .clone()
+                .message_component()
+                .expect("Didn't get a message component in select menu");
+            let key = data
+                .data
+                .values
+                .first()
+                .cloned()
+                .expect("No values returned from select menu");
 
-                let chosen = options
-                    .get(key)
-                    .expect("Not a valid choice in select menu");
+            let chosen = options
+                .get(&key)
+                .expect("Not a valid choice in select menu");
 
-                handler(chosen.clone()).await;
-            })
+            handler((key, chosen.clone()))
         })
         .set_component_type(ComponentType::SelectMenu);
 
@@ -135,36 +135,12 @@ impl SelectMenu {
             r
         });
 
-        match interaction {
-            Interaction::MessageComponent(comp) => {
-                comp.create_interaction_response(http, |i| {
-                    *i = resp;
-                    i
-                })
-                .await
-            },
-            Interaction::ModalSubmit(modal) => {
-                modal
-                    .create_interaction_response(http, |i| {
-                        *i = resp;
-                        i
-                    })
-                    .await
-            },
-            Interaction::ApplicationCommand(cmd) => {
-                cmd.create_interaction_response(http, |i| {
-                    *i = resp;
-                    i
-                })
-                .await
-            },
-            _ => panic!("Unsupported interaction for sending a select menu to"),
-        };
+        respond_to_interaction(http, interaction, resp).await;
     }
 
     pub fn builder<F>(handler: F) -> SelectMenuBuilder
     where
-        F: Fn(String) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        F: Fn((String, String)) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         SelectMenuBuilder::new(handler)
     }
@@ -178,7 +154,7 @@ pub struct SelectMenuBuilder {
 impl SelectMenuBuilder {
     pub fn new<F>(handler: F) -> Self
     where
-        F: Fn(String) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        F: Fn((String, String)) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         Self {
             inner: SelectMenu {
@@ -211,25 +187,25 @@ impl SelectMenuBuilder {
         Ok(self.inner)
     }
 
-    pub fn set_description(self, description: impl ToString) -> Self {
+    pub fn set_description<T: ToString>(mut self, description: T) -> Self {
         self.inner
             .description = Some(description.to_string());
         self
     }
 
-    pub fn set_custom_id(self, custom_id: impl ToString) -> Self {
+    pub fn set_custom_id<T: ToString>(mut self, custom_id: T) -> Self {
         self.inner
             .custom_id = Some(custom_id.to_string());
         self
     }
 
-    pub fn set_options(self, options: HashMap<String, String>) -> Self {
+    pub fn set_options(mut self, options: HashMap<String, String>) -> Self {
         self.inner
             .options = options;
         self
     }
 
-    pub fn make_ephemeral(self) -> Self {
+    pub fn make_ephemeral(mut self) -> Self {
         self.inner
             .ephemeral = true;
         self

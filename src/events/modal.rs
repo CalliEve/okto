@@ -12,12 +12,19 @@ use serenity::{
         Interaction,
         InteractionResponseType,
         InteractionType,
-    }, prelude::{RwLock, TypeMap}, Error,
+    },
+    prelude::{
+        RwLock,
+        TypeMap,
+    },
+    Error,
 };
 
+use super::interaction_handler::{
+    respond_to_interaction,
+    InteractionHandler,
+};
 use crate::models::caches::InteractionKey;
-
-use super::interaction_handler::InteractionHandler;
 
 type Handler = Arc<Box<dyn Fn(HashMap<String, String>) -> BoxFuture<'static, ()> + Send + Sync>>;
 
@@ -33,6 +40,7 @@ pub struct Modal {
 pub struct Question {
     pub custom_id: Option<String>,
     pub label: String,
+    pub placeholder: Option<String>,
 }
 
 impl Modal {
@@ -48,39 +56,32 @@ impl Modal {
         let handler = self
             .handler
             .clone();
-        let questions = self
-            .questions
-            .clone();
 
         let mut interaction_handler = InteractionHandler::builder(move |interaction| {
-            let handler = handler.clone();
-            let questions = questions.clone();
-            Box::pin(async move {
-                let data = interaction
-                    .clone()
-                    .modal_submit()
-                    .expect("Didn't get a modal submit in modal");
-                let res = data
-                    .data
-                    .components
-                    .clone()
-                    .into_iter()
-                    .flat_map(|row| {
-                        row.components
-                            .into_iter()
-                    })
-                    .map(|comp| {
-                        if let ActionRowComponent::InputText(text) = comp {
-                            text
-                        } else {
-                            panic!("Modal contained something else than text")
-                        }
-                    })
-                    .map(|text| (text.custom_id, text.value))
-                    .collect::<HashMap<String, String>>();
+            let data = interaction
+                .clone()
+                .modal_submit()
+                .expect("Didn't get a modal submit in modal");
+            let res = data
+                .data
+                .components
+                .clone()
+                .into_iter()
+                .flat_map(|row| {
+                    row.components
+                        .into_iter()
+                })
+                .map(|comp| {
+                    if let ActionRowComponent::InputText(text) = comp {
+                        text
+                    } else {
+                        panic!("Modal contained something else than text")
+                    }
+                })
+                .map(|text| (text.custom_id, text.value))
+                .collect::<HashMap<String, String>>();
 
-                handler(res).await;
-            })
+            handler(res)
         })
         .set_interaction_type(InteractionType::ModalSubmit);
 
@@ -116,6 +117,10 @@ impl Modal {
                     for question in &self.questions {
                         comps.create_action_row(|row| {
                             row.create_input_text(|text| {
+                                if let Some(placeholder) = &question.placeholder {
+                                    text.placeholder(placeholder);
+                                }
+
                                 text.custom_id(
                                     question
                                         .custom_id
@@ -139,31 +144,7 @@ impl Modal {
                 r
             });
 
-        match interaction {
-            Interaction::MessageComponent(comp) => {
-                comp.create_interaction_response(http, |i| {
-                    *i = resp;
-                    i
-                })
-                .await
-            },
-            Interaction::ModalSubmit(modal) => {
-                modal
-                    .create_interaction_response(http, |i| {
-                        *i = resp;
-                        i
-                    })
-                    .await
-            },
-            Interaction::ApplicationCommand(cmd) => {
-                cmd.create_interaction_response(http, |i| {
-                    *i = resp;
-                    i
-                })
-                .await
-            },
-            _ => panic!("Unsupported interaction for sending a select menu to"),
-        };
+        respond_to_interaction(http, interaction, resp).await;
     }
 
     pub fn builder<F>(handler: F) -> ModalBuilder
@@ -195,28 +176,35 @@ impl ModalBuilder {
     }
 
     pub fn build(self) -> Result<Modal, Error> {
-        if self.inner.questions.is_empty() || self.inner.questions.len() > 5 {
-            return Err(Error::Other(
-                "Unsupported amount of fields in a modal",
-            ));
+        if self
+            .inner
+            .questions
+            .is_empty()
+            || self
+                .inner
+                .questions
+                .len()
+                > 5
+        {
+            return Err(Error::Other("Unsupported amount of fields in a modal"));
         }
-        
+
         Ok(self.inner)
     }
-    
-    pub fn set_custom_id(self, custom_id: impl ToString) -> Self {
+
+    pub fn set_custom_id<T: ToString>(mut self, custom_id: T) -> Self {
         self.inner
             .custom_id = Some(custom_id.to_string());
         self
     }
 
-    pub fn set_questions(self, questions: Vec<Question>) -> Self {
+    pub fn set_questions(mut self, questions: Vec<Question>) -> Self {
         self.inner
             .questions = questions;
         self
     }
-    
-    pub fn set_title(self, title: impl ToString) -> Self {
+
+    pub fn set_title<T: ToString>(mut self, title: T) -> Self {
         self.inner
             .title = Some(title.to_string());
         self
@@ -224,16 +212,21 @@ impl ModalBuilder {
 }
 
 impl Question {
-    pub fn new(label: impl ToString) -> Self {
+    pub fn new<T: ToString>(label: T) -> Self {
         Self {
             label: label.to_string(),
             custom_id: None,
+            placeholder: None,
         }
     }
 
-    pub fn set_custom_id(self, custom_id: impl ToString) -> Self {
+    pub fn set_custom_id<T: ToString>(mut self, custom_id: T) -> Self {
         self.custom_id = Some(custom_id.to_string());
         self
     }
-}
 
+    pub fn set_placeholder<T: ToString>(mut self, placeholder: T) -> Self {
+        self.placeholder = Some(placeholder.to_string());
+        self
+    }
+}

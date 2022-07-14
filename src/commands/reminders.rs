@@ -48,10 +48,8 @@ use serenity::{
                 ApplicationCommandInteraction,
                 ApplicationCommandInteractionDataOptionValue,
             },
-            message_component::{
-                ButtonStyle,
-                ComponentType,
-            },
+            message_component::ButtonStyle,
+            Interaction,
             InteractionApplicationCommandCallbackDataFlags,
         },
     },
@@ -63,7 +61,11 @@ use serenity::{
 
 use crate::{
     events::{
-        interaction_handler::InteractionHandler,
+        modal::{
+            Modal,
+            Question,
+        },
+        select_menu::SelectMenu,
         statefulembed::{
             ButtonType,
             EmbedSession,
@@ -71,23 +73,22 @@ use crate::{
         },
     },
     models::{
-        caches::{
-            DatabaseKey,
-            InteractionKey,
-        },
+        caches::DatabaseKey,
         reminders::Reminder,
     },
     utils::{
         constants::*,
         default_embed,
+        default_select_menus::{
+            channel_select_menu,
+            role_select_menu,
+        },
         format_duration,
         parse_duration,
-        parse_id,
         reminders::{
             get_guild_settings,
             get_user_settings,
         },
-        temp_message,
         StandardButton,
     },
 };
@@ -333,87 +334,127 @@ fn reminders_page(
 
         let add_ses = ses.clone();
         em.add_option(
-        &ButtonType {
+            &ButtonType {
                 label: "Add reminder".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(PROGRADE.clone()))
+                emoji: Some(ReactionType::from(PROGRADE.clone())),
             },
-        move || Box::pin({
-            let add_ses = add_ses.clone();
-            async move {
-                let inner_ses = add_ses.clone();
-                let channel_id = inner_ses.read().await.interaction.channel_id;
-                let user_id = inner_ses.read().await.author;
-                let wait_ses = add_ses.clone();
+            move || {
+                Box::pin({
+                    let add_ses = add_ses.clone();
+                    async move {
+                        let inner_ses = add_ses.clone();
+                        let wait_ses = add_ses.clone();
 
-                let interaction_handler = InteractionHandler::builder(|_i| todo!("welp"))
-                    .set_channel(channel_id)
-                    .set_user(user_id)
-                    .set_component_type(ComponentType::SelectMenu)
-                    .build()
-                    .unwrap();
+                        let (user_id, http, interaction, data) = {
+                            let s = inner_ses
+                                .read()
+                                .await;
+                            (
+                                s.author
+                                    .clone(),
+                                s.http
+                                    .clone(),
+                                Interaction::ApplicationCommand(
+                                    s.interaction
+                                        .clone(),
+                                ),
+                                s.data
+                                    .clone(),
+                            )
+                        };
 
-                if let Some(waiting) = inner_ses.read().await.data
-                    .write()
-                    .await
-                    .get_mut::<InteractionKey>()
-                {
-                    waiting.0.push(interaction_handler);
-                }
-
-                WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                    let wait_ses = wait_ses.clone();
-                        Box::pin(async move {
-                        if let WaitPayload::Message(message) = payload {
-                            let dur = parse_duration(&message.content);
-                            if !dur.is_zero() {
-                                add_reminder(&wait_ses.clone(), id, dur).await;
-                            }
-                            reminders_page(wait_ses.clone(), id).await;
-                        }
-                    })
+                        Modal::builder(move |choices| {
+                            let wait_ses = wait_ses.clone();
+                            Box::pin(async move {
+                                let dur = parse_duration(
+                                    choices
+                                        .get("time")
+                                        .expect("no time given"),
+                                );
+                                if !dur.is_zero() {
+                                    add_reminder(&wait_ses.clone(), id, dur).await;
+                                }
+                                reminders_page(wait_ses.clone(), id).await;
+                            })
+                        })
+                        .set_custom_id(format!("{}-add-reminder", user_id))
+                        .set_title("Add Reminder")
+                        .set_questions(vec![Question::new("Time from reminder till launch")
+                            .set_custom_id("time")
+                            .set_placeholder(
+                                "Please give the time in the format of `1w 2d 3h 4m`",
+                            )])
+                        .build()
+                        .unwrap()
+                        .listen(http, &interaction, data)
+                        .await;
+                    }
                 })
-                .send_explanation(
-                    "Send how long before the launch you want the reminder.\nPlease give the time in the format of `1w 2d 3h 4m`",
-                    &inner_ses.read().await.http,
-                ).await
-                .listen(inner_ses.read().await.data.clone())
-                .await;
-            }
-        }));
+            },
+        );
 
         let remove_ses = ses.clone();
         em.add_option(
-        &ButtonType {
+            &ButtonType {
                 label: "Remove reminder".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(RETROGRADE.clone()))
+                emoji: Some(ReactionType::from(RETROGRADE.clone())),
             },
-        move || {
-            let remove_ses = remove_ses.clone();
-            Box::pin(async move {
-                let inner_ses = remove_ses.clone();
-                let channel_id = inner_ses.read().await.interaction.channel_id;
-                let user_id = inner_ses.read().await.author;
-                let wait_ses = remove_ses.clone();
+            move || {
+                let remove_ses = remove_ses.clone();
+                Box::pin(async move {
+                    let inner_ses = remove_ses.clone();
+                    let wait_ses = remove_ses.clone();
 
-                WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                    let wait_ses = wait_ses.clone();
-                    Box::pin(async move {
-                        if let WaitPayload::Message(message) = payload {
-                            remove_reminder(&wait_ses.clone(), id, parse_duration(&message.content)).await;
+                    let (user_id, http, interaction, data) = {
+                        let s = inner_ses
+                            .read()
+                            .await;
+                        (
+                            s.author
+                                .clone(),
+                            s.http
+                                .clone(),
+                            Interaction::ApplicationCommand(
+                                s.interaction
+                                    .clone(),
+                            ),
+                            s.data
+                                .clone(),
+                        )
+                    };
+
+                    Modal::builder(move |choices| {
+                        let wait_ses = wait_ses.clone();
+                        Box::pin(async move {
+                            remove_reminder(
+                                &wait_ses.clone(),
+                                id,
+                                parse_duration(
+                                    &choices
+                                        .get("time")
+                                        .expect("no time given"),
+                                ),
+                            )
+                            .await;
                             reminders_page(wait_ses.clone(), id).await;
-                        }
+                        })
                     })
+                    .set_custom_id(format!("{}-remove-reminder", user_id))
+                    .set_title("Add Reminder")
+                    .set_questions(vec![Question::new("Time of the reminder to remove")
+                        .set_custom_id("time")
+                        .set_placeholder(
+                            "Please give the time in the format of `1w 2d 3h 4m`",
+                        )])
+                    .build()
+                    .unwrap()
+                    .listen(http, &interaction, data)
+                    .await;
                 })
-                .send_explanation(
-                    "Send the time of the reminder you want to remove.\nPlease give the time in the format of `1w 2d 3h 4m`",
-                    &inner_ses.read().await.http,
-                ).await
-                .listen(inner_ses.read().await.data.clone())
-                .await;
-            })
-        });
+            },
+        );
 
         em.add_option(
             &ButtonType {
@@ -502,41 +543,57 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
             &ButtonType {
                 label: "Add filter".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(PROGRADE.clone()))
+                emoji: Some(ReactionType::from(PROGRADE.clone())),
             },
             move || {
                 let add_ses = add_ses.clone();
                 Box::pin(async move {
                     let inner_ses = add_ses.clone();
-                    let channel_id = inner_ses.read().await.interaction.channel_id;
-                    let user_id = inner_ses.read().await.author;
                     let wait_ses = add_ses.clone();
 
-                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                    let (user_id, http, interaction, data) = {
+                        let s = inner_ses
+                            .read()
+                            .await;
+                        (
+                            s.author
+                                .clone(),
+                            s.http
+                                .clone(),
+                            Interaction::ApplicationCommand(
+                                s.interaction
+                                    .clone(),
+                            ),
+                            s.data
+                                .clone(),
+                        )
+                    };
+
+                    SelectMenu::builder(move |(choice, _)| {
                         let wait_ses = wait_ses.clone();
                         Box::pin(async move {
-                            if let WaitPayload::Message(message) = payload {
-                                let content = message.content.to_lowercase();
-                                if LAUNCH_AGENCIES.contains_key(content.as_str()) {
-                                    add_filter(&wait_ses.clone(), id, content, "filters").await;
-                                } else {
-                                    temp_message(
-                                        wait_ses.read().await.interaction.channel_id,
-                                        &wait_ses.read().await.http,
-                                        "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
-                                        Duration::seconds(5)
-                                    ).await;
-                                }
-                                filters_page(wait_ses.clone(), id).await
+                            if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
+                                add_filter(&wait_ses.clone(), id, choice, "filters").await;
+                            } else {
+                                panic!("select menu returned unknown choice")
                             }
+                            filters_page(wait_ses.clone(), id).await
                         })
                     })
-                    .send_explanation(
-                        "Send the filter name of the agency you do not want to receive reminders for",
-                        &inner_ses.read().await.http,
+                    .set_description(
+                        "Select the name of the agency you do not want to receive reminders for",
                     )
-                    .await
-                    .listen(inner_ses.read().await.data.clone())
+                    .set_custom_id(format!("{}-add-filter", user_id))
+                    .make_ephemeral()
+                    .set_options(
+                        LAUNCH_AGENCIES
+                            .iter()
+                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .collect(),
+                    )
+                    .build()
+                    .unwrap()
+                    .listen(http, &interaction, data)
                     .await;
                 })
             },
@@ -547,41 +604,57 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
             &ButtonType {
                 label: "Remove filter".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(RETROGRADE.clone()))
+                emoji: Some(ReactionType::from(RETROGRADE.clone())),
             },
             move || {
                 let remove_ses = remove_ses.clone();
                 Box::pin(async move {
                     let inner_ses = remove_ses.clone();
-                    let channel_id = inner_ses.read().await.interaction.channel_id;
-                    let user_id = inner_ses.read().await.author;
                     let wait_ses = remove_ses.clone();
 
-                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                    let (user_id, http, interaction, data) = {
+                        let s = inner_ses
+                            .read()
+                            .await;
+                        (
+                            s.author
+                                .clone(),
+                            s.http
+                                .clone(),
+                            Interaction::ApplicationCommand(
+                                s.interaction
+                                    .clone(),
+                            ),
+                            s.data
+                                .clone(),
+                        )
+                    };
+
+                    SelectMenu::builder(move |(choice, _)| {
                         let wait_ses = wait_ses.clone();
                         Box::pin(async move {
-                            if let WaitPayload::Message(message) = payload {
-                                let content = message.content.to_lowercase();
-                                if LAUNCH_AGENCIES.contains_key(content.as_str()) {
-                                    remove_filter(&wait_ses.clone(), id, content, "filters").await;
-                                } else {
-                                    temp_message(
-                                        wait_ses.read().await.interaction.channel_id,
-                                        &wait_ses.read().await.http,
-                                        "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
-                                        Duration::seconds(5)
-                                    ).await;
-                                }
-                                filters_page(wait_ses.clone(), id).await
+                            if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
+                                remove_filter(&wait_ses.clone(), id, choice, "filters").await;
+                            } else {
+                                panic!("select menu returned unknown choice")
                             }
+                            filters_page(wait_ses.clone(), id).await
                         })
                     })
-                    .send_explanation(
-                        "Send the filter name of the agency you want to receive reminders for again",
-                        &inner_ses.read().await.http,
+                    .set_description(
+                        "Select the name of the agency you want to receive reminders for again",
                     )
-                    .await
-                    .listen(inner_ses.read().await.data.clone())
+                    .set_custom_id(format!("{}-remove-filter", user_id))
+                    .make_ephemeral()
+                    .set_options(
+                        LAUNCH_AGENCIES
+                            .iter()
+                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .collect(),
+                    )
+                    .build()
+                    .unwrap()
+                    .listen(http, &interaction, data)
                     .await;
                 })
             },
@@ -679,41 +752,57 @@ fn allow_filters_page(
             &ButtonType {
                 style: ButtonStyle::Primary,
                 label: "Add allow filter".to_owned(),
-                emoji: Some(ReactionType::from(PROGRADE.clone()))
+                emoji: Some(ReactionType::from(PROGRADE.clone())),
             },
             move || {
                 let add_ses = add_ses.clone();
                 Box::pin(async move {
                     let inner_ses = add_ses.clone();
-                    let channel_id = inner_ses.read().await.interaction.channel_id;
-                    let user_id = inner_ses.read().await.author;
                     let wait_ses = add_ses.clone();
 
-                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
+                    let (user_id, http, interaction, data) = {
+                        let s = inner_ses
+                            .read()
+                            .await;
+                        (
+                            s.author
+                                .clone(),
+                            s.http
+                                .clone(),
+                            Interaction::ApplicationCommand(
+                                s.interaction
+                                    .clone(),
+                            ),
+                            s.data
+                                .clone(),
+                        )
+                    };
+
+                    SelectMenu::builder(move |(choice, _)| {
                         let wait_ses = wait_ses.clone();
                         Box::pin(async move {
-                            if let WaitPayload::Message(message) = payload {
-                                let content = message.content.to_lowercase();
-                                if LAUNCH_AGENCIES.contains_key(content.as_str()) {
-                                    add_filter(&wait_ses.clone(), id, content, "allow_filters").await;
-                                } else {
-                                    temp_message(
-                                        wait_ses.read().await.interaction.channel_id,
-                                        &wait_ses.read().await.http,
-                                        "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
-                                        Duration::seconds(5)
-                                    ).await;
-                                }
-                                allow_filters_page(wait_ses.clone(), id).await
+                            if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
+                                add_filter(&wait_ses.clone(), id, choice, "allow_filters").await;
+                            } else {
+                                panic!("select menu returned unknown choice")
                             }
+                            allow_filters_page(wait_ses.clone(), id).await
                         })
                     })
-                    .send_explanation(
-                        "Send the filter name of the agency you specifically want to get reminders for",
-                        &inner_ses.read().await.http,
+                    .set_description(
+                        "Select the name of the agency you specifically want to get reminders for",
                     )
-                    .await
-                    .listen(inner_ses.read().await.data.clone())
+                    .set_custom_id(format!("{}-add-allow-filter", user_id))
+                    .make_ephemeral()
+                    .set_options(
+                        LAUNCH_AGENCIES
+                            .iter()
+                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .collect(),
+                    )
+                    .build()
+                    .unwrap()
+                    .listen(http, &interaction, data)
                     .await;
                 })
             },
@@ -730,36 +819,44 @@ fn allow_filters_page(
                 let remove_ses = remove_ses.clone();
                 Box::pin(async move {
                     let inner_ses = remove_ses.clone();
-                    let channel_id = inner_ses.read().await.interaction.channel_id;
-                    let user_id = inner_ses.read().await.author;
                     let wait_ses = remove_ses.clone();
 
-                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                        let wait_ses = wait_ses.clone();
-                        Box::pin(async move {
-                            if let WaitPayload::Message(message) = payload {
-                                let content = message.content.to_lowercase();
-                                if LAUNCH_AGENCIES.contains_key(content.as_str()) {
-                                    remove_filter(&wait_ses.clone(), id, content, "allow_filters").await;
+                    let (user_id, http, interaction, data) = {
+                        let s = inner_ses
+                                .read()
+                                .await;
+                        (
+                            s.author
+                                .clone(),
+                            s.http
+                                .clone(),
+                            Interaction::ApplicationCommand(
+                                s.interaction
+                                    .clone(),
+                            ),
+                            s.data
+                                .clone(),
+                        )
+                    };
+
+                    SelectMenu::builder(move |(choice, _)| {
+                            let wait_ses = wait_ses.clone();
+                            Box::pin(async move {
+                                if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
+                                    remove_filter(&wait_ses.clone(), id, choice, "allow_filters").await;
                                 } else {
-                                    temp_message(
-                                        wait_ses.read().await.interaction.channel_id,
-                                        &wait_ses.read().await.http,
-                                        "Sorry, this launch agency does not exist in my records, so it can't be filtered on.",
-                                        Duration::seconds(5)
-                                    ).await;
-                                }
-                                allow_filters_page(wait_ses.clone(), id).await
-                            }
-                        })
+                                        panic!("select menu returned unknown choice")
+                                    }
+                                filters_page(wait_ses.clone(), id).await
+                            })
                     })
-                    .send_explanation(
-                        "Send the filter name of the agency you do not want to receive reminders for again",
-                        &inner_ses.read().await.http,
-                    )
-                    .await
-                    .listen(inner_ses.read().await.data.clone())
-                    .await;
+                        .set_description("Select the name of the agency you do not want to receive reminders for again")
+                        .set_custom_id(format!("{}-remove-allow-filter", user_id))
+                        .make_ephemeral()
+                        .set_options(LAUNCH_AGENCIES.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect())
+                        .build()
+                        .unwrap()
+                        .listen(http, &interaction, data).await;
                 })
             },
         );
@@ -848,57 +945,31 @@ fn mentions_page(
             move || {
                 let add_ses = add_ses.clone();
                 Box::pin(async move {
-                    let inner_ses = add_ses.clone();
-                    let channel_id = inner_ses
-                        .read()
-                        .await
-                        .interaction
-                        .channel_id;
-                    let user_id = inner_ses
-                        .read()
-                        .await
-                        .author;
-                    let wait_ses = add_ses.clone();
+                    let (user_id, http, interaction, data) = {
+                        let s = add_ses
+                            .read()
+                            .await;
+                        (
+                            s.author
+                                .clone(),
+                            s.http
+                                .clone(),
+                            Interaction::ApplicationCommand(
+                                s.interaction
+                                    .clone(),
+                            ),
+                            s.data
+                                .clone(),
+                        )
+                    };
 
-                    WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                        let wait_ses = wait_ses.clone();
+                    role_select_menu(http, user_id, &interaction, data, move |role_id| {
+                        let wait_ses = add_ses.clone();
                         Box::pin(async move {
-                            if let WaitPayload::Message(message) = payload {
-                                if let Some(role_id) = parse_id(&message.content) {
-                                    add_mention(&wait_ses.clone(), id, role_id.into()).await;
-                                    mentions_page(wait_ses.clone(), id).await;
-                                } else {
-                                    mentions_page(wait_ses.clone(), id).await;
-                                    temp_message(
-                                        channel_id,
-                                        wait_ses
-                                            .read()
-                                            .await
-                                            .http
-                                            .clone(),
-                                        "Sorry, I can't find that role, please try again later",
-                                        Duration::seconds(5),
-                                    )
-                                    .await
-                                }
-                            }
+                            add_mention(&wait_ses.clone(), id, role_id.into()).await;
+                            mentions_page(wait_ses.clone(), id).await;
                         })
                     })
-                    .send_explanation(
-                        "Mention the role you want to have mentioned during launch reminders",
-                        &inner_ses
-                            .read()
-                            .await
-                            .http,
-                    )
-                    .await
-                    .listen(
-                        inner_ses
-                            .read()
-                            .await
-                            .data
-                            .clone(),
-                    )
                     .await;
                 })
             },
@@ -909,44 +980,40 @@ fn mentions_page(
             &ButtonType {
                 label: "Remove mention".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(RETROGRADE.clone()))
+                emoji: Some(ReactionType::from(RETROGRADE.clone())),
             },
-        move || {
-            let remove_ses = remove_ses.clone();
-            Box::pin(async move {
-                let inner_ses = remove_ses.clone();
-                let channel_id = inner_ses.read().await.interaction.channel_id;
-                let user_id = inner_ses.read().await.author;
-                let wait_ses = remove_ses.clone();
+            move || {
+                let remove_ses = remove_ses.clone();
+                Box::pin(async move {
+                    let (user_id, http, interaction, data) = {
+                        let s = remove_ses
+                            .read()
+                            .await;
+                        (
+                            s.author
+                                .clone(),
+                            s.http
+                                .clone(),
+                            Interaction::ApplicationCommand(
+                                s.interaction
+                                    .clone(),
+                            ),
+                            s.data
+                                .clone(),
+                        )
+                    };
 
-                WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                    let wait_ses = wait_ses.clone();
-                    Box::pin(async move {
-                    if let WaitPayload::Message(message) = payload {
-                        if let Some(role_id) = parse_id(&message.content) {
+                    role_select_menu(http, user_id, &interaction, data, move |role_id| {
+                        let wait_ses = remove_ses.clone();
+                        Box::pin(async move {
                             remove_mention(&wait_ses.clone(), id, role_id.into()).await;
                             mentions_page(wait_ses.clone(), id).await;
-                        } else {
-                            mentions_page(wait_ses.clone(), id).await;
-                            temp_message(
-                                channel_id,
-                                wait_ses.read().await.http.clone(),
-                                "Sorry, I can't find that role, please try again later",
-                                Duration::seconds(5),
-                            ).await
-                        }
-                    }
+                        })
+                    })
+                    .await;
                 })
-                })
-                .send_explanation(
-                    "Mention the role you want to have removed from being mentioned during launch reminders", 
-                    &inner_ses.read().await.http
-                ).await
-                .listen(inner_ses.read().await.data.clone())
-                .await;
-            })
-        },
-    );
+            },
+        );
 
         em.add_option(
             &ButtonType {
@@ -1112,36 +1179,31 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                 move || {
                     let chan_ses = chan_ses.clone();
                     Box::pin(async move {
-                        let inner_ses = chan_ses.clone();
-                        let channel_id = inner_ses.read().await.interaction.channel_id;
-                        let user_id = inner_ses.read().await.author;
-                        let wait_ses = chan_ses.clone();
+                    let (user_id, http, interaction, data) = {
+                        let s = chan_ses
+                                .read()
+                                .await;
+                        (
+                            s.author
+                                .clone(),
+                            s.http
+                                .clone(),
+                            Interaction::ApplicationCommand(
+                                s.interaction
+                                    .clone(),
+                            ),
+                            s.data
+                                .clone(),
+                        )
+                    };
 
-                        WaitFor::message(channel_id, user_id, move |payload: WaitPayload| {
-                            let wait_ses = wait_ses.clone();
-                            Box::pin(async move {
-                            if let WaitPayload::Message(message) = payload {
-                                if let Some(channel_id) = parse_id(&message.content) {
+                    channel_select_menu(http, user_id, &interaction, data, move |channel_id| {
+                        let wait_ses = chan_ses.clone();
+                        Box::pin(async move {
                                     set_notification_channel(&wait_ses.clone(), id, channel_id.into()).await;
                                     other_page(wait_ses.clone(), id).await;
-                                } else {
-                                    other_page(wait_ses.clone(), id).await;
-                                    temp_message(
-                                        channel_id,
-                                        wait_ses.read().await.http.clone(),
-                                        "Sorry, I can't find that channel, please try again later",
-                                        Duration::seconds(5),
-                                    ).await
-                                }
-                            }
-                        })
-                        })
-                        .send_explanation(
-                            "Mention the channel you want to set as the server's notification channel", 
-                            &inner_ses.read().await.http
-                        ).await
-                        .listen(inner_ses.read().await.data.clone())
-                        .await;
+                    })}).await;
+
                     })
                 },
             );

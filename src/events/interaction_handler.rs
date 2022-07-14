@@ -8,7 +8,9 @@ use futures::{
     },
 };
 use serenity::{
+    builder::CreateInteractionResponse,
     client::Context,
+    http::Http,
     model::{
         id::{
             ChannelId,
@@ -165,31 +167,31 @@ impl InteractionHandlerBuilder {
         }
     }
 
-    pub fn set_channel(self, channel: ChannelId) -> Self {
+    pub fn set_channel(mut self, channel: ChannelId) -> Self {
         self.inner
             .channel = Some(channel);
         self
     }
 
-    pub fn set_user(self, user: UserId) -> Self {
+    pub fn set_user(mut self, user: UserId) -> Self {
         self.inner
             .user = Some(user);
         self
     }
 
-    pub fn set_custom_id(self, custom_id: String) -> Self {
+    pub fn set_custom_id(mut self, custom_id: String) -> Self {
         self.inner
             .custom_id = Some(custom_id);
         self
     }
 
-    pub fn set_interaction_type(self, interaction_type: InteractionType) -> Self {
+    pub fn set_interaction_type(mut self, interaction_type: InteractionType) -> Self {
         self.inner
             .interaction_type = Some(interaction_type);
         self
     }
 
-    pub fn set_component_type(self, component_type: ComponentType) -> Self {
+    pub fn set_component_type(mut self, component_type: ComponentType) -> Self {
         self.inner
             .component_type = Some(component_type);
 
@@ -205,7 +207,7 @@ impl InteractionHandlerBuilder {
         self
     }
 
-    pub fn set_filter(self, filter: Filter) -> Self {
+    pub fn set_filter(mut self, filter: Filter) -> Self {
         self.inner
             .filter = Some(filter);
         self
@@ -253,4 +255,37 @@ pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
         .cloned()
         .collect::<Vec<InteractionHandler>>();
     }
+}
+
+pub async fn respond_to_interaction(
+    http: impl AsRef<Http>,
+    interaction: &Interaction,
+    resp: CreateInteractionResponse<'_>,
+) {
+    match interaction {
+        Interaction::MessageComponent(comp) => {
+            comp.create_interaction_response(http, |i| {
+                *i = resp;
+                i
+            })
+            .await
+        },
+        Interaction::ModalSubmit(modal) => {
+            modal
+                .create_interaction_response(http, |i| {
+                    *i = resp;
+                    i
+                })
+                .await
+        },
+        Interaction::ApplicationCommand(cmd) => {
+            cmd.create_interaction_response(http, |i| {
+                *i = resp;
+                i
+            })
+            .await
+        },
+        _ => panic!("Unsupported interaction for sending a response to"),
+    }
+    .expect("Interaction response failed");
 }
