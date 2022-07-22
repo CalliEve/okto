@@ -260,7 +260,7 @@ fn list_page(
         if page_num > 0 {
             let first_page_launches = list.clone();
             let first_page_session = session.clone();
-            em.add_option(&StandardButton::First.to_button(), move || {
+            em.add_option(&StandardButton::First.to_button(), move |_| {
                 let first_page_session = first_page_session.clone();
                 let first_page_launches = first_page_launches.clone();
                 Box::pin(async move {
@@ -278,7 +278,7 @@ fn list_page(
         if page_num > 0 {
             let last_page_launches = list.clone();
             let last_page_session = session.clone();
-            em.add_option(&StandardButton::Back.to_button(), move || {
+            em.add_option(&StandardButton::Back.to_button(), move |_| {
                 let last_page_launches = last_page_launches.clone();
                 let last_page_session = last_page_session.clone();
                 Box::pin(async move {
@@ -310,7 +310,7 @@ fn list_page(
                         id: EmojiId::from(CERTAIN_EMOJI),
                     }),
                 },
-                move || {
+                move |_| {
                     let certain_page_session = certain_page_session.clone();
                     let certain_page_launches = certain_page_launches.clone();
                     Box::pin(async move {
@@ -337,7 +337,7 @@ fn list_page(
                         id: EmojiId::from(UNCERTAIN_EMOJI),
                     }),
                 },
-                move || {
+                move |_| {
                     let uncertain_page_session = uncertain_page_session.clone();
                     let uncertain_page_launches = uncertain_page_launches.clone();
                     Box::pin(async move {
@@ -356,7 +356,7 @@ fn list_page(
         if page_num < max_page {
             let next_page_launches = list.clone();
             let next_page_session = session.clone();
-            em.add_option(&StandardButton::Forward.to_button(), move || {
+            em.add_option(&StandardButton::Forward.to_button(), move |_| {
                 let next_page_launches = next_page_launches.clone();
                 let next_page_session = next_page_session.clone();
                 Box::pin(async move {
@@ -374,7 +374,7 @@ fn list_page(
         if page_num < max_page {
             let final_page_launches = list;
             let final_page_session = session.clone();
-            em.add_option(&StandardButton::Last.to_button(), move || {
+            em.add_option(&StandardButton::Last.to_button(), move |_| {
                 let final_page_launches = final_page_launches.clone();
                 let final_page_session = final_page_session.clone();
                 Box::pin(async move {
@@ -389,7 +389,7 @@ fn list_page(
             });
         }
 
-        em.add_option(&StandardButton::Exit.to_button(), move || {
+        em.add_option(&StandardButton::Exit.to_button(), move |_| {
             let session = session.clone();
             Box::pin(async move {
                 let lock = session

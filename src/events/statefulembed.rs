@@ -20,7 +20,7 @@ use serenity::{
         },
         interactions::{
             application_command::ApplicationCommandInteraction,
-            message_component::ButtonStyle,
+            message_component::{ButtonStyle, MessageComponentInteraction},
             Interaction,
             InteractionApplicationCommandCallbackDataFlags,
             InteractionResponseType,
@@ -34,9 +34,9 @@ use serenity::{
     Result,
 };
 
-use crate::models::caches::EmbedSessionsKey;
+use crate::{models::caches::EmbedSessionsKey, utils::error_log};
 
-type Handler = dyn Fn() -> BoxFuture<'static, ()> + Send + Sync;
+type Handler = dyn Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync;
 
 #[derive(Debug, Clone)]
 pub struct ButtonType {
@@ -90,7 +90,7 @@ impl StatefulEmbed {
         button: &ButtonType,
         handler: F,
     ) where
-        F: Fn() -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         let full_name = if let Some(e) = &button.emoji {
             format!("{} {}", e, name)
@@ -108,7 +108,7 @@ impl StatefulEmbed {
 
     pub fn add_option<F>(&mut self, button: &ButtonType, handler: F)
     where
-        F: Fn() -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         self.options
             .push(StatefulOption {
@@ -324,12 +324,17 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
         };
 
         if let Some(handler) = handler {
-            let _ = interaction
+            let r = interaction
                 .create_interaction_response(&ctx.http, |c| {
                     c.kind(InteractionResponseType::DeferredUpdateMessage)
                 })
                 .await;
-            handler().await;
+            
+            if let Err(e) = r {
+                error_log(&ctx.http, format!("Got error when responding to interaction: {:?}", e)).await;
+            } else {
+                handler(interaction.clone()).await;
+            }
         }
     }
 }

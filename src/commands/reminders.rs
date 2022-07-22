@@ -206,7 +206,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
                 style: ButtonStyle::Primary,
                 label: "Reminders".to_owned(),
             },
-            move || {
+            move |_| {
                 let reminder_ses = reminder_ses.clone();
                 Box::pin(async move { reminders_page(reminder_ses.clone(), id).await })
             },
@@ -218,7 +218,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             "Set which agencies to filter out of launch reminders, making you not get any reminders for these agencies again",
             false,
             &ButtonType{ emoji: Some('📝'.into()), style: ButtonStyle::Primary, label: "Filters".to_owned()},
-            move || {
+            move |_| {
                 let filters_ses = filters_ses.clone();
                 Box::pin(async move { filters_page(filters_ses.clone(), id).await })
             },
@@ -230,7 +230,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             "Set which agencies to filter launch reminders for, making you get only reminders for these agencies",
             false,
             &ButtonType{ emoji: Some('🔍'.into()), style: ButtonStyle::Primary, label: "Allow Filters".to_owned()},
-            move || {
+            move |_| {
                 let allow_filters_ses = allow_filters_ses.clone();
                 Box::pin(async move { allow_filters_page(allow_filters_ses.clone(), id).await })
             },
@@ -247,7 +247,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
                     style: ButtonStyle::Primary,
                     label: "Mentions".to_owned(),
                 },
-                move || {
+                move |_| {
                     let mention_ses = mention_ses.clone();
                     Box::pin(async move { mentions_page(mention_ses.clone(), id).await })
                 },
@@ -264,7 +264,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
                 style: ButtonStyle::Primary,
                 label: "Other".to_owned(),
             },
-            move || {
+            move |_| {
                 let other_ses = other_ses.clone();
                 Box::pin(async move { other_page(other_ses.clone(), id).await })
             },
@@ -276,7 +276,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             "Close this menu",
             false,
             &StandardButton::Exit.to_button(),
-            move || {
+            move |_| {
                 let close_ses = close_ses.clone();
                 Box::pin(async move {
                     let lock = close_ses
@@ -339,14 +339,14 @@ fn reminders_page(
                 style: ButtonStyle::Primary,
                 emoji: Some(ReactionType::from(PROGRADE.clone())),
             },
-            move || {
+            move |button_click| {
                 Box::pin({
                     let add_ses = add_ses.clone();
                     async move {
                         let inner_ses = add_ses.clone();
                         let wait_ses = add_ses.clone();
 
-                        let (user_id, http, interaction, data) = {
+                        let (user_id, http, data) = {
                             let s = inner_ses
                                 .read()
                                 .await;
@@ -355,10 +355,6 @@ fn reminders_page(
                                     .clone(),
                                 s.http
                                     .clone(),
-                                Interaction::ApplicationCommand(
-                                    s.interaction
-                                        .clone(),
-                                ),
                                 s.data
                                     .clone(),
                             )
@@ -387,7 +383,7 @@ fn reminders_page(
                             )])
                         .build()
                         .unwrap()
-                        .listen(http, &interaction, data)
+                        .listen(http, &Interaction::MessageComponent(button_click), data)
                         .await;
                     }
                 })
@@ -401,13 +397,13 @@ fn reminders_page(
                 style: ButtonStyle::Primary,
                 emoji: Some(ReactionType::from(RETROGRADE.clone())),
             },
-            move || {
+            move |button_click| {
                 let remove_ses = remove_ses.clone();
                 Box::pin(async move {
                     let inner_ses = remove_ses.clone();
                     let wait_ses = remove_ses.clone();
 
-                    let (user_id, http, interaction, data) = {
+                    let (user_id, http, data) = {
                         let s = inner_ses
                             .read()
                             .await;
@@ -416,10 +412,6 @@ fn reminders_page(
                                 .clone(),
                             s.http
                                 .clone(),
-                            Interaction::ApplicationCommand(
-                                s.interaction
-                                    .clone(),
-                            ),
                             s.data
                                 .clone(),
                         )
@@ -450,7 +442,7 @@ fn reminders_page(
                         )])
                     .build()
                     .unwrap()
-                    .listen(http, &interaction, data)
+                    .listen(http, &Interaction::MessageComponent(button_click), data)
                     .await;
                 })
             },
@@ -462,7 +454,7 @@ fn reminders_page(
                 style: ButtonStyle::Danger,
                 emoji: Some(ReactionType::from(BACK_EMOJI)),
             },
-            move || {
+            move |_| {
                 let ses = ses.clone();
                 Box::pin(async move { main_menu(ses.clone(), id).await })
             },
@@ -545,13 +537,13 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                 style: ButtonStyle::Primary,
                 emoji: Some(ReactionType::from(PROGRADE.clone())),
             },
-            move || {
+            move |button_click| {
                 let add_ses = add_ses.clone();
                 Box::pin(async move {
                     let inner_ses = add_ses.clone();
                     let wait_ses = add_ses.clone();
 
-                    let (user_id, http, interaction, data) = {
+                    let (user_id, http, data) = {
                         let s = inner_ses
                             .read()
                             .await;
@@ -560,10 +552,6 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                                 .clone(),
                             s.http
                                 .clone(),
-                            Interaction::ApplicationCommand(
-                                s.interaction
-                                    .clone(),
-                            ),
                             s.data
                                 .clone(),
                         )
@@ -593,7 +581,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     )
                     .build()
                     .unwrap()
-                    .listen(http, &interaction, data)
+                    .listen(http, &Interaction::MessageComponent(button_click), data)
                     .await;
                 })
             },
@@ -606,13 +594,13 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                 style: ButtonStyle::Primary,
                 emoji: Some(ReactionType::from(RETROGRADE.clone())),
             },
-            move || {
+            move |button_click| {
                 let remove_ses = remove_ses.clone();
                 Box::pin(async move {
                     let inner_ses = remove_ses.clone();
                     let wait_ses = remove_ses.clone();
 
-                    let (user_id, http, interaction, data) = {
+                    let (user_id, http, data) = {
                         let s = inner_ses
                             .read()
                             .await;
@@ -621,10 +609,6 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                                 .clone(),
                             s.http
                                 .clone(),
-                            Interaction::ApplicationCommand(
-                                s.interaction
-                                    .clone(),
-                            ),
                             s.data
                                 .clone(),
                         )
@@ -654,7 +638,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     )
                     .build()
                     .unwrap()
-                    .listen(http, &interaction, data)
+                    .listen(http, &Interaction::MessageComponent(button_click), data)
                     .await;
                 })
             },
@@ -666,7 +650,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                 style: ButtonStyle::Danger,
                 emoji: Some(ReactionType::from(BACK_EMOJI)),
             },
-            move || {
+            move |_| {
                 let ses = ses.clone();
                 Box::pin(async move { main_menu(ses.clone(), id).await })
             },
@@ -754,13 +738,13 @@ fn allow_filters_page(
                 label: "Add allow filter".to_owned(),
                 emoji: Some(ReactionType::from(PROGRADE.clone())),
             },
-            move || {
+            move |button_click| {
                 let add_ses = add_ses.clone();
                 Box::pin(async move {
                     let inner_ses = add_ses.clone();
                     let wait_ses = add_ses.clone();
 
-                    let (user_id, http, interaction, data) = {
+                    let (user_id, http, data) = {
                         let s = inner_ses
                             .read()
                             .await;
@@ -769,10 +753,6 @@ fn allow_filters_page(
                                 .clone(),
                             s.http
                                 .clone(),
-                            Interaction::ApplicationCommand(
-                                s.interaction
-                                    .clone(),
-                            ),
                             s.data
                                 .clone(),
                         )
@@ -802,7 +782,7 @@ fn allow_filters_page(
                     )
                     .build()
                     .unwrap()
-                    .listen(http, &interaction, data)
+                    .listen(http, &Interaction::MessageComponent(button_click), data)
                     .await;
                 })
             },
@@ -815,13 +795,13 @@ fn allow_filters_page(
                 style: ButtonStyle::Primary,
                 emoji: Some(ReactionType::from(RETROGRADE.clone()))
             },
-            move || {
+            move |button_click| {
                 let remove_ses = remove_ses.clone();
                 Box::pin(async move {
                     let inner_ses = remove_ses.clone();
                     let wait_ses = remove_ses.clone();
 
-                    let (user_id, http, interaction, data) = {
+                    let (user_id, http, data) = {
                         let s = inner_ses
                                 .read()
                                 .await;
@@ -830,10 +810,6 @@ fn allow_filters_page(
                                 .clone(),
                             s.http
                                 .clone(),
-                            Interaction::ApplicationCommand(
-                                s.interaction
-                                    .clone(),
-                            ),
                             s.data
                                 .clone(),
                         )
@@ -856,7 +832,7 @@ fn allow_filters_page(
                         .set_options(LAUNCH_AGENCIES.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect())
                         .build()
                         .unwrap()
-                        .listen(http, &interaction, data).await;
+                        .listen(http, &Interaction::MessageComponent(button_click), data).await;
                 })
             },
         );
@@ -867,7 +843,7 @@ fn allow_filters_page(
                 style: ButtonStyle::Danger,
                 emoji: Some(ReactionType::from(BACK_EMOJI)),
             },
-            move || {
+            move |_| {
                 let ses = ses.clone();
                 Box::pin(async move { main_menu(ses.clone(), id).await })
             },
@@ -942,10 +918,10 @@ fn mentions_page(
                 style: ButtonStyle::Primary,
                 emoji: Some(ReactionType::from(PROGRADE.clone())),
             },
-            move || {
+            move |button_click| {
                 let add_ses = add_ses.clone();
                 Box::pin(async move {
-                    let (user_id, http, interaction, data) = {
+                    let (user_id, http, data) = {
                         let s = add_ses
                             .read()
                             .await;
@@ -954,16 +930,12 @@ fn mentions_page(
                                 .clone(),
                             s.http
                                 .clone(),
-                            Interaction::ApplicationCommand(
-                                s.interaction
-                                    .clone(),
-                            ),
                             s.data
                                 .clone(),
                         )
                     };
 
-                    role_select_menu(http, user_id, &interaction, data, move |role_id| {
+                    role_select_menu(http, user_id, &Interaction::MessageComponent(button_click), data, move |role_id| {
                         let wait_ses = add_ses.clone();
                         Box::pin(async move {
                             add_mention(&wait_ses.clone(), id, role_id.into()).await;
@@ -982,10 +954,10 @@ fn mentions_page(
                 style: ButtonStyle::Primary,
                 emoji: Some(ReactionType::from(RETROGRADE.clone())),
             },
-            move || {
+            move |button_click| {
                 let remove_ses = remove_ses.clone();
                 Box::pin(async move {
-                    let (user_id, http, interaction, data) = {
+                    let (user_id, http, data) = {
                         let s = remove_ses
                             .read()
                             .await;
@@ -994,16 +966,12 @@ fn mentions_page(
                                 .clone(),
                             s.http
                                 .clone(),
-                            Interaction::ApplicationCommand(
-                                s.interaction
-                                    .clone(),
-                            ),
                             s.data
                                 .clone(),
                         )
                     };
 
-                    role_select_menu(http, user_id, &interaction, data, move |role_id| {
+                    role_select_menu(http, user_id, &Interaction::MessageComponent(button_click), data, move |role_id| {
                         let wait_ses = remove_ses.clone();
                         Box::pin(async move {
                             remove_mention(&wait_ses.clone(), id, role_id.into()).await;
@@ -1021,7 +989,7 @@ fn mentions_page(
                 style: ButtonStyle::Danger,
                 emoji: Some(ReactionType::from(BACK_EMOJI)),
             },
-            move || {
+            move |_| {
                 let ses = ses.clone();
                 Box::pin(async move { main_menu(ses.clone(), id).await })
             },
@@ -1110,7 +1078,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                 style: ButtonStyle::Primary,
                 label: "Toggle Scrubs".to_owned(),
             },
-            move || {
+            move |_| {
                 let scrub_ses = scrub_ses.clone();
                 Box::pin(async move {
                     let scrub_ses = scrub_ses.clone();
@@ -1131,7 +1099,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                 style: ButtonStyle::Primary,
                 label: "Toggle Outcomes".to_owned(),
             },
-            move || {
+            move |_| {
                 let outcome_ses = outcome_ses.clone();
                 Box::pin(async move {
                     let outcome_ses = outcome_ses.clone();
@@ -1155,7 +1123,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                 style: ButtonStyle::Primary,
                 label: "Toggle Mentions".to_owned(),
             },
-            move || {
+            move |_| {
                 let mentions_ses = mentions_ses.clone();
                 Box::pin(async move {
                     let mentions_ses = mentions_ses.clone();
@@ -1176,10 +1144,10 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                     style: ButtonStyle::Primary,
                     label: "Set Notification Channel".to_owned(),
                 },
-                move || {
+                move |button_click| {
                     let chan_ses = chan_ses.clone();
                     Box::pin(async move {
-                    let (user_id, http, interaction, data) = {
+                    let (user_id, http, data) = {
                         let s = chan_ses
                                 .read()
                                 .await;
@@ -1188,16 +1156,12 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                                 .clone(),
                             s.http
                                 .clone(),
-                            Interaction::ApplicationCommand(
-                                s.interaction
-                                    .clone(),
-                            ),
                             s.data
                                 .clone(),
                         )
                     };
 
-                    channel_select_menu(http, user_id, &interaction, data, move |channel_id| {
+                    channel_select_menu(http, user_id, &Interaction::MessageComponent(button_click), data, move |channel_id| {
                         let wait_ses = chan_ses.clone();
                         Box::pin(async move {
                                     set_notification_channel(&wait_ses.clone(), id, channel_id.into()).await;
@@ -1215,7 +1179,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                 style: ButtonStyle::Danger,
                 emoji: Some(ReactionType::from(BACK_EMOJI)),
             },
-            move || {
+            move |_| {
                 let ses = ses.clone();
                 Box::pin(async move { main_menu(ses.clone(), id).await })
             },

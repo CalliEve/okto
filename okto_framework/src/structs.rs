@@ -12,6 +12,8 @@ use serenity::{
     },
 };
 
+// FIXME: remove permissions as they are now
+
 #[derive(Clone)]
 pub struct Command {
     pub options: &'static CommandDetails,

@@ -2,28 +2,17 @@ use std::sync::Arc;
 
 use futures::{
     future::BoxFuture,
-    stream::{
-        self,
-        StreamExt,
-    },
+    stream::{self, StreamExt},
 };
 use serenity::{
     builder::CreateInteractionResponse,
     client::Context,
     http::Http,
     model::{
-        id::{
-            ChannelId,
-            UserId,
-        },
-        interactions::{
-            message_component::ComponentType,
-            Interaction,
-            InteractionType,
-        },
+        id::{ChannelId, UserId},
+        interactions::{message_component::ComponentType, Interaction, InteractionType},
     },
-    Error,
-    Result,
+    Error, Result,
 };
 
 use crate::models::caches::InteractionKey;
@@ -41,6 +30,7 @@ pub struct InteractionHandler {
     component_type: Option<ComponentType>,
     handler: Handler,
     filter: Option<Filter>,
+    update: bool,
 }
 
 impl InteractionHandler {
@@ -163,16 +153,19 @@ impl InteractionHandlerBuilder {
                 interaction_type: None,
                 component_type: None,
                 filter: None,
+                update: false,
             },
         }
     }
 
+    #[allow(dead_code)]
     pub fn set_channel(mut self, channel: ChannelId) -> Self {
         self.inner
             .channel = Some(channel);
         self
     }
 
+    #[allow(dead_code)]
     pub fn set_user(mut self, user: UserId) -> Self {
         self.inner
             .user = Some(user);
@@ -207,9 +200,16 @@ impl InteractionHandlerBuilder {
         self
     }
 
+    #[allow(dead_code)]
     pub fn set_filter(mut self, filter: Filter) -> Self {
         self.inner
             .filter = Some(filter);
+        self
+    }
+
+    pub fn update_not_new(mut self) -> Self {
+        self.inner
+            .update = true;
         self
     }
 
@@ -261,31 +261,61 @@ pub async fn respond_to_interaction(
     http: impl AsRef<Http>,
     interaction: &Interaction,
     resp: CreateInteractionResponse<'_>,
+    update: bool,
 ) {
-    match interaction {
-        Interaction::MessageComponent(comp) => {
-            comp.create_interaction_response(http, |i| {
-                *i = resp;
-                i
-            })
-            .await
-        },
-        Interaction::ModalSubmit(modal) => {
-            modal
-                .create_interaction_response(http, |i| {
+    if update {
+        match interaction {
+            Interaction::MessageComponent(comp) => {
+                comp.edit_original_interaction_response(http, |i| {
                     *i = resp;
                     i
                 })
                 .await
-        },
-        Interaction::ApplicationCommand(cmd) => {
-            cmd.create_interaction_response(http, |i| {
-                *i = resp;
-                i
-            })
-            .await
-        },
-        _ => panic!("Unsupported interaction for sending a response to"),
+            },
+            Interaction::ModalSubmit(modal) => {
+                modal
+                    .edit_original_interaction_response(http, |i| {
+                        *i = resp;
+                        i
+                    })
+                    .await
+            },
+            Interaction::ApplicationCommand(cmd) => {
+                cmd.edit_original_interaction_response(http, |i| {
+                    *i = resp;
+                    i
+                })
+                .await
+            },
+            _ => panic!("Unsupported interaction for sending a response to"),
+        }
+    } else {
+        match interaction {
+            Interaction::MessageComponent(comp) => {
+                comp.create_interaction_response(http, |i| {
+                    *i = resp;
+                    i
+                })
+                .await
+            },
+            Interaction::ModalSubmit(modal) => {
+                modal
+                    .create_interaction_response(http, |i| {
+                        *i = resp;
+                        i
+                    })
+                    .await
+            },
+            Interaction::ApplicationCommand(cmd) => {
+                cmd.create_interaction_response(http, |i| {
+                    *i = resp;
+                    i
+                })
+                .await
+            },
+            _ => panic!("Unsupported interaction for sending a response to"),
+        }
+        .map(|| ())
     }
     .expect("Interaction response failed");
 }

@@ -248,7 +248,7 @@ fn help_menu(
                         style: ButtonStyle::Primary,
                         emoji: Some(NUMBER_EMOJIS[i].clone()),
                     },
-                    move || {
+                    move |_| {
                         let details_ses = details_ses.clone();
                         let details_ctx = details_ctx.clone();
                         let details_group = group.clone();
@@ -275,7 +275,7 @@ fn help_menu(
                 style: ButtonStyle::Danger,
                 emoji: Some(ReactionType::from(EXIT_EMOJI)),
             },
-            move || {
+            move |_| {
                 let close_ses = ses.clone();
                 Box::pin(async move {
                     let lock = close_ses
@@ -366,7 +366,7 @@ fn command_details(
                 style: ButtonStyle::Danger,
                 emoji: Some(BACK_EMOJI.into()),
             },
-            move || {
+            move |_| {
                 let back_ses = ses.clone();
                 let back_ctx = ctx.clone();
                 let back_interaction = interaction.clone();
