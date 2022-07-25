@@ -1,15 +1,11 @@
-FROM rust:slim-bullseye as builder
+FROM rust:slim-bullseye
 
-RUN apt update && apt install pkg-config libssl-dev -y
+RUN apt update && apt install pkg-config libssl-dev ca-certificates  -y
 
 WORKDIR /okto
 COPY . .
 
-RUN cargo install --path .
-
-FROM debian:buster-slim
-
-RUN apt-get update && apt-get install -y ca-certificates libssl-dev && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /usr/local/cargo/bin/okto /usr/local/bin/okto
+RUN cargo install --path . && \
+  cp /usr/local/cargo/bin/okto /usr/local/bin/okto
 
 CMD ["okto"]
