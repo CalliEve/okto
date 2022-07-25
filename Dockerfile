@@ -1,4 +1,6 @@
-from rust:latest as builder
+FROM rust:slim-bullseye as builder
+
+RUN apt update && apt install pkg-config libssl-dev -y
 
 WORKDIR /okto
 COPY . .
