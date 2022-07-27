@@ -1,13 +1,12 @@
 #![recursion_limit = "128"]
 #![warn(clippy::pedantic)]
-#![allow(clippy::unreadable_literal)]
-#![allow(clippy::module_name_repetitions)]
-#![allow(clippy::let_underscore_drop)] // looks better imo
+#![allow(clippy::unreadable_literal)] // because of discord IDs being long numbers 
+#![allow(clippy::module_name_repetitions)] // makes some struct names clearer
+#![allow(clippy::let_underscore_drop)] // looks better when not caring if it errored imo
 #![allow(clippy::semicolon_if_nothing_returned)] // looks better imo
 #![allow(clippy::cast_possible_wrap)] // for mongo bson some u64 ids need to be cast to i64
 #![allow(clippy::wildcard_imports)] // the commands/events structure of serenity requires these
 #![allow(clippy::used_underscore_binding)] // the commands/events structure of serenity requires these
-#![allow(clippy::eval_order_dependence)] // messes up due to async, but should look into more
 #![allow(clippy::too_many_lines)] // TODO: refactor some functions to be smaller
 #![allow(clippy::non_ascii_literal)] // I want to use emojis uwu
 

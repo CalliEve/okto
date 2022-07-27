@@ -334,7 +334,7 @@ async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -
         })
         .and_then(|v| {
             v.as_str()
-                .map(|s| s.to_owned())
+                .map(ToOwned::to_owned)
         });
     let star_name = interaction
         .data
@@ -347,7 +347,7 @@ async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -
         })
         .and_then(|v| {
             v.as_str()
-                .map(|s| s.to_owned())
+                .map(ToOwned::to_owned)
         });
 
     match ctx

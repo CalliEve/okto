@@ -6,10 +6,7 @@ use std::{
 use futures::future::BoxFuture;
 use itertools::Itertools;
 use serenity::http::Http;
-use serenity::{
-    builder::CreateInteractionResponse,
-    model::interactions::message_component::ComponentType,
-};
+use serenity::model::interactions::message_component::ComponentType;
 use serenity::{
     model::interactions::Interaction,
     prelude::{
@@ -24,6 +21,7 @@ use super::interaction_handler::{
     InteractionHandler,
 };
 use crate::models::caches::InteractionKey;
+use crate::utils::interaction_builder::InteractionResponseBuilder;
 
 type Handler = Arc<Box<dyn Fn((String, String)) -> BoxFuture<'static, ()> + Send + Sync>>;
 
@@ -54,7 +52,6 @@ impl SelectMenu {
             .clone();
         let mut interaction_handler = InteractionHandler::builder(move |interaction| {
             let data = interaction
-                .clone()
                 .message_component()
                 .expect("Didn't get a message component in select menu");
             let key = data
@@ -92,16 +89,13 @@ impl SelectMenu {
     }
 
     async fn send(&self, http: impl AsRef<Http>, interaction: &Interaction) {
-        let mut resp = CreateInteractionResponse::default();
-        resp.interaction_response_data(|r| {
-            r.ephemeral(self.ephemeral)
-                .content(
-                    self.description
-                        .clone()
-                        .unwrap_or_else(|| "Select an option".to_owned()),
-                );
-
-            r.components(|comps| {
+        let mut resp = InteractionResponseBuilder::default()
+            .content(
+                self.description
+                    .clone()
+                    .unwrap_or_else(|| "Select an option".to_owned()),
+            )
+            .components(|comps| {
                 for chunk in &self
                     .options
                     .iter()
@@ -125,17 +119,18 @@ impl SelectMenu {
                 comps
             });
 
-            if let Some(custom_id) = self
-                .custom_id
-                .clone()
-            {
-                r.custom_id(custom_id);
-            }
+        if self.ephemeral {
+            resp = resp.make_ephemeral();
+        }
 
-            r
-        });
+        if let Some(custom_id) = self
+            .custom_id
+            .clone()
+        {
+            resp = resp.custom_id(custom_id);
+        }
 
-        respond_to_interaction(http, interaction, resp).await;
+        respond_to_interaction(http, interaction, resp, true).await;
     }
 
     pub fn builder<F>(handler: F) -> SelectMenuBuilder
@@ -171,8 +166,7 @@ impl SelectMenuBuilder {
         if self
             .inner
             .options
-            .len()
-            < 1
+            .is_empty()
             || self
                 .inner
                 .options
@@ -187,13 +181,13 @@ impl SelectMenuBuilder {
         Ok(self.inner)
     }
 
-    pub fn set_description<T: ToString>(mut self, description: T) -> Self {
+    pub fn set_description<T: ToString + ?Sized>(mut self, description: &T) -> Self {
         self.inner
             .description = Some(description.to_string());
         self
     }
 
-    pub fn set_custom_id<T: ToString>(mut self, custom_id: T) -> Self {
+    pub fn set_custom_id<T: ToString + ?Sized>(mut self, custom_id: &T) -> Self {
         self.inner
             .custom_id = Some(custom_id.to_string());
         self

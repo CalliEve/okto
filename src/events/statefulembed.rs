@@ -20,7 +20,10 @@ use serenity::{
         },
         interactions::{
             application_command::ApplicationCommandInteraction,
-            message_component::{ButtonStyle, MessageComponentInteraction},
+            message_component::{
+                ButtonStyle,
+                MessageComponentInteraction,
+            },
             Interaction,
             InteractionApplicationCommandCallbackDataFlags,
             InteractionResponseType,
@@ -34,7 +37,10 @@ use serenity::{
     Result,
 };
 
-use crate::{models::caches::EmbedSessionsKey, utils::error_log};
+use crate::{
+    models::caches::EmbedSessionsKey,
+    utils::error_log,
+};
 
 type Handler = dyn Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync;
 
@@ -89,7 +95,8 @@ impl StatefulEmbed {
         inline: bool,
         button: &ButtonType,
         handler: F,
-    ) where
+    ) -> &mut Self
+    where
         F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         let full_name = if let Some(e) = &button.emoji {
@@ -103,10 +110,12 @@ impl StatefulEmbed {
             .push(StatefulOption {
                 button: button.clone(),
                 handler: Arc::new(Box::new(handler)),
-            })
+            });
+
+        self
     }
 
-    pub fn add_option<F>(&mut self, button: &ButtonType, handler: F)
+    pub fn add_option<F>(&mut self, button: &ButtonType, handler: F) -> &mut Self
     where
         F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
@@ -114,7 +123,9 @@ impl StatefulEmbed {
             .push(StatefulOption {
                 button: button.clone(),
                 handler: Arc::new(Box::new(handler)),
-            })
+            });
+
+        self
     }
 
     fn get_components(&self) -> CreateComponents {
@@ -150,7 +161,7 @@ impl StatefulEmbed {
                             .button
                             .emoji
                         {
-                            b.emoji(e.to_owned());
+                            b.emoji(e.clone());
                         }
 
                         b
@@ -323,15 +334,20 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
             None
         };
 
+        // TODO: pass update boolean to here
         if let Some(handler) = handler {
             let r = interaction
                 .create_interaction_response(&ctx.http, |c| {
                     c.kind(InteractionResponseType::DeferredUpdateMessage)
                 })
                 .await;
-            
+
             if let Err(e) = r {
-                error_log(&ctx.http, format!("Got error when responding to interaction: {:?}", e)).await;
+                error_log(
+                    &ctx.http,
+                    format!("Got error when responding to interaction: {:?}", e),
+                )
+                .await;
             } else {
                 handler(interaction.clone()).await;
             }

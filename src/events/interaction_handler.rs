@@ -2,20 +2,33 @@ use std::sync::Arc;
 
 use futures::{
     future::BoxFuture,
-    stream::{self, StreamExt},
+    stream::{
+        self,
+        StreamExt,
+    },
 };
 use serenity::{
-    builder::CreateInteractionResponse,
     client::Context,
     http::Http,
     model::{
-        id::{ChannelId, UserId},
-        interactions::{message_component::ComponentType, Interaction, InteractionType},
+        id::{
+            ChannelId,
+            UserId,
+        },
+        interactions::{
+            message_component::ComponentType,
+            Interaction,
+            InteractionType,
+        },
     },
-    Error, Result,
+    Error,
+    Result,
 };
 
-use crate::models::caches::InteractionKey;
+use crate::{
+    models::caches::InteractionKey,
+    utils::interaction_builder::InteractionResponseBuilder,
+};
 
 type Handler = Arc<Box<dyn Fn(Interaction) -> BoxFuture<'static, ()> + Send + Sync>>;
 
@@ -30,7 +43,6 @@ pub struct InteractionHandler {
     component_type: Option<ComponentType>,
     handler: Handler,
     filter: Option<Filter>,
-    update: bool,
 }
 
 impl InteractionHandler {
@@ -153,7 +165,6 @@ impl InteractionHandlerBuilder {
                 interaction_type: None,
                 component_type: None,
                 filter: None,
-                update: false,
             },
         }
     }
@@ -178,6 +189,7 @@ impl InteractionHandlerBuilder {
         self
     }
 
+    #[allow(dead_code)]
     pub fn set_interaction_type(mut self, interaction_type: InteractionType) -> Self {
         self.inner
             .interaction_type = Some(interaction_type);
@@ -204,12 +216,6 @@ impl InteractionHandlerBuilder {
     pub fn set_filter(mut self, filter: Filter) -> Self {
         self.inner
             .filter = Some(filter);
-        self
-    }
-
-    pub fn update_not_new(mut self) -> Self {
-        self.inner
-            .update = true;
         self
     }
 
@@ -260,14 +266,14 @@ pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
 pub async fn respond_to_interaction(
     http: impl AsRef<Http>,
     interaction: &Interaction,
-    resp: CreateInteractionResponse<'_>,
+    resp: InteractionResponseBuilder,
     update: bool,
 ) {
     if update {
         match interaction {
             Interaction::MessageComponent(comp) => {
                 comp.edit_original_interaction_response(http, |i| {
-                    *i = resp;
+                    *i = resp.into();
                     i
                 })
                 .await
@@ -275,25 +281,26 @@ pub async fn respond_to_interaction(
             Interaction::ModalSubmit(modal) => {
                 modal
                     .edit_original_interaction_response(http, |i| {
-                        *i = resp;
+                        *i = resp.into();
                         i
                     })
                     .await
             },
             Interaction::ApplicationCommand(cmd) => {
                 cmd.edit_original_interaction_response(http, |i| {
-                    *i = resp;
+                    *i = resp.into();
                     i
                 })
                 .await
             },
             _ => panic!("Unsupported interaction for sending a response to"),
         }
+        .map(|_| ())
     } else {
         match interaction {
             Interaction::MessageComponent(comp) => {
                 comp.create_interaction_response(http, |i| {
-                    *i = resp;
+                    *i = resp.into();
                     i
                 })
                 .await
@@ -301,21 +308,21 @@ pub async fn respond_to_interaction(
             Interaction::ModalSubmit(modal) => {
                 modal
                     .create_interaction_response(http, |i| {
-                        *i = resp;
+                        *i = resp.into();
                         i
                     })
                     .await
             },
             Interaction::ApplicationCommand(cmd) => {
                 cmd.create_interaction_response(http, |i| {
-                    *i = resp;
+                    *i = resp.into();
                     i
                 })
                 .await
             },
             _ => panic!("Unsupported interaction for sending a response to"),
         }
-        .map(|| ())
+        .map(|_| ())
     }
     .expect("Interaction response failed");
 }

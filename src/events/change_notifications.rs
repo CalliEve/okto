@@ -95,7 +95,7 @@ fn get_mentions(settings: &GuildSettings) -> Option<String> {
             acc + &format!(" <@&{}>", mention.as_u64())
         });
 
-    (settings.mention_others && !mentions.is_empty()).then(|| mentions)
+    (settings.mention_others && !mentions.is_empty()).then_some(mentions)
 }
 
 fn passes_filters<T>(settings: &T, l: &LaunchData) -> bool

@@ -56,7 +56,7 @@ pub fn filter_launches(
         })
         .and_then(|v| {
             v.as_str()
-                .map(|s| s.to_owned())
+                .map(ToOwned::to_owned)
         });
 
     if let Some(lsp) = agency_filter {
@@ -90,7 +90,7 @@ pub fn filter_launches(
         })
         .and_then(|v| {
             v.as_str()
-                .map(|s| s.to_owned())
+                .map(ToOwned::to_owned)
         });
 
     if let Some(rocket) = rocket_filter {

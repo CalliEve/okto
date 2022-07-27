@@ -43,7 +43,7 @@ pub async fn role_select_menu<F>(
         callback(id)
     })
     .set_description("Select a role")
-    .set_custom_id(format!("{}-role-select", user_id))
+    .set_custom_id(&format!("{}-role-select", user_id))
     .make_ephemeral()
     .set_options(
         roles
@@ -52,8 +52,7 @@ pub async fn role_select_menu<F>(
             .map(|(k, v)| {
                 (
                     k.0.to_string(),
-                    v.name
-                        .to_string(),
+                    v.name,
                 )
             })
             .collect(),
@@ -87,7 +86,7 @@ pub async fn channel_select_menu<F>(
         callback(id)
     })
     .set_description("Select a channel")
-    .set_custom_id(format!("{}-channel-select", user_id))
+    .set_custom_id(&format!("{}-channel-select", user_id))
     .make_ephemeral()
     .set_options(
         channels
@@ -96,8 +95,7 @@ pub async fn channel_select_menu<F>(
             .map(|(k, v)| {
                 (
                     k.0.to_string(),
-                    v.name
-                        .to_string(),
+                    v.name,
                 )
             })
             .collect(),

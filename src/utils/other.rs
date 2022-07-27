@@ -2,8 +2,6 @@ use chrono::{
     Duration,
     Utc,
 };
-use lazy_static::lazy_static;
-use regex::Regex;
 use serenity::{
     builder::{
         CreateEmbed,
@@ -30,13 +28,6 @@ use super::constants::{
     RETROGRADE,
 };
 use crate::events::statefulembed::ButtonType;
-
-lazy_static! {
-    static ref WEEK_REGEX: Regex = Regex::new(r"(^|\b)([0-9]+)[wW]").unwrap();
-    static ref DAY_REGEX: Regex = Regex::new(r"(^|\b)([0-9]+)[dD]").unwrap();
-    static ref HOUR_REGEX: Regex = Regex::new(r"(^|\b)([0-9]+)[hH]").unwrap();
-    static ref MINUTE_REGEX: Regex = Regex::new(r"(^|\b)([0-9]+)[mM]").unwrap();
-}
 
 pub fn cutoff_on_last_dot(text: &str, length: usize) -> &str {
     let mut last: usize = 0;
@@ -137,56 +128,6 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
     res
 }
 
-pub fn parse_duration(text: &str) -> Duration {
-    let mut dur = Duration::zero();
-
-    if let Some(num_raw) = WEEK_REGEX.captures(text) {
-        if let Ok(num) = num_raw
-            .get(2)
-            .unwrap()
-            .as_str()
-            .parse()
-        {
-            dur = dur + Duration::weeks(num)
-        }
-    }
-
-    if let Some(num_raw) = DAY_REGEX.captures(text) {
-        if let Ok(num) = num_raw
-            .get(2)
-            .unwrap()
-            .as_str()
-            .parse()
-        {
-            dur = dur + Duration::days(num)
-        }
-    }
-
-    if let Some(num_raw) = HOUR_REGEX.captures(text) {
-        if let Ok(num) = num_raw
-            .get(2)
-            .unwrap()
-            .as_str()
-            .parse()
-        {
-            dur = dur + Duration::hours(num)
-        }
-    }
-
-    if let Some(num_raw) = MINUTE_REGEX.captures(text) {
-        if let Ok(num) = num_raw
-            .get(2)
-            .unwrap()
-            .as_str()
-            .parse()
-        {
-            dur = dur + Duration::minutes(num)
-        }
-    }
-
-    dur
-}
-
 #[allow(dead_code)]
 const DEBUG_CHANNEL: ChannelId = ChannelId(771669392399532063);
 const ERROR_CHANNEL: ChannelId = ChannelId(447876053109702668);
@@ -224,8 +165,8 @@ pub enum StandardButton {
 }
 
 impl StandardButton {
-    pub fn to_button(&self) -> ButtonType {
-        match *self {
+    pub fn to_button(self) -> ButtonType {
+        match self {
             Self::Last => ButtonType {
                 label: "Last page".to_owned(),
                 style: ButtonStyle::Secondary,
@@ -254,12 +195,12 @@ impl StandardButton {
             Self::Prograde => ButtonType {
                 label: "Next".to_owned(),
                 style: ButtonStyle::Secondary,
-                emoji: Some(ReactionType::from(PROGRADE.clone())),
+                emoji: Some(PROGRADE.clone()),
             },
             Self::Retrograde => ButtonType {
                 label: "Back".to_owned(),
                 style: ButtonStyle::Secondary,
-                emoji: Some(ReactionType::from(RETROGRADE.clone())),
+                emoji: Some(RETROGRADE.clone()),
             },
         }
     }

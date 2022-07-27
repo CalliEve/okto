@@ -67,7 +67,7 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         })
         .and_then(|v| {
             v.as_str()
-                .map(|s| s.to_owned())
+                .map(ToOwned::to_owned)
         })
         .unwrap_or_else(|| "natural".to_owned());
 

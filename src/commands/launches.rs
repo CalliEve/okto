@@ -508,7 +508,7 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
         })
         .and_then(|v| {
             v.as_i64()
-                .map(|i| i as i32)
+                .map(|i| { let o: i32 = i.try_into().expect("Got a launch id that was too big to be possible"); o})
         })
         .ok_or("No launch id provided while it was a required argument")?;
 

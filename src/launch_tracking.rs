@@ -139,7 +139,7 @@ async fn get_new_launches() -> Result<LaunchContainer> {
     params.insert("limit", "100");
     params.insert("mode", "detailed");
 
-    Ok(DEFAULT_CLIENT
+    DEFAULT_CLIENT
         .get("https://ll.thespacedevs.com/2.0.0/launch/upcoming/")
         .header(AUTHORIZATION, LL_KEY.as_str())
         .query(&params)
@@ -147,5 +147,5 @@ async fn get_new_launches() -> Result<LaunchContainer> {
         .await?
         .error_for_status()?
         .json()
-        .await?)
+        .await
 }

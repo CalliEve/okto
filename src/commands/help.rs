@@ -86,7 +86,7 @@ async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
         })
         .and_then(|v| {
             v.as_str()
-                .map(|s| s.to_owned())
+                .map(ToOwned::to_owned)
         })
     {
         let command = if let Some(cmd) = ctx
@@ -173,7 +173,7 @@ fn help_menu(
             .await
             .get::<CommandListKey>()
             .unwrap()
-            .into_iter()
+            .iter()
             .sorted_by_key(|c| {
                 c.info
                     .file
@@ -189,7 +189,7 @@ fn help_menu(
                     acc.push((
                         k,
                         g.into_iter()
-                            .map(|c| *c)
+                            .copied()
                             .collect(),
                     ));
                     acc
@@ -423,10 +423,10 @@ async fn allowed(
         return Ok(false);
     }
 
+    // FIXME: what to do about perms?
     let req_perms = cmds
         .iter()
-        .map(|c| c.perms)
-        .flatten()
+        .flat_map(|c| c.perms)
         .copied()
         .collect::<Permissions>();
 
@@ -456,7 +456,7 @@ async fn allowed(
                 return Ok(false);
             };
 
-            if let Ok(perms) = guild.user_permissions_in(&channel, member) {
+            if let Ok(perms) = guild.user_permissions_in(channel, member) {
                 if !perms.contains(req_perms) {
                     return Ok(false);
                 }

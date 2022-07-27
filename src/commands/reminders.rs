@@ -61,16 +61,13 @@ use serenity::{
 
 use crate::{
     events::{
-        modal::{
-            Modal,
-            Question,
-        },
         select_menu::SelectMenu,
         statefulembed::{
             ButtonType,
             EmbedSession,
             StatefulEmbed,
         },
+        time_embed::TimeEmbed,
     },
     models::{
         caches::DatabaseKey,
@@ -84,7 +81,6 @@ use crate::{
             role_select_menu,
         },
         format_duration,
-        parse_duration,
         reminders::{
             get_guild_settings,
             get_user_settings,
@@ -337,53 +333,25 @@ fn reminders_page(
             &ButtonType {
                 label: "Add reminder".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(PROGRADE.clone())),
+                emoji: Some(PROGRADE.clone()),
             },
-            move |button_click| {
+            move |_| {
                 Box::pin({
                     let add_ses = add_ses.clone();
                     async move {
                         let inner_ses = add_ses.clone();
                         let wait_ses = add_ses.clone();
 
-                        let (user_id, http, data) = {
-                            let s = inner_ses
-                                .read()
-                                .await;
-                            (
-                                s.author
-                                    .clone(),
-                                s.http
-                                    .clone(),
-                                s.data
-                                    .clone(),
-                            )
-                        };
-
-                        Modal::builder(move |choices| {
+                        TimeEmbed::new(inner_ses, move |dur| {
                             let wait_ses = wait_ses.clone();
                             Box::pin(async move {
-                                let dur = parse_duration(
-                                    choices
-                                        .get("time")
-                                        .expect("no time given"),
-                                );
                                 if !dur.is_zero() {
                                     add_reminder(&wait_ses.clone(), id, dur).await;
                                 }
                                 reminders_page(wait_ses.clone(), id).await;
                             })
                         })
-                        .set_custom_id(format!("{}-add-reminder", user_id))
-                        .set_title("Add Reminder")
-                        .set_questions(vec![Question::new("Time from reminder till launch")
-                            .set_custom_id("time")
-                            .set_placeholder(
-                                "Please give the time in the format of `1w 2d 3h 4m`",
-                            )])
-                        .build()
-                        .unwrap()
-                        .listen(http, &Interaction::MessageComponent(button_click), data)
+                        .listen()
                         .await;
                     }
                 })
@@ -395,54 +363,24 @@ fn reminders_page(
             &ButtonType {
                 label: "Remove reminder".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(RETROGRADE.clone())),
+                emoji: Some(RETROGRADE.clone()),
             },
-            move |button_click| {
+            move |_| {
                 let remove_ses = remove_ses.clone();
                 Box::pin(async move {
                     let inner_ses = remove_ses.clone();
                     let wait_ses = remove_ses.clone();
 
-                    let (user_id, http, data) = {
-                        let s = inner_ses
-                            .read()
-                            .await;
-                        (
-                            s.author
-                                .clone(),
-                            s.http
-                                .clone(),
-                            s.data
-                                .clone(),
-                        )
-                    };
-
-                    Modal::builder(move |choices| {
+                    TimeEmbed::new(inner_ses, move |dur| {
                         let wait_ses = wait_ses.clone();
                         Box::pin(async move {
-                            remove_reminder(
-                                &wait_ses.clone(),
-                                id,
-                                parse_duration(
-                                    &choices
-                                        .get("time")
-                                        .expect("no time given"),
-                                ),
-                            )
-                            .await;
+                            if !dur.is_zero() {
+                                remove_reminder(&wait_ses.clone(), id, dur).await;
+                            }
                             reminders_page(wait_ses.clone(), id).await;
                         })
                     })
-                    .set_custom_id(format!("{}-remove-reminder", user_id))
-                    .set_title("Add Reminder")
-                    .set_questions(vec![Question::new("Time of the reminder to remove")
-                        .set_custom_id("time")
-                        .set_placeholder(
-                            "Please give the time in the format of `1w 2d 3h 4m`",
-                        )])
-                    .build()
-                    .unwrap()
-                    .listen(http, &Interaction::MessageComponent(button_click), data)
+                    .listen()
                     .await;
                 })
             },
@@ -535,7 +473,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
             &ButtonType {
                 label: "Add filter".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(PROGRADE.clone())),
+                emoji: Some(PROGRADE.clone()),
             },
             move |button_click| {
                 let add_ses = add_ses.clone();
@@ -548,8 +486,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             .read()
                             .await;
                         (
-                            s.author
-                                .clone(),
+                            s.author,
                             s.http
                                 .clone(),
                             s.data
@@ -571,12 +508,12 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     .set_description(
                         "Select the name of the agency you do not want to receive reminders for",
                     )
-                    .set_custom_id(format!("{}-add-filter", user_id))
+                    .set_custom_id(&format!("{}-add-filter", user_id))
                     .make_ephemeral()
                     .set_options(
                         LAUNCH_AGENCIES
                             .iter()
-                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
                             .collect(),
                     )
                     .build()
@@ -592,7 +529,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
             &ButtonType {
                 label: "Remove filter".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(RETROGRADE.clone())),
+                emoji: Some(RETROGRADE.clone()),
             },
             move |button_click| {
                 let remove_ses = remove_ses.clone();
@@ -605,8 +542,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             .read()
                             .await;
                         (
-                            s.author
-                                .clone(),
+                            s.author,
                             s.http
                                 .clone(),
                             s.data
@@ -628,12 +564,12 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     .set_description(
                         "Select the name of the agency you want to receive reminders for again",
                     )
-                    .set_custom_id(format!("{}-remove-filter", user_id))
+                    .set_custom_id(&format!("{}-remove-filter", user_id))
                     .make_ephemeral()
                     .set_options(
                         LAUNCH_AGENCIES
                             .iter()
-                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
                             .collect(),
                     )
                     .build()
@@ -736,7 +672,7 @@ fn allow_filters_page(
             &ButtonType {
                 style: ButtonStyle::Primary,
                 label: "Add allow filter".to_owned(),
-                emoji: Some(ReactionType::from(PROGRADE.clone())),
+                emoji: Some(PROGRADE.clone()),
             },
             move |button_click| {
                 let add_ses = add_ses.clone();
@@ -749,8 +685,7 @@ fn allow_filters_page(
                             .read()
                             .await;
                         (
-                            s.author
-                                .clone(),
+                            s.author,
                             s.http
                                 .clone(),
                             s.data
@@ -772,12 +707,12 @@ fn allow_filters_page(
                     .set_description(
                         "Select the name of the agency you specifically want to get reminders for",
                     )
-                    .set_custom_id(format!("{}-add-allow-filter", user_id))
+                    .set_custom_id(&format!("{}-add-allow-filter", user_id))
                     .make_ephemeral()
                     .set_options(
                         LAUNCH_AGENCIES
                             .iter()
-                            .map(|(k, v)| (k.to_string(), v.to_string()))
+                            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
                             .collect(),
                     )
                     .build()
@@ -793,7 +728,7 @@ fn allow_filters_page(
             &ButtonType {
                 label: "Remove allow filter".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(RETROGRADE.clone()))
+                emoji: Some(RETROGRADE.clone())
             },
             move |button_click| {
                 let remove_ses = remove_ses.clone();
@@ -806,8 +741,7 @@ fn allow_filters_page(
                                 .read()
                                 .await;
                         (
-                            s.author
-                                .clone(),
+                            s.author,
                             s.http
                                 .clone(),
                             s.data
@@ -827,9 +761,9 @@ fn allow_filters_page(
                             })
                     })
                         .set_description("Select the name of the agency you do not want to receive reminders for again")
-                        .set_custom_id(format!("{}-remove-allow-filter", user_id))
+                        .set_custom_id(&format!("{}-remove-allow-filter", user_id))
                         .make_ephemeral()
-                        .set_options(LAUNCH_AGENCIES.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect())
+                        .set_options(LAUNCH_AGENCIES.iter().map(|(k, v)| ((*k).to_string(), (*v).to_string())).collect())
                         .build()
                         .unwrap()
                         .listen(http, &Interaction::MessageComponent(button_click), data).await;
@@ -916,7 +850,7 @@ fn mentions_page(
             &ButtonType {
                 label: "Add mention".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(PROGRADE.clone())),
+                emoji: Some(PROGRADE.clone()),
             },
             move |button_click| {
                 let add_ses = add_ses.clone();
@@ -926,8 +860,7 @@ fn mentions_page(
                             .read()
                             .await;
                         (
-                            s.author
-                                .clone(),
+                            s.author,
                             s.http
                                 .clone(),
                             s.data
@@ -935,13 +868,19 @@ fn mentions_page(
                         )
                     };
 
-                    role_select_menu(http, user_id, &Interaction::MessageComponent(button_click), data, move |role_id| {
-                        let wait_ses = add_ses.clone();
-                        Box::pin(async move {
-                            add_mention(&wait_ses.clone(), id, role_id.into()).await;
-                            mentions_page(wait_ses.clone(), id).await;
-                        })
-                    })
+                    role_select_menu(
+                        http,
+                        user_id,
+                        &Interaction::MessageComponent(button_click),
+                        data,
+                        move |role_id| {
+                            let wait_ses = add_ses.clone();
+                            Box::pin(async move {
+                                add_mention(&wait_ses.clone(), id, role_id).await;
+                                mentions_page(wait_ses.clone(), id).await;
+                            })
+                        },
+                    )
                     .await;
                 })
             },
@@ -952,7 +891,7 @@ fn mentions_page(
             &ButtonType {
                 label: "Remove mention".to_owned(),
                 style: ButtonStyle::Primary,
-                emoji: Some(ReactionType::from(RETROGRADE.clone())),
+                emoji: Some(RETROGRADE.clone()),
             },
             move |button_click| {
                 let remove_ses = remove_ses.clone();
@@ -962,8 +901,7 @@ fn mentions_page(
                             .read()
                             .await;
                         (
-                            s.author
-                                .clone(),
+                            s.author,
                             s.http
                                 .clone(),
                             s.data
@@ -971,13 +909,19 @@ fn mentions_page(
                         )
                     };
 
-                    role_select_menu(http, user_id, &Interaction::MessageComponent(button_click), data, move |role_id| {
-                        let wait_ses = remove_ses.clone();
-                        Box::pin(async move {
-                            remove_mention(&wait_ses.clone(), id, role_id.into()).await;
-                            mentions_page(wait_ses.clone(), id).await;
-                        })
-                    })
+                    role_select_menu(
+                        http,
+                        user_id,
+                        &Interaction::MessageComponent(button_click),
+                        data,
+                        move |role_id| {
+                            let wait_ses = remove_ses.clone();
+                            Box::pin(async move {
+                                remove_mention(&wait_ses.clone(), id, role_id).await;
+                                mentions_page(wait_ses.clone(), id).await;
+                            })
+                        },
+                    )
                     .await;
                 })
             },
@@ -1152,8 +1096,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                                 .read()
                                 .await;
                         (
-                            s.author
-                                .clone(),
+                            s.author,
                             s.http
                                 .clone(),
                             s.data
@@ -1164,7 +1107,7 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                     channel_select_menu(http, user_id, &Interaction::MessageComponent(button_click), data, move |channel_id| {
                         let wait_ses = chan_ses.clone();
                         Box::pin(async move {
-                                    set_notification_channel(&wait_ses.clone(), id, channel_id.into()).await;
+                                    set_notification_channel(&wait_ses.clone(), id, channel_id).await;
                                     other_page(wait_ses.clone(), id).await;
                     })}).await;
 
