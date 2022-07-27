@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use serenity::model::interactions::application_command::ApplicationCommandInteraction;
+use serenity::model::application::interaction::application_command::ApplicationCommandInteraction;
 
 use crate::{
     models::launches::{

@@ -36,21 +36,21 @@ use serenity::{
     },
     framework::standard::CommandResult,
     model::{
+        application::{
+            component::ButtonStyle,
+            interaction::application_command::{
+                ApplicationCommandInteraction,
+                CommandDataOptionValue,
+            },
+            interaction::Interaction,
+            interaction::MessageFlags,
+        },
         channel::ReactionType,
         id::{
             ChannelId,
             GuildId,
             RoleId,
             UserId,
-        },
-        interactions::{
-            application_command::{
-                ApplicationCommandInteraction,
-                ApplicationCommandInteractionDataOptionValue,
-            },
-            message_component::ButtonStyle,
-            Interaction,
-            InteractionApplicationCommandCallbackDataFlags,
         },
     },
     prelude::{
@@ -111,7 +111,7 @@ async fn notifychannel(
         interaction
             .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
                 m.interaction_response_data(|c| {
-                    c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                    c.flags(MessageFlags::EPHEMERAL)
                         .embed(|e: &mut CreateEmbed| {
                             default_embed(e, "This command can only be ran in a server.", false)
                         })
@@ -132,7 +132,7 @@ async fn notifychannel(
             .resolved
             .clone()
             .and_then(|v| {
-                if let ApplicationCommandInteractionDataOptionValue::Channel(c) = v {
+                if let CommandDataOptionValue::Channel(c) = v {
                     Some(c.id)
                 } else {
                     None

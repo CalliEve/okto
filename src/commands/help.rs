@@ -28,9 +28,9 @@ use serenity::{
         ReactionType,
     },
     model::{
-        interactions::{
-            application_command::ApplicationCommandInteraction,
-            message_component::ButtonStyle,
+        application::{
+            component::ButtonStyle,
+            interaction::application_command::ApplicationCommandInteraction,
         },
         Permissions,
     },

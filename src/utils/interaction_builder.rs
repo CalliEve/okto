@@ -5,7 +5,7 @@ use serenity::{
         CreateInteractionResponse,
         EditInteractionResponse,
     },
-    model::interactions::InteractionResponseType,
+    model::application::interaction::InteractionResponseType,
 };
 
 pub struct InteractionResponseBuilder {
@@ -120,13 +120,13 @@ impl InteractionResponseBuilder {
     }
 }
 
-impl From<InteractionResponseBuilder> for CreateInteractionResponse<'_>{
+impl From<InteractionResponseBuilder> for CreateInteractionResponse<'_> {
     fn from(other: InteractionResponseBuilder) -> CreateInteractionResponse<'static> {
         other.into_create_response()
     }
 }
 
-impl  From<InteractionResponseBuilder> for EditInteractionResponse {
+impl From<InteractionResponseBuilder> for EditInteractionResponse {
     fn from(other: InteractionResponseBuilder) -> EditInteractionResponse {
         other.into_edit_response()
     }

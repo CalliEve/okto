@@ -5,14 +5,18 @@ use serenity::{
     client::Context,
     framework::standard::CommandResult,
     http::Http,
-    model::{interactions::{Interaction, application_command::ApplicationCommandPermissionType}, id::CommandId, Permissions},
+    model::{
+        application::{command::CommandPermissionType, interaction::Interaction},
+        id::CommandId,
+        Permissions,
+    },
     Result,
 };
 
-use crate::{structs::{
-    Command,
-    CommandDetails,
-}, utils::{get_all_guilds, get_roles_with_permission}};
+use crate::{
+    structs::{Command, CommandDetails},
+    utils::{get_all_guilds, get_roles_with_permission},
+};
 
 #[derive(Clone, Debug)]
 struct DiscordCommand {
@@ -30,14 +34,14 @@ struct CommandPermission {
 struct CommandPermissionEntry {
     id: u64,
     #[serde(rename = "type")]
-    kind: ApplicationCommandPermissionType,
+    kind: CommandPermissionType,
     permission: bool,
 }
 
 #[derive(Clone)]
 pub struct Handler {
     cmds: HashMap<String, &'static Command>,
-    d_cmds: Vec<DiscordCommand>
+    d_cmds: Vec<DiscordCommand>,
 }
 
 impl Handler {
@@ -49,17 +53,43 @@ impl Handler {
     }
 
     pub fn get_command_list(&self) -> Vec<&'static Command> {
-        self.cmds.values().map(|v| *v).collect()
+        self.cmds
+            .values()
+            .map(|v| *v)
+            .collect()
     }
 
     pub fn add_command(&mut self, cmd: &'static Command) -> std::result::Result<(), String> {
-        if cmd.options.description.is_empty() {
-            return Err(format!("Command {} has no description", &cmd.options.name));
-        } else if cmd.options.description.len() > 100 {
-            return Err(format!("Command {} has a description longer than 100 characters", &cmd.options.name));
+        if cmd
+            .options
+            .description
+            .is_empty()
+        {
+            return Err(format!(
+                "Command {} has no description",
+                &cmd.options
+                    .name
+            ));
+        } else if cmd
+            .options
+            .description
+            .len()
+            > 100
+        {
+            return Err(format!(
+                "Command {} has a description longer than 100 characters",
+                &cmd.options
+                    .name
+            ));
         }
 
-        self.cmds.insert(cmd.options.name.to_owned(), cmd);
+        self.cmds
+            .insert(
+                cmd.options
+                    .name
+                    .to_owned(),
+                cmd,
+            );
 
         Ok(())
     }
@@ -70,11 +100,18 @@ impl Handler {
         interaction: &Interaction,
     ) -> CommandResult {
         if let Interaction::ApplicationCommand(cmd_interaction) = interaction {
-            if let Some(cmd) = self.cmds.get(&cmd_interaction.data.name) {
+            if let Some(cmd) = self
+                .cmds
+                .get(
+                    &cmd_interaction
+                        .data
+                        .name,
+                )
+            {
                 return (cmd.func)(ctx, cmd_interaction).await;
             }
         }
-        
+
         Ok(())
     }
 
@@ -87,9 +124,16 @@ impl Handler {
                 .collect::<Vec<&CommandDetails>>(),
         )?;
 
-        self.d_cmds = http.as_ref()
+        self.d_cmds = http
+            .as_ref()
             .create_global_application_commands(&body)
-            .await?.into_iter().map(|c| DiscordCommand { id: c.id, name: c.name }).collect();
+            .await?
+            .into_iter()
+            .map(|c| DiscordCommand {
+                id: c.id,
+                name: c.name,
+            })
+            .collect();
 
         Ok(())
     }
@@ -102,31 +146,44 @@ impl Handler {
             let mut permissions = Vec::new();
 
             for c in &self.d_cmds {
-                if let Some(cmd) = self.cmds.get(&c.name) {
-                    if cmd.perms.is_empty() {
+                if let Some(cmd) = self
+                    .cmds
+                    .get(&c.name)
+                {
+                    if cmd
+                        .perms
+                        .is_empty()
+                    {
                         continue;
                     }
 
-                    let discord_perms = cmd.perms.iter().fold(Permissions::empty(), |acc, p| acc.union(*p));
-                    
+                    let discord_perms = cmd
+                        .perms
+                        .iter()
+                        .fold(Permissions::empty(), |acc, p| acc.union(*p));
+
                     let mut c_perms = Vec::new();
                     for role in get_roles_with_permission(&g, discord_perms) {
                         c_perms.push(CommandPermissionEntry {
-                            kind: ApplicationCommandPermissionType::Role,
+                            kind: CommandPermissionType::Role,
                             permission: true,
-                            id: role.id.0
+                            id: role
+                                .id
+                                .0,
                         })
                     }
-                    
+
                     c_perms.push(CommandPermissionEntry {
-                        id: g.owner_id.0,
+                        id: g
+                            .owner_id
+                            .0,
                         permission: true,
-                        kind: ApplicationCommandPermissionType::User
+                        kind: CommandPermissionType::User,
                     });
                     if !c_perms.is_empty() {
                         permissions.push(CommandPermission {
                             id: c.id,
-                            permissions: c_perms
+                            permissions: c_perms,
                         });
                     }
                 }
@@ -138,7 +195,8 @@ impl Handler {
 
             let body = serde_json::to_value(permissions)?;
 
-            http.edit_guild_application_commands_permissions(g.id.0, &body).await?;
+            http.edit_guild_application_commands_permissions(g.id.0, &body)
+                .await?;
         }
 
         Ok(())
@@ -150,4 +208,3 @@ impl Default for Handler {
         Self::new()
     }
 }
-

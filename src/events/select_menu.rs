@@ -6,9 +6,11 @@ use std::{
 use futures::future::BoxFuture;
 use itertools::Itertools;
 use serenity::http::Http;
-use serenity::model::interactions::message_component::ComponentType;
 use serenity::{
-    model::interactions::Interaction,
+    model::application::{
+        component::ComponentType,
+        interaction::Interaction,
+    },
     prelude::{
         RwLock,
         TypeMap,
@@ -96,23 +98,33 @@ impl SelectMenu {
                     .unwrap_or_else(|| "Select an option".to_owned()),
             )
             .components(|comps| {
-                for chunk in &self
+                for (i, chunk) in self
                     .options
                     .iter()
                     .chunks(25)
+                    .into_iter()
+                    .enumerate()
                 {
                     comps.create_action_row(|row| {
                         row.create_select_menu(|menu| {
-                            menu.max_values(1)
-                                .options(|options| {
-                                    for (key, value) in chunk {
-                                        options.create_option(|opt| {
-                                            opt.value(key)
-                                                .label(value)
-                                        });
-                                    }
-                                    options
-                                })
+                            menu.custom_id(format!(
+                                "{}-{}",
+                                self.custom_id
+                                    .as_ref()
+                                    .map(|s| s.as_str())
+                                    .unwrap_or("select-row"),
+                                i
+                            ))
+                            .max_values(1)
+                            .options(|options| {
+                                for (key, value) in chunk {
+                                    options.create_option(|opt| {
+                                        opt.value(key)
+                                            .label(value)
+                                    });
+                                }
+                                options
+                            })
                         })
                     });
                 }

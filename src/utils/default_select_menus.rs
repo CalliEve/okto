@@ -4,13 +4,13 @@ use futures::future::BoxFuture;
 use serenity::{
     http::Http,
     model::{
+        application::interaction::Interaction,
         id::{
             ChannelId,
             GuildId,
             RoleId,
             UserId,
         },
-        interactions::Interaction,
     },
     prelude::{
         RwLock,
@@ -49,12 +49,7 @@ pub async fn role_select_menu<F>(
         roles
             .into_iter()
             .take(125)
-            .map(|(k, v)| {
-                (
-                    k.0.to_string(),
-                    v.name,
-                )
-            })
+            .map(|(k, v)| (k.0.to_string(), v.name))
             .collect(),
     )
     .build()
@@ -92,12 +87,7 @@ pub async fn channel_select_menu<F>(
         channels
             .into_iter()
             .take(125)
-            .map(|(k, v)| {
-                (
-                    k.0.to_string(),
-                    v.name,
-                )
-            })
+            .map(|(k, v)| (k.0.to_string(), v.name))
             .collect(),
     )
     .build()

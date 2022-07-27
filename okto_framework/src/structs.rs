@@ -7,8 +7,8 @@ use serenity::{
     client::Context,
     framework::standard::{CommandResult, OnlyIn},
     model::{
-        channel::ChannelType, interactions::application_command::ApplicationCommandInteraction,
-        Permissions,
+        application::interaction::application_command::ApplicationCommandInteraction,
+        channel::ChannelType, Permissions,
     },
 };
 

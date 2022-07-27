@@ -13,20 +13,20 @@ use serenity::{
     cache::Cache,
     http::Http,
     model::{
+        application::{
+            component::ButtonStyle,
+            interaction::{
+                application_command::ApplicationCommandInteraction,
+                message_component::MessageComponentInteraction,
+                Interaction,
+                InteractionResponseType,
+                MessageFlags,
+            },
+        },
         channel::ReactionType,
         id::{
             MessageId,
             UserId,
-        },
-        interactions::{
-            application_command::ApplicationCommandInteraction,
-            message_component::{
-                ButtonStyle,
-                MessageComponentInteraction,
-            },
-            Interaction,
-            InteractionApplicationCommandCallbackDataFlags,
-            InteractionResponseType,
         },
     },
     prelude::{
@@ -247,9 +247,7 @@ impl EmbedSession {
                 c.kind(InteractionResponseType::DeferredChannelMessageWithSource);
 
                 if ephemeral {
-                    c.interaction_response_data(|d| {
-                        d.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
-                    });
+                    c.interaction_response_data(|d| d.flags(MessageFlags::EPHEMERAL));
                 }
 
                 c

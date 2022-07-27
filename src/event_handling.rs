@@ -8,6 +8,7 @@ use reqwest::header::AUTHORIZATION;
 use serenity::{
     async_trait,
     model::{
+        application::interaction::Interaction,
         channel::Message,
         gateway::Ready,
         guild::{
@@ -19,7 +20,6 @@ use serenity::{
             GuildId,
             MessageId,
         },
-        interactions::Interaction,
         prelude::Activity,
     },
     prelude::{
@@ -85,13 +85,7 @@ impl EventHandler for Handler {
             .send_message(&ctx.http, |m| m.content(content))
             .await;
 
-        let status = format!(
-            "{} servers",
-            ready
-                .guilds
-                .len()
-        );
-        ctx.set_activity(Activity::listening(&status))
+        ctx.set_activity(Activity::listening("slash-commands"))
             .await;
 
         tokio::spawn(async move {
@@ -101,9 +95,9 @@ impl EventHandler for Handler {
                     let amount: usize = ctx
                         .cache
                         .guild_count();
-                    let status = format!("{} servers", amount);
-                    ctx.set_activity(Activity::listening(&status))
-                        .await;
+                    // let status = format!("{} servers", amount);
+                    // ctx.set_activity(Activity::listening(&status))
+                    //     .await;
 
                     let mut map = HashMap::new();
                     map.insert("server_count", amount);

@@ -11,14 +11,16 @@ use serenity::{
     client::Context,
     http::Http,
     model::{
+        application::{
+            component::ComponentType,
+            interaction::{
+                Interaction,
+                InteractionType,
+            },
+        },
         id::{
             ChannelId,
             UserId,
-        },
-        interactions::{
-            message_component::ComponentType,
-            Interaction,
-            InteractionType,
         },
     },
     Error,
@@ -54,6 +56,7 @@ impl InteractionHandler {
     }
 
     async fn handle(&self, interaction: &Interaction) -> bool {
+        println!("handle does get called");
         if self
             .interaction_type
             .filter(|t| *t == interaction.kind())
@@ -64,6 +67,7 @@ impl InteractionHandler {
 
         match interaction {
             Interaction::MessageComponent(component) => {
+                dbg!(component);
                 if let Some(user) = self.user {
                     if component
                         .user
@@ -91,10 +95,10 @@ impl InteractionHandler {
                 }
 
                 if let Some(custom_id) = &self.custom_id {
-                    if custom_id
-                        != &component
-                            .data
-                            .custom_id
+                    if !component
+                        .data
+                        .custom_id
+                        .starts_with(custom_id)
                     {
                         return false;
                     }
@@ -246,6 +250,9 @@ pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
         .await
         .get_mut::<InteractionKey>()
     {
+        dbg!(waiting
+            .0
+            .len());
         waiting.0 = stream::iter(
             waiting
                 .0

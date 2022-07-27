@@ -1,6 +1,6 @@
 #![recursion_limit = "128"]
 #![warn(clippy::pedantic)]
-#![allow(clippy::unreadable_literal)] // because of discord IDs being long numbers 
+#![allow(clippy::unreadable_literal)] // because of discord IDs being long numbers
 #![allow(clippy::module_name_repetitions)] // makes some struct names clearer
 #![allow(clippy::let_underscore_drop)] // looks better when not caring if it errored imo
 #![allow(clippy::semicolon_if_nothing_returned)] // looks better imo

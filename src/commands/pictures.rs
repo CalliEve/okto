@@ -15,9 +15,9 @@ use serenity::{
         EditInteractionResponse,
     },
     framework::standard::CommandResult,
-    model::interactions::{
-        application_command::ApplicationCommandInteraction,
-        InteractionResponseType,
+    model::application::{
+        interaction::application_command::ApplicationCommandInteraction,
+        interaction::InteractionResponseType,
     },
     prelude::Context,
 };

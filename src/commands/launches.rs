@@ -11,13 +11,13 @@ use serenity::{
     },
     framework::standard::CommandResult,
     model::{
+        application::{
+            component::ButtonStyle,
+            interaction::application_command::ApplicationCommandInteraction,
+            interaction::MessageFlags,
+        },
         channel::ReactionType,
         id::EmojiId,
-        interactions::{
-            application_command::ApplicationCommandInteraction,
-            message_component::ButtonStyle,
-            InteractionApplicationCommandCallbackDataFlags,
-        },
     },
     prelude::{
         Context,
@@ -88,7 +88,7 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
         interaction
             .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
                 m.interaction_response_data(|c| {
-                    c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                    c.flags(MessageFlags::EPHEMERAL)
                         .embed(|e: &mut CreateEmbed| {
                             default_embed(
                                 e,
@@ -108,7 +108,7 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
             interaction
                 .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
                     m.interaction_response_data(|c| {
-                        c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                        c.flags(MessageFlags::EPHEMERAL)
                             .embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
                     })
                 })
@@ -452,7 +452,7 @@ async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction
             interaction
                 .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
                     m.interaction_response_data(|c| {
-                        c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                        c.flags(MessageFlags::EPHEMERAL)
                             .embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
                     })
                 })
@@ -508,7 +508,12 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
         })
         .and_then(|v| {
             v.as_i64()
-                .map(|i| { let o: i32 = i.try_into().expect("Got a launch id that was too big to be possible"); o})
+                .map(|i| {
+                    let o: i32 = i
+                        .try_into()
+                        .expect("Got a launch id that was too big to be possible");
+                    o
+                })
         })
         .ok_or("No launch id provided while it was a required argument")?;
 
@@ -521,7 +526,7 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
         interaction
             .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
                 m.interaction_response_data(|c| {
-                    c.flags(InteractionApplicationCommandCallbackDataFlags::EPHEMERAL)
+                    c.flags(MessageFlags::EPHEMERAL)
                         .embed(|e: &mut CreateEmbed| {
                             default_embed(e, "No launch was found with that ID :(", false)
                         })

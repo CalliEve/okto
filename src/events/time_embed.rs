@@ -4,8 +4,8 @@ use chrono::Duration;
 use futures::future::BoxFuture;
 use serenity::{
     model::{
+        application::component::ButtonStyle,
         channel::ReactionType,
-        interactions::message_component::ButtonStyle,
     },
     prelude::RwLock,
 };
@@ -68,15 +68,18 @@ impl TimeEmbed {
 
             embed
                 .add_option(&add_button("1 day"), move |_| {
-                    self_1_day.add_duration(Duration::days(1))
+                    self_1_day
+                        .add_duration(Duration::days(1))
                         .show_embed()
                 })
                 .add_option(&add_button("6 hours"), move |_| {
-                    self_6_hours.add_duration(Duration::hours(6))
+                    self_6_hours
+                        .add_duration(Duration::hours(6))
                         .show_embed()
                 })
                 .add_option(&add_button("1 hour"), move |_| {
-                    self_1_hour.add_duration(Duration::hours(1))
+                    self_1_hour
+                        .add_duration(Duration::hours(1))
                         .show_embed()
                 })
                 .add_option(&add_button("15 minutes"), move |_| {
@@ -85,7 +88,8 @@ impl TimeEmbed {
                         .show_embed()
                 })
                 .add_option(&add_button("5 minutes"), move |_| {
-                    self_5_minute.add_duration(Duration::minutes(5))
+                    self_5_minute
+                        .add_duration(Duration::minutes(5))
                         .show_embed()
                 })
                 .add_option(&StandardButton::Exit.to_button(), move |_| {

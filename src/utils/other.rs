@@ -9,9 +9,9 @@ use serenity::{
     },
     http::Http,
     model::{
+        application::component::ButtonStyle,
         channel::ReactionType,
         id::ChannelId,
-        interactions::message_component::ButtonStyle,
     },
     utils::Colour,
 };
