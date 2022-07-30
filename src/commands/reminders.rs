@@ -266,28 +266,30 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             },
         );
 
-        let close_ses = ses.clone();
-        em.add_field(
-            "Close",
-            "Close this menu",
-            false,
-            &StandardButton::Exit.to_button(),
-            move |_| {
-                let close_ses = close_ses.clone();
-                Box::pin(async move {
-                    let lock = close_ses
-                        .read()
-                        .await;
-                    let r = lock
-                        .interaction
-                        .delete_original_interaction_response(&lock.http)
-                        .await;
-                    if let Err(e) = r {
-                        dbg!(e);
-                    }
-                })
-            },
-        );
+        if id.guild_specific() {
+            let close_ses = ses.clone();
+            em.add_field(
+                "Close",
+                "Close this menu",
+                false,
+                &StandardButton::Exit.to_button(),
+                move |_| {
+                    let close_ses = close_ses.clone();
+                    Box::pin(async move {
+                        let lock = close_ses
+                            .read()
+                            .await;
+                        let r = lock
+                            .interaction
+                            .delete_original_interaction_response(&lock.http)
+                            .await;
+                        if let Err(e) = r {
+                            dbg!(e);
+                        }
+                    })
+                },
+            );
+        }
 
         let result = em
             .show()
@@ -497,11 +499,13 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     SelectMenu::builder(move |(choice, _)| {
                         let wait_ses = wait_ses.clone();
                         Box::pin(async move {
+                            println!("add filter received: {}", &choice);
                             if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
                                 add_filter(&wait_ses.clone(), id, choice, "filters").await;
                             } else {
-                                panic!("select menu returned unknown choice")
+                                eprintln!("select menu returned unknown choice")
                             }
+                            println!("calling filters page again");
                             filters_page(wait_ses.clone(), id).await
                         })
                     })
@@ -509,7 +513,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                         "Select the name of the agency you do not want to receive reminders for",
                     )
                     .set_custom_id(&format!("{}-add-filter", user_id))
-                    .make_ephemeral()
+                    .set_user(user_id)
                     .set_options(
                         LAUNCH_AGENCIES
                             .iter()
@@ -556,7 +560,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                             if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
                                 remove_filter(&wait_ses.clone(), id, choice, "filters").await;
                             } else {
-                                panic!("select menu returned unknown choice")
+                                eprintln!("select menu returned unknown choice")
                             }
                             filters_page(wait_ses.clone(), id).await
                         })
@@ -565,7 +569,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                         "Select the name of the agency you want to receive reminders for again",
                     )
                     .set_custom_id(&format!("{}-remove-filter", user_id))
-                    .make_ephemeral()
+                    .set_user(user_id)
                     .set_options(
                         LAUNCH_AGENCIES
                             .iter()
@@ -598,6 +602,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
         if let Err(err) = result {
             dbg!(err);
         }
+        println!("handled filters page");
     })
 }
 
@@ -699,7 +704,7 @@ fn allow_filters_page(
                             if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
                                 add_filter(&wait_ses.clone(), id, choice, "allow_filters").await;
                             } else {
-                                panic!("select menu returned unknown choice")
+                                eprintln!("select menu returned unknown choice")
                             }
                             allow_filters_page(wait_ses.clone(), id).await
                         })
@@ -708,6 +713,7 @@ fn allow_filters_page(
                         "Select the name of the agency you specifically want to get reminders for",
                     )
                     .set_custom_id(&format!("{}-add-allow-filter", user_id))
+                    .set_user(user_id)
                     .make_ephemeral()
                     .set_options(
                         LAUNCH_AGENCIES
@@ -755,13 +761,14 @@ fn allow_filters_page(
                                 if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
                                     remove_filter(&wait_ses.clone(), id, choice, "allow_filters").await;
                                 } else {
-                                        panic!("select menu returned unknown choice")
-                                    }
+                                    eprintln!("select menu returned unknown choice")
+                                }
                                 filters_page(wait_ses.clone(), id).await
                             })
                     })
                         .set_description("Select the name of the agency you do not want to receive reminders for again")
                         .set_custom_id(&format!("{}-remove-allow-filter", user_id))
+                    .set_user(user_id)
                         .make_ephemeral()
                         .set_options(LAUNCH_AGENCIES.iter().map(|(k, v)| ((*k).to_string(), (*v).to_string())).collect())
                         .build()
@@ -1213,6 +1220,7 @@ async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duratio
     .await;
 
     if let Err(e) = result {
+        eprintln!("error while adding reminder:");
         dbg!(e);
     }
 }
@@ -1249,6 +1257,7 @@ async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dura
     .await;
 
     if let Err(e) = result {
+        eprintln!("error while removing reminder:");
         dbg!(e);
     }
 }
@@ -1303,6 +1312,7 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String, fil
     .await;
 
     if let Err(e) = result {
+        eprintln!("error while adding filter:");
         dbg!(e);
     }
 }
@@ -1343,6 +1353,7 @@ async fn remove_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String, 
     .await;
 
     if let Err(e) = result {
+        eprintln!("error while removing filter:");
         dbg!(e);
     }
 }
@@ -1391,6 +1402,7 @@ async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &str, 
     .await;
 
     if let Err(e) = result {
+        eprintln!("error while toggling setting:");
         dbg!(e);
     }
 }
@@ -1423,6 +1435,7 @@ async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, chann
     .await;
 
     if let Err(e) = result {
+        eprintln!("error while setting notification channel:");
         dbg!(e);
     }
 }
@@ -1458,6 +1471,7 @@ async fn add_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
         .await;
 
     if let Err(e) = result {
+        eprintln!("error while adding mention:");
         dbg!(e);
     }
 }
@@ -1489,6 +1503,7 @@ async fn remove_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
         .await;
 
     if let Err(e) = result {
+        eprintln!("error while removing mention:");
         dbg!(e);
     }
 }

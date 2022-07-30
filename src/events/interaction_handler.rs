@@ -56,30 +56,31 @@ impl InteractionHandler {
     }
 
     async fn handle(&self, interaction: &Interaction) -> bool {
-        println!("handle does get called");
-        if self
+        if self.interaction_type.is_none() || self
             .interaction_type
             .filter(|t| *t == interaction.kind())
-            .is_some()
+            .is_none()
         {
             return false;
         }
 
         match interaction {
             Interaction::MessageComponent(component) => {
-                dbg!(component);
+                println!("message component received");
                 if let Some(user) = self.user {
                     if component
                         .user
                         .id
                         != user
                     {
+                        println!("wrong user");
                         return false;
                     }
                 }
 
                 if let Some(channel) = self.channel {
                     if component.channel_id != channel {
+                        println!("wrong channel");
                         return false;
                     }
                 }
@@ -90,6 +91,7 @@ impl InteractionHandler {
                             .data
                             .component_type
                     {
+                        println!("wrong component type");
                         return false;
                     }
                 }
@@ -100,6 +102,7 @@ impl InteractionHandler {
                         .custom_id
                         .starts_with(custom_id)
                     {
+                        println!("wrong custom id");
                         return false;
                     }
                 }
@@ -124,20 +127,6 @@ impl InteractionHandler {
             _ => return false,
         }
 
-        if let Some(component_type) = self.component_type {
-            if let Interaction::MessageComponent(component) = &interaction {
-                if component_type
-                    != component
-                        .data
-                        .component_type
-                {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
-
         if let Some(filter) = &self.filter {
             if !filter(interaction.clone()).await {
                 return false;
@@ -147,6 +136,12 @@ impl InteractionHandler {
         (self.handler)(interaction.clone()).await;
 
         true
+    }
+}
+
+impl PartialEq for InteractionHandler {
+    fn eq(&self, other: &Self) -> bool {
+        self.channel == other.channel && self.user == other.user && self.custom_id == other.custom_id && self.interaction_type == other.interaction_type && self.component_type == other.component_type
     }
 }
 
@@ -180,7 +175,6 @@ impl InteractionHandlerBuilder {
         self
     }
 
-    #[allow(dead_code)]
     pub fn set_user(mut self, user: UserId) -> Self {
         self.inner
             .user = Some(user);
@@ -244,27 +238,40 @@ impl InteractionHandlerBuilder {
 }
 
 pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
+    let all = if let Some(waiting) = ctx
+        .data
+        .read()
+        .await
+        .get::<InteractionKey>()
+    {
+            waiting
+                .0
+                .clone()
+    } else {
+        eprintln!("No waiting interaction cache");
+        return
+    };
+
+    let handled = stream::iter(all.iter()).filter(|h| async {
+        h.handle(interaction)
+            .await
+    })
+    .collect::<Vec<&InteractionHandler>>()
+    .await
+    .into_iter()
+    .cloned()
+    .collect::<Vec<InteractionHandler>>();
+
     if let Some(mut waiting) = ctx
         .data
         .write()
         .await
         .get_mut::<InteractionKey>()
     {
-        dbg!(waiting
-            .0
-            .len());
-        waiting.0 = stream::iter(
-            waiting
+        waiting.0 = waiting
                 .0
-                .iter(),
-        )
-        .filter(|h| async {
-            !h.handle(interaction)
-                .await
-        })
-        .collect::<Vec<&InteractionHandler>>()
-        .await
-        .into_iter()
+                .iter()
+        .filter(|h| !handled.contains(h))
         .cloned()
         .collect::<Vec<InteractionHandler>>();
     }

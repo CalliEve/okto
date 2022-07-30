@@ -37,7 +37,6 @@ use serenity::{
 };
 
 use crate::{
-    launch_tracking,
     models::{
         launches::{
             LaunchData,
@@ -59,6 +58,8 @@ use crate::{
         },
     },
 };
+
+use super::launch_tracking;
 
 pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, db: Database) {
     // wait for client to have started

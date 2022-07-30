@@ -11,11 +11,9 @@
 #![allow(clippy::non_ascii_literal)] // I want to use emojis uwu
 
 mod commands;
-mod event_handling;
 mod events;
-mod launch_tracking;
 mod models;
-mod reminder_tracking;
+mod reminders;
 mod utils;
 
 use std::{
@@ -24,24 +22,7 @@ use std::{
     sync::Arc,
 };
 
-use commands::{
-    general::*,
-    help::*,
-    launches::*,
-    pictures::*,
-    reminders::*,
-};
-use event_handling::Handler;
-use launch_tracking::launch_tracking;
-use models::caches::{
-    DatabaseKey,
-    EmbedSessionsKey,
-    InteractionKey,
-    LaunchesCacheKey,
-    PictureCacheKey,
-};
 use mongodb::Client as MongoClient;
-use reminder_tracking::reminder_tracking;
 use serenity::{
     client::Client,
     framework::standard::StandardFramework,
@@ -51,12 +32,26 @@ use serenity::{
         TypeMap,
     },
 };
+
+use commands::{
+    general::*,
+    help::*,
+    launches::*,
+    pictures::*,
+    reminders::*,
+};
+use models::caches::{
+    DatabaseKey,
+    EmbedSessionsKey,
+    InteractionKey,
+    LaunchesCacheKey,
+    PictureCacheKey,
+};
 use utils::{
     error_log,
     preloading::preload_data,
 };
-
-use crate::models::caches::CommandListKey;
+use models::caches::CommandListKey;
 
 #[tokio::main]
 async fn main() {
@@ -149,7 +144,7 @@ async fn main() {
         .application_id(application_id)
         .framework(framework)
         .type_map(data_map)
-        .event_handler(Handler::new(slash_framework))
+        .event_handler(events::Handler::new(slash_framework))
         .await
         .expect("Error creating client");
 
@@ -171,7 +166,7 @@ async fn main() {
                 .http
                 .clone();
             let db_clone = db.clone();
-            tokio::spawn(reminder_tracking(
+            tokio::spawn(reminders::reminder_tracking(
                 http_clone,
                 launches_cache_clone,
                 db_clone,

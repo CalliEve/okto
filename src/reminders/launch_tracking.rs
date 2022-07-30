@@ -20,10 +20,6 @@ use serenity::{
 };
 
 use crate::{
-    events::change_notifications::{
-        notify_outcome,
-        notify_scrub,
-    },
     models::launches::{
         LaunchContainer,
         LaunchData,
@@ -37,6 +33,11 @@ use crate::{
         error_log,
     },
 };
+
+use super::{
+        notify_outcome,
+        notify_scrub,
+    };
 
 pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Vec<LaunchData>>>) {
     println!("getting launch information");

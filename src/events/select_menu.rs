@@ -6,10 +6,11 @@ use std::{
 use futures::future::BoxFuture;
 use itertools::Itertools;
 use serenity::http::Http;
+use serenity::model::id::UserId;
 use serenity::{
     model::application::{
         component::ComponentType,
-        interaction::Interaction,
+        interaction::{Interaction, InteractionResponseType},
     },
     prelude::{
         RwLock,
@@ -30,6 +31,7 @@ type Handler = Arc<Box<dyn Fn((String, String)) -> BoxFuture<'static, ()> + Send
 #[derive(Clone)]
 pub struct SelectMenu {
     description: Option<String>,
+    user_id: Option<UserId>,
     options: HashMap<String, String>,
     ephemeral: bool,
     custom_id: Option<String>,
@@ -39,11 +41,11 @@ pub struct SelectMenu {
 impl SelectMenu {
     pub async fn listen(
         self,
-        http: impl AsRef<Http>,
+        http: Arc<Http>,
         interaction: &Interaction,
         data: Arc<RwLock<TypeMap>>,
     ) {
-        self.send(http, interaction)
+        self.send(&http, interaction)
             .await;
 
         let handler = self
@@ -52,10 +54,13 @@ impl SelectMenu {
         let options = self
             .options
             .clone();
+        let http_clone = http.clone();
         let mut interaction_handler = InteractionHandler::builder(move |interaction| {
+            println!("select menu handler gets it");
             let data = interaction
                 .message_component()
                 .expect("Didn't get a message component in select menu");
+
             let key = data
                 .data
                 .values
@@ -65,11 +70,25 @@ impl SelectMenu {
 
             let chosen = options
                 .get(&key)
+                .cloned()
                 .expect("Not a valid choice in select menu");
 
-            handler((key, chosen.clone()))
+            let http_clone = http_clone.clone();
+            let handler_clone = handler.clone();
+            Box::pin(async move {
+                let _ = data.create_interaction_response(http_clone, |c| {
+                    c.kind(InteractionResponseType::DeferredUpdateMessage)
+                })
+                .await;
+
+                handler_clone((key, chosen.clone())).await
+            })
         })
         .set_component_type(ComponentType::SelectMenu);
+        
+        if let Some(user_id) = self.user_id {
+            interaction_handler = interaction_handler.set_user(user_id);
+        }
 
         if let Some(custom_id) = self.custom_id {
             interaction_handler = interaction_handler.set_custom_id(custom_id);
@@ -169,6 +188,7 @@ impl SelectMenuBuilder {
                 ephemeral: false,
                 description: None,
                 custom_id: None,
+                user_id: None,
                 options: HashMap::new(),
             },
         }
@@ -202,6 +222,12 @@ impl SelectMenuBuilder {
     pub fn set_custom_id<T: ToString + ?Sized>(mut self, custom_id: &T) -> Self {
         self.inner
             .custom_id = Some(custom_id.to_string());
+        self
+    }
+    
+    pub fn set_user(mut self, user_id: UserId) -> Self {
+        self.inner
+            .user_id = Some(user_id);
         self
     }
 

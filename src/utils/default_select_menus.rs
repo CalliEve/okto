@@ -21,7 +21,7 @@ use serenity::{
 use crate::events::select_menu::SelectMenu;
 
 pub async fn role_select_menu<F>(
-    http: impl AsRef<Http>,
+    http: Arc<Http>,
     user_id: UserId,
     interaction: &Interaction,
     data: Arc<RwLock<TypeMap>>,
@@ -44,6 +44,7 @@ pub async fn role_select_menu<F>(
     })
     .set_description("Select a role")
     .set_custom_id(&format!("{}-role-select", user_id))
+                    .set_user(user_id)
     .make_ephemeral()
     .set_options(
         roles
@@ -59,7 +60,7 @@ pub async fn role_select_menu<F>(
 }
 
 pub async fn channel_select_menu<F>(
-    http: impl AsRef<Http>,
+    http: Arc<Http>,
     user_id: UserId,
     interaction: &Interaction,
     data: Arc<RwLock<TypeMap>>,
@@ -82,6 +83,7 @@ pub async fn channel_select_menu<F>(
     })
     .set_description("Select a channel")
     .set_custom_id(&format!("{}-channel-select", user_id))
+                    .set_user(user_id)
     .make_ephemeral()
     .set_options(
         channels

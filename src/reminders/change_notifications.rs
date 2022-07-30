@@ -218,13 +218,15 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
     default_embed(
         &mut e,
         &format!(
-            "The launch of {} on a **{}** is now scheduled for <t:{}> instead of <t:{}>",
+            "The launch of {} on a **{}** is now scheduled for <t:{}>{} instead of <t:{}>{}",
             new.payload,
             new.vehicle,
             new.net
                 .timestamp(),
+            if new.status == LaunchStatus::Tbd { " (TBD)" } else {""},
             old.net
-                .timestamp()
+                .timestamp(),
+            if old.status == LaunchStatus::Tbd { " (TBD)" } else {""},
         ),
         false,
     );
