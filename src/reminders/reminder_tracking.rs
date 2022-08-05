@@ -36,6 +36,7 @@ use serenity::{
     prelude::RwLock,
 };
 
+use super::launch_tracking;
 use crate::{
     models::{
         launches::{
@@ -59,8 +60,6 @@ use crate::{
     },
 };
 
-use super::launch_tracking;
-
 pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData>>>, db: Database) {
     // wait for client to have started
     tokio::time::sleep(std::time::Duration::from_secs(60)).await;
@@ -72,7 +71,11 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
         println!("running loop {}", loop_count);
 
         if loop_count % 5 == 0 {
-            tokio::spawn(launch_tracking(http.clone(), db.clone(), cache.clone()));
+            tokio::spawn(launch_tracking(
+                http.clone(),
+                db.clone(),
+                cache.clone(),
+            ));
         }
 
         loop_count += 1;
@@ -118,7 +121,10 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
                     if let Err(e) = handle.await {
                         error_log(
                             http.clone(),
-                            &format!("A panic happened in reminders: ```{:?}```", e),
+                            &format!(
+                                "A panic happened in reminders: ```{:?}```",
+                                e
+                            ),
                         )
                         .await
                     }
@@ -269,8 +275,11 @@ fn reminder_embed<'a>(
 
     e.color(DEFAULT_COLOR)
         .author(|a: &mut CreateEmbedAuthor| {
-            a.name(format!("{} till launch", &format_duration(diff, false)))
-                .icon_url(DEFAULT_ICON)
+            a.name(format!(
+                "{} till launch",
+                &format_duration(diff, false)
+            ))
+            .icon_url(DEFAULT_ICON)
         })
         .description(format!(
             "**Payload:** {}\n\

@@ -166,11 +166,19 @@ async fn send_guild_notification<'r>(
 }
 
 pub async fn notify_scrub(http: Arc<Http>, db: Database, old: LaunchData, new: LaunchData) {
-    let user_settings: Vec<UserSettings> =
-        get_toggled(&db, "user_settings", "scrub_notifications").await;
+    let user_settings: Vec<UserSettings> = get_toggled(
+        &db,
+        "user_settings",
+        "scrub_notifications",
+    )
+    .await;
 
-    let guild_settings: Vec<GuildSettings> =
-        get_toggled(&db, "guild_settings", "scrub_notifications").await;
+    let guild_settings: Vec<GuildSettings> = get_toggled(
+        &db,
+        "guild_settings",
+        "scrub_notifications",
+    )
+    .await;
 
     let embed = scrub_embed(&old, &new);
 
@@ -223,10 +231,18 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
             new.vehicle,
             new.net
                 .timestamp(),
-            if new.status == LaunchStatus::Tbd { " (TBD)" } else {""},
+            if new.status == LaunchStatus::Tbd {
+                " (TBD)"
+            } else {
+                ""
+            },
             old.net
                 .timestamp(),
-            if old.status == LaunchStatus::Tbd { " (TBD)" } else {""},
+            if old.status == LaunchStatus::Tbd {
+                " (TBD)"
+            } else {
+                ""
+            },
         ),
         false,
     );
@@ -241,11 +257,19 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
 }
 
 pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData) {
-    let user_settings: Vec<UserSettings> =
-        get_toggled(&db, "user_settings", "outcome_notifications").await;
+    let user_settings: Vec<UserSettings> = get_toggled(
+        &db,
+        "user_settings",
+        "outcome_notifications",
+    )
+    .await;
 
-    let guild_settings: Vec<GuildSettings> =
-        get_toggled(&db, "guild_settings", "outcome_notifications").await;
+    let guild_settings: Vec<GuildSettings> = get_toggled(
+        &db,
+        "guild_settings",
+        "outcome_notifications",
+    )
+    .await;
 
     let embed = outcome_embed(&finished);
 
@@ -273,7 +297,10 @@ fn outcome_embed(finished: &LaunchData) -> CreateEmbed {
     e.color(
         if matches!(finished.status, LaunchStatus::Success) {
             Colour::FOOYOO
-        } else if matches!(finished.status, LaunchStatus::PartialFailure) {
+        } else if matches!(
+            finished.status,
+            LaunchStatus::PartialFailure
+        ) {
             Colour::ORANGE
         } else {
             Colour::RED
@@ -285,8 +312,10 @@ fn outcome_embed(finished: &LaunchData) -> CreateEmbed {
 
 #[cfg(test)]
 mod tests {
-    use chrono::Duration;
-    use chrono::NaiveDateTime;
+    use chrono::{
+        Duration,
+        NaiveDateTime,
+    };
     use serenity::model::id::{
         ChannelId,
         GuildId,

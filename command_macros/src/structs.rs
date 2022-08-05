@@ -1,23 +1,25 @@
 use std::ops::DerefMut;
 
-use proc_macro2::Span;
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{
+    Span,
+    TokenStream as TokenStream2,
+};
 use quote::{
     quote,
     ToTokens,
 };
-use syn::parse::{
-    Parse,
-    ParseStream,
-    Result,
-};
-use syn::Lifetime;
 use syn::{
     braced,
+    parse::{
+        Parse,
+        ParseStream,
+        Result,
+    },
     Attribute,
     Block,
     FnArg,
     Ident,
+    Lifetime,
     Path,
     PathSegment,
     ReturnType,

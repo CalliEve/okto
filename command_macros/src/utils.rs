@@ -42,7 +42,9 @@ impl<T: Parse> Parse for ParenthesisedItems<T> {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
         parenthesized!(content in input);
-        Ok(Self(content.parse_terminated(T::parse)?))
+        Ok(Self(
+            content.parse_terminated(T::parse)?,
+        ))
     }
 }
 
@@ -57,28 +59,48 @@ impl CommandAttributeContent {
     pub fn get_string(self) -> Result<String> {
         match self {
             Self::String(s) => Ok(s),
-            _ => Err(Error::new(Span::call_site(), "invalid command attribute")),
+            _ => {
+                Err(Error::new(
+                    Span::call_site(),
+                    "invalid command attribute",
+                ))
+            },
         }
     }
 
     pub fn get_boolean(self) -> Result<bool> {
         match self {
             Self::Boolean(b) => Ok(b),
-            _ => Err(Error::new(Span::call_site(), "invalid command attribute")),
+            _ => {
+                Err(Error::new(
+                    Span::call_site(),
+                    "invalid command attribute",
+                ))
+            },
         }
     }
 
     pub fn get_options(self) -> Result<Vec<CommandOption>> {
         match self {
             Self::Options(o) => Ok(o),
-            _ => Err(Error::new(Span::call_site(), "invalid command attribute")),
+            _ => {
+                Err(Error::new(
+                    Span::call_site(),
+                    "invalid command attribute",
+                ))
+            },
         }
     }
 
     pub fn get_permissions(self) -> Result<Vec<Path>> {
         match self {
             Self::Permissions(o) => Ok(o),
-            _ => Err(Error::new(Span::call_site(), "invalid command attribute")),
+            _ => {
+                Err(Error::new(
+                    Span::call_site(),
+                    "invalid command attribute",
+                ))
+            },
         }
     }
 }
@@ -134,24 +156,25 @@ impl Parse for CommandAttributeContent {
 macro_rules! get_field {
     ($name:literal, $map:expr, $res:ty) => {{
         match $map.get($name) {
-            Some(value) => syn::parse2::<$res>(
-                value
-                    .into_token_stream(),
-            )?,
+            Some(value) => syn::parse2::<$res>(value.into_token_stream())?,
             None => {
                 return Err(Error::new(
                     Span::call_site(),
-                    format!("No required field {} in command attributes", $name),
+                    format!(
+                        "No required field {} in command attributes",
+                        $name
+                    ),
                 ))
             },
         }
     }};
     (false, $name:literal, $map:expr, $res:ty) => {{
         match $map.get($name) {
-            Some(value) => Some(syn::parse2::<$res>(
-                value
-                    .into_token_stream(),
-            )?),
+            Some(value) => {
+                Some(syn::parse2::<$res>(
+                    value.into_token_stream(),
+                )?)
+            },
             None => None,
         }
     }};
@@ -191,7 +214,12 @@ impl Parse for CommandOption {
                 v.base10_parse()
                     .unwrap()
             }),
-            choices: get_field!(false, "choices", fields, List<CommandOptionChoice>),
+            choices: get_field!(
+                false,
+                "choices",
+                fields,
+                List<CommandOptionChoice>
+            ),
         })
     }
 }

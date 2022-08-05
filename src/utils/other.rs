@@ -167,40 +167,54 @@ pub enum StandardButton {
 impl StandardButton {
     pub fn to_button(self) -> ButtonType {
         match self {
-            Self::Last => ButtonType {
-                label: "Last page".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(ReactionType::from(FINAL_PAGE_EMOJI)),
+            Self::Last => {
+                ButtonType {
+                    label: "Last page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(FINAL_PAGE_EMOJI)),
+                }
             },
-            Self::First => ButtonType {
-                label: "First page".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(ReactionType::from(FIRST_PAGE_EMOJI)),
+            Self::First => {
+                ButtonType {
+                    label: "First page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(FIRST_PAGE_EMOJI)),
+                }
             },
-            Self::Forward => ButtonType {
-                label: "Forward one page".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(ReactionType::from(NEXT_PAGE_EMOJI)),
+            Self::Forward => {
+                ButtonType {
+                    label: "Forward one page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(NEXT_PAGE_EMOJI)),
+                }
             },
-            Self::Back => ButtonType {
-                label: "Back one page".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(ReactionType::from(LAST_PAGE_EMOJI)),
+            Self::Back => {
+                ButtonType {
+                    label: "Back one page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(LAST_PAGE_EMOJI)),
+                }
             },
-            Self::Exit => ButtonType {
-                label: "Exit".to_owned(),
-                style: ButtonStyle::Danger,
-                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+            Self::Exit => {
+                ButtonType {
+                    label: "Exit".to_owned(),
+                    style: ButtonStyle::Danger,
+                    emoji: Some(ReactionType::from(EXIT_EMOJI)),
+                }
             },
-            Self::Prograde => ButtonType {
-                label: "Next".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(PROGRADE.clone()),
+            Self::Prograde => {
+                ButtonType {
+                    label: "Next".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(PROGRADE.clone()),
+                }
             },
-            Self::Retrograde => ButtonType {
-                label: "Back".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(RETROGRADE.clone()),
+            Self::Retrograde => {
+                ButtonType {
+                    label: "Back".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(RETROGRADE.clone()),
+                }
             },
         }
     }

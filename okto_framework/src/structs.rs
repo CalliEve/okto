@@ -5,10 +5,14 @@ use serde::Serialize;
 use serde_repr::Serialize_repr;
 use serenity::{
     client::Context,
-    framework::standard::{CommandResult, OnlyIn},
+    framework::standard::{
+        CommandResult,
+        OnlyIn,
+    },
     model::{
         application::interaction::application_command::ApplicationCommandInteraction,
-        channel::ChannelType, Permissions,
+        channel::ChannelType,
+        Permissions,
     },
 };
 

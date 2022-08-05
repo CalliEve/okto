@@ -56,10 +56,13 @@ impl InteractionHandler {
     }
 
     async fn handle(&self, interaction: &Interaction) -> bool {
-        if self.interaction_type.is_none() || self
+        if self
             .interaction_type
-            .filter(|t| *t == interaction.kind())
             .is_none()
+            || self
+                .interaction_type
+                .filter(|t| *t == interaction.kind())
+                .is_none()
         {
             return false;
         }
@@ -141,7 +144,11 @@ impl InteractionHandler {
 
 impl PartialEq for InteractionHandler {
     fn eq(&self, other: &Self) -> bool {
-        self.channel == other.channel && self.user == other.user && self.custom_id == other.custom_id && self.interaction_type == other.interaction_type && self.component_type == other.component_type
+        self.channel == other.channel
+            && self.user == other.user
+            && self.custom_id == other.custom_id
+            && self.interaction_type == other.interaction_type
+            && self.component_type == other.component_type
     }
 }
 
@@ -244,23 +251,26 @@ pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
         .await
         .get::<InteractionKey>()
     {
-            waiting
-                .0
-                .clone()
+        waiting
+            .0
+            .clone()
     } else {
         eprintln!("No waiting interaction cache");
-        return
+        return;
     };
 
-    let handled = stream::iter(all.iter()).filter(|h| async {
-        h.handle(interaction)
-            .await
-    })
-    .collect::<Vec<&InteractionHandler>>()
-    .await
-    .into_iter()
-    .cloned()
-    .collect::<Vec<InteractionHandler>>();
+    let handled = stream::iter(all.iter())
+        .filter(|h| {
+            async {
+                h.handle(interaction)
+                    .await
+            }
+        })
+        .collect::<Vec<&InteractionHandler>>()
+        .await
+        .into_iter()
+        .cloned()
+        .collect::<Vec<InteractionHandler>>();
 
     if let Some(mut waiting) = ctx
         .data
@@ -269,11 +279,11 @@ pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
         .get_mut::<InteractionKey>()
     {
         waiting.0 = waiting
-                .0
-                .iter()
-        .filter(|h| !handled.contains(h))
-        .cloned()
-        .collect::<Vec<InteractionHandler>>();
+            .0
+            .iter()
+            .filter(|h| !handled.contains(h))
+            .cloned()
+            .collect::<Vec<InteractionHandler>>();
     }
 }
 

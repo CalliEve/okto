@@ -38,12 +38,14 @@ use serenity::{
     model::{
         application::{
             component::ButtonStyle,
-            interaction::application_command::{
-                ApplicationCommandInteraction,
-                CommandDataOptionValue,
+            interaction::{
+                application_command::{
+                    ApplicationCommandInteraction,
+                    CommandDataOptionValue,
+                },
+                Interaction,
+                MessageFlags,
             },
-            interaction::Interaction,
-            interaction::MessageFlags,
         },
         channel::ReactionType,
         id::{
@@ -109,14 +111,21 @@ async fn notifychannel(
         .is_none()
     {
         interaction
-            .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-                m.interaction_response_data(|c| {
-                    c.flags(MessageFlags::EPHEMERAL)
-                        .embed(|e: &mut CreateEmbed| {
-                            default_embed(e, "This command can only be ran in a server.", false)
-                        })
-                })
-            })
+            .create_interaction_response(
+                &ctx.http,
+                |m: &mut CreateInteractionResponse| {
+                    m.interaction_response_data(|c| {
+                        c.flags(MessageFlags::EPHEMERAL)
+                            .embed(|e: &mut CreateEmbed| {
+                                default_embed(
+                                    e,
+                                    "This command can only be ran in a server.",
+                                    false,
+                                )
+                            })
+                    })
+                },
+            )
             .await?;
 
         return Ok(());
@@ -140,7 +149,9 @@ async fn notifychannel(
             })
             .ok_or("Invalid argument given")?
             .to_channel_cached(&ctx)
-            .map_or(interaction.channel_id, |channel| channel.id())
+            .map_or(interaction.channel_id, |channel| {
+                channel.id()
+            })
     } else {
         interaction.channel_id
     };
@@ -522,7 +533,11 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     )
                     .build()
                     .unwrap()
-                    .listen(http, &Interaction::MessageComponent(button_click), data)
+                    .listen(
+                        http,
+                        &Interaction::MessageComponent(button_click),
+                        data,
+                    )
                     .await;
                 })
             },
@@ -578,7 +593,11 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     )
                     .build()
                     .unwrap()
-                    .listen(http, &Interaction::MessageComponent(button_click), data)
+                    .listen(
+                        http,
+                        &Interaction::MessageComponent(button_click),
+                        data,
+                    )
                     .await;
                 })
             },
@@ -702,7 +721,13 @@ fn allow_filters_page(
                         let wait_ses = wait_ses.clone();
                         Box::pin(async move {
                             if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
-                                add_filter(&wait_ses.clone(), id, choice, "allow_filters").await;
+                                add_filter(
+                                    &wait_ses.clone(),
+                                    id,
+                                    choice,
+                                    "allow_filters",
+                                )
+                                .await;
                             } else {
                                 eprintln!("select menu returned unknown choice")
                             }
@@ -723,7 +748,11 @@ fn allow_filters_page(
                     )
                     .build()
                     .unwrap()
-                    .listen(http, &Interaction::MessageComponent(button_click), data)
+                    .listen(
+                        http,
+                        &Interaction::MessageComponent(button_click),
+                        data,
+                    )
                     .await;
                 })
             },
@@ -1078,7 +1107,13 @@ fn other_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFut
                 let mentions_ses = mentions_ses.clone();
                 Box::pin(async move {
                     let mentions_ses = mentions_ses.clone();
-                    toggle_setting(&mentions_ses, id, "mention_others", !mentions.as_ref()).await;
+                    toggle_setting(
+                        &mentions_ses,
+                        id,
+                        "mention_others",
+                        !mentions.as_ref(),
+                    )
+                    .await;
                     other_page(mentions_ses, id).await
                 })
             },
@@ -1150,9 +1185,9 @@ async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<V
     let db = if let Some(db) = get_db(ses).await {
         db
     } else {
-        return Err(MongoError::from(MongoErrorKind::Io(Arc::new(
-            IoErrorKind::NotFound.into(),
-        ))));
+        return Err(MongoError::from(MongoErrorKind::Io(
+            Arc::new(IoErrorKind::NotFound.into()),
+        )));
     };
 
     match id {
@@ -1189,35 +1224,38 @@ async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duratio
 
     let collection = db.collection::<Document>("reminders");
 
-    let result = match id {
-        ID::User(user_id) => collection.update_one(
-            doc! {"minutes": duration.num_minutes()},
-            doc! {
-                "$addToSet": {
-                    "users": user_id.0 as i64
-                }
+    let result =
+        match id {
+            ID::User(user_id) => {
+                collection.update_one(
+                    doc! {"minutes": duration.num_minutes()},
+                    doc! {
+                        "$addToSet": {
+                            "users": user_id.0 as i64
+                        }
+                    },
+                    Some(
+                        UpdateOptions::builder()
+                            .upsert(true)
+                            .build(),
+                    ),
+                )
             },
-            Some(
-                UpdateOptions::builder()
-                    .upsert(true)
-                    .build(),
+            ID::Channel((channel_id, guild_id)) => collection.update_one(
+                doc! {"minutes": duration.num_minutes()},
+                doc! {
+                    "$addToSet": {
+                        "channels": { "channel": channel_id.0 as i64, "guild": guild_id.0 as i64 }
+                    }
+                },
+                Some(
+                    UpdateOptions::builder()
+                        .upsert(true)
+                        .build(),
+                ),
             ),
-        ),
-        ID::Channel((channel_id, guild_id)) => collection.update_one(
-            doc! {"minutes": duration.num_minutes()},
-            doc! {
-                "$addToSet": {
-                    "channels": { "channel": channel_id.0 as i64, "guild": guild_id.0 as i64 }
-                }
-            },
-            Some(
-                UpdateOptions::builder()
-                    .upsert(true)
-                    .build(),
-            ),
-        ),
-    }
-    .await;
+        }
+        .await;
 
     if let Err(e) = result {
         eprintln!("error while adding reminder:");
@@ -1234,27 +1272,30 @@ async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dura
 
     let collection = db.collection::<Document>("reminders");
 
-    let result = match id {
-        ID::User(user_id) => collection.update_one(
-            doc! {"minutes": duration.num_minutes()},
-            doc! {
-                "$pull": {
-                    "users": user_id.0 as i64
-                }
+    let result =
+        match id {
+            ID::User(user_id) => {
+                collection.update_one(
+                    doc! {"minutes": duration.num_minutes()},
+                    doc! {
+                        "$pull": {
+                            "users": user_id.0 as i64
+                        }
+                    },
+                    None,
+                )
             },
-            None,
-        ),
-        ID::Channel((channel_id, guild_id)) => collection.update_one(
-            doc! {"minutes": duration.num_minutes()},
-            doc! {
-                "$pull": {
-                    "channels": { "channel": channel_id.0 as i64, "guild": guild_id.0 as i64 }
-                }
-            },
-            None,
-        ),
-    }
-    .await;
+            ID::Channel((channel_id, guild_id)) => collection.update_one(
+                doc! {"minutes": duration.num_minutes()},
+                doc! {
+                    "$pull": {
+                        "channels": { "channel": channel_id.0 as i64, "guild": guild_id.0 as i64 }
+                    }
+                },
+                None,
+            ),
+        }
+        .await;
 
     if let Err(e) = result {
         eprintln!("error while removing reminder:");
@@ -1282,32 +1323,36 @@ async fn add_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String, fil
     };
 
     let result = match id {
-        ID::User(user_id) => collection.update_one(
-            doc! {"user": user_id.0 as i64},
-            doc! {
-                "$addToSet": {
-                    filter_type: filter
-                }
-            },
-            Some(
-                UpdateOptions::builder()
-                    .upsert(true)
-                    .build(),
-            ),
-        ),
-        ID::Channel((_, guild_id)) => collection.update_one(
-            doc! {"guild": guild_id.0 as i64},
-            doc! {
-                "$addToSet": {
-                    filter_type: filter
-                }
-            },
-            Some(
-                UpdateOptions::builder()
-                    .upsert(true)
-                    .build(),
-            ),
-        ),
+        ID::User(user_id) => {
+            collection.update_one(
+                doc! {"user": user_id.0 as i64},
+                doc! {
+                    "$addToSet": {
+                        filter_type: filter
+                    }
+                },
+                Some(
+                    UpdateOptions::builder()
+                        .upsert(true)
+                        .build(),
+                ),
+            )
+        },
+        ID::Channel((_, guild_id)) => {
+            collection.update_one(
+                doc! {"guild": guild_id.0 as i64},
+                doc! {
+                    "$addToSet": {
+                        filter_type: filter
+                    }
+                },
+                Some(
+                    UpdateOptions::builder()
+                        .upsert(true)
+                        .build(),
+                ),
+            )
+        },
     }
     .await;
 
@@ -1331,24 +1376,28 @@ async fn remove_filter(ses: &Arc<RwLock<EmbedSession>>, id: ID, filter: String, 
     };
 
     let result = match id {
-        ID::User(user_id) => collection.update_one(
-            doc! {"user": user_id.0 as i64},
-            doc! {
-                "$pull": {
-                    filter_type: filter
-                }
-            },
-            None,
-        ),
-        ID::Channel((_, guild_id)) => collection.update_one(
-            doc! {"guild": guild_id.0 as i64},
-            doc! {
-                "$pull": {
-                    filter_type: filter
-                }
-            },
-            None,
-        ),
+        ID::User(user_id) => {
+            collection.update_one(
+                doc! {"user": user_id.0 as i64},
+                doc! {
+                    "$pull": {
+                        filter_type: filter
+                    }
+                },
+                None,
+            )
+        },
+        ID::Channel((_, guild_id)) => {
+            collection.update_one(
+                doc! {"guild": guild_id.0 as i64},
+                doc! {
+                    "$pull": {
+                        filter_type: filter
+                    }
+                },
+                None,
+            )
+        },
     }
     .await;
 
@@ -1372,32 +1421,36 @@ async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &str, 
     };
 
     let result = match id {
-        ID::User(user_id) => collection.update_one(
-            doc! {"user": user_id.0 as i64},
-            doc! {
-                "$set": {
-                    setting: val
-                }
-            },
-            Some(
-                UpdateOptions::builder()
-                    .upsert(true)
-                    .build(),
-            ),
-        ),
-        ID::Channel((_, guild_id)) => collection.update_one(
-            doc! {"guild": guild_id.0 as i64},
-            doc! {
-                "$set": {
-                    setting: val
-                }
-            },
-            Some(
-                UpdateOptions::builder()
-                    .upsert(true)
-                    .build(),
-            ),
-        ),
+        ID::User(user_id) => {
+            collection.update_one(
+                doc! {"user": user_id.0 as i64},
+                doc! {
+                    "$set": {
+                        setting: val
+                    }
+                },
+                Some(
+                    UpdateOptions::builder()
+                        .upsert(true)
+                        .build(),
+                ),
+            )
+        },
+        ID::Channel((_, guild_id)) => {
+            collection.update_one(
+                doc! {"guild": guild_id.0 as i64},
+                doc! {
+                    "$set": {
+                        setting: val
+                    }
+                },
+                Some(
+                    UpdateOptions::builder()
+                        .upsert(true)
+                        .build(),
+                ),
+            )
+        },
     }
     .await;
 
@@ -1417,19 +1470,21 @@ async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, chann
     let collection = db.collection::<Document>("guild_settings");
 
     let result = match id {
-        ID::Channel((_, guild_id)) => collection.update_one(
-            doc! {"guild": guild_id.0 as i64},
-            doc! {
-                "$set": {
-                    "notifications_channel": channel.0 as i64
-                }
-            },
-            Some(
-                UpdateOptions::builder()
-                    .upsert(true)
-                    .build(),
-            ),
-        ),
+        ID::Channel((_, guild_id)) => {
+            collection.update_one(
+                doc! {"guild": guild_id.0 as i64},
+                doc! {
+                    "$set": {
+                        "notifications_channel": channel.0 as i64
+                    }
+                },
+                Some(
+                    UpdateOptions::builder()
+                        .upsert(true)
+                        .build(),
+                ),
+            )
+        },
         ID::User(_) => return,
     }
     .await;

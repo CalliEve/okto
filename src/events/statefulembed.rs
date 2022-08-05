@@ -187,20 +187,23 @@ impl StatefulEmbed {
 
             session
                 .interaction
-                .edit_original_interaction_response(&http, |e: &mut EditInteractionResponse| {
-                    e.components(|c: &mut CreateComponents| {
-                        *c = self.get_components();
+                .edit_original_interaction_response(
+                    &http,
+                    |e: &mut EditInteractionResponse| {
+                        e.components(|c: &mut CreateComponents| {
+                            *c = self.get_components();
 
-                        c
-                    })
-                    .embed(|e: &mut CreateEmbed| {
-                        e.0 = self
-                            .inner
-                            .0
-                            .clone();
-                        e
-                    })
-                })
+                            c
+                        })
+                        .embed(|e: &mut CreateEmbed| {
+                            e.0 = self
+                                .inner
+                                .0
+                                .clone();
+                            e
+                        })
+                    },
+                )
                 .await?;
 
             let msg = session
@@ -343,7 +346,10 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
             if let Err(e) = r {
                 error_log(
                     &ctx.http,
-                    format!("Got error when responding to interaction: {:?}", e),
+                    format!(
+                        "Got error when responding to interaction: {:?}",
+                        e
+                    ),
                 )
                 .await;
             } else {

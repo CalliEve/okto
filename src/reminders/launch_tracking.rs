@@ -19,6 +19,10 @@ use serenity::{
     prelude::RwLock,
 };
 
+use super::{
+    notify_outcome,
+    notify_scrub,
+};
 use crate::{
     models::launches::{
         LaunchContainer,
@@ -34,21 +38,17 @@ use crate::{
     },
 };
 
-use super::{
-        notify_outcome,
-        notify_scrub,
-    };
-
 pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Vec<LaunchData>>>) {
     println!("getting launch information");
 
     // Get new set of launches
     let mut launches: Vec<LaunchData> = match get_new_launches().await {
-        Ok(ls) => ls
-            .results
-            .into_iter()
-            .map(LaunchData::from)
-            .collect(),
+        Ok(ls) => {
+            ls.results
+                .into_iter()
+                .map(LaunchData::from)
+                .collect()
+        },
         Err(e) => {
             dbg!(e);
             return;
@@ -131,7 +131,11 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
             .await;
     });
     if let Err(p) = notif_res.await {
-        error_log(http, format!("Panic in sending notifications: {}", p)).await;
+        error_log(
+            http,
+            format!("Panic in sending notifications: {}", p),
+        )
+        .await;
     }
 }
 

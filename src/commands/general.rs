@@ -17,9 +17,9 @@ use serenity::{
         EditInteractionResponse,
     },
     framework::standard::CommandResult,
-    model::application::{
-        interaction::application_command::ApplicationCommandInteraction,
-        interaction::InteractionResponseType,
+    model::application::interaction::{
+        application_command::ApplicationCommandInteraction,
+        InteractionResponseType,
     },
     prelude::Context,
     utils::Colour,
@@ -35,11 +35,14 @@ use crate::{
 async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let start = Utc::now();
     interaction
-        .create_interaction_response(&ctx, |c: &mut CreateInteractionResponse| {
-            c.interaction_response_data(|d| {
-                d.embed(|e: &mut CreateEmbed| e.description("\u{1f3d3} pong..."))
-            })
-        })
+        .create_interaction_response(
+            &ctx,
+            |c: &mut CreateInteractionResponse| {
+                c.interaction_response_data(|d| {
+                    d.embed(|e: &mut CreateEmbed| e.description("\u{1f3d3} pong..."))
+                })
+            },
+        )
         .await?;
     let end = Utc::now();
 
@@ -50,16 +53,19 @@ async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
             .created_at();
 
     interaction
-        .edit_original_interaction_response(ctx, |e: &mut EditInteractionResponse| {
-            e.embed(|e: &mut CreateEmbed| {
-                e.title("Pong!")
-                    .description(format!(
-                        "\u{1f3d3}\nws delay: {}ms\napi ping: {}ms",
-                        ws_delay.num_milliseconds(),
-                        round_trip.num_milliseconds()
-                    ))
-            })
-        })
+        .edit_original_interaction_response(
+            ctx,
+            |e: &mut EditInteractionResponse| {
+                e.embed(|e: &mut CreateEmbed| {
+                    e.title("Pong!")
+                        .description(format!(
+                            "\u{1f3d3}\nws delay: {}ms\napi ping: {}ms",
+                            ws_delay.num_milliseconds(),
+                            round_trip.num_milliseconds()
+                        ))
+                })
+            },
+        )
         .await?;
 
     Ok(())
@@ -134,19 +140,21 @@ async fn info(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
 /// Have some helpful websites
 async fn websites(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     interaction
-        .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {
-                c.embed(|e: &mut CreateEmbed| {
-                    e.field(
-                        "General launch information:",
-                        "**Spaceflight Insider:** http://www.spaceflightinsider.com/
+        .create_interaction_response(
+            &ctx.http,
+            |m: &mut CreateInteractionResponse| {
+                m.interaction_response_data(|c| {
+                    c.embed(|e: &mut CreateEmbed| {
+                        e.field(
+                            "General launch information:",
+                            "**Spaceflight Insider:** http://www.spaceflightinsider.com/
                     **Rocket Watch:** https://rocket.watch/
                     **Go4LiftOff:** https://go4liftoff.com/",
-                        false,
-                    )
-                    .field(
-                        "Launch providers:",
-                        "**SpaceX:** http://www.spacex.com/
+                            false,
+                        )
+                        .field(
+                            "Launch providers:",
+                            "**SpaceX:** http://www.spacex.com/
                     **United Launch Alliance:** https://www.ulalaunch.com/
                     **Arianespace:** http://www.arianespace.com/
                     **Rocket Lab:** https://www.rocketlabusa.com/
@@ -154,16 +162,17 @@ async fn websites(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
                     **Orbital ATK:** https://www.orbitalatk.com/
                     **ISRO:** https://www.isro.gov.in/
                     **NASA:** https://www.nasa.gov/",
-                        false,
-                    )
-                    .author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Some websites with more information")
-                            .icon_url(DEFAULT_ICON)
+                            false,
+                        )
+                        .author(|a: &mut CreateEmbedAuthor| {
+                            a.name("Some websites with more information")
+                                .icon_url(DEFAULT_ICON)
+                        })
+                        .color(DEFAULT_COLOR)
                     })
-                    .color(DEFAULT_COLOR)
                 })
-            })
-        })
+            },
+        )
         .await?;
     Ok(())
 }
@@ -199,32 +208,38 @@ async fn peopleinspace(
             .len(),
     );
     for person in &pis.people {
-        text_vec.push(format!("{}: {}\n", person.name, person.craft));
+        text_vec.push(format!(
+            "{}: {}\n",
+            person.name, person.craft
+        ));
     }
 
     interaction
-        .create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {
-                c.embed(|e: &mut CreateEmbed| {
-                    e.title(format!(
-                        "There are currently {} people in space",
-                        pis.number
-                    ))
-                    .description(
-                        text_vec
-                            .iter()
-                            .map(std::string::String::as_str)
-                            .collect::<String>(),
-                    )
-                    .author(|a: &mut CreateEmbedAuthor| {
-                        a.name("People in space")
-                            .icon_url(DEFAULT_ICON)
+        .create_interaction_response(
+            &ctx.http,
+            |m: &mut CreateInteractionResponse| {
+                m.interaction_response_data(|c| {
+                    c.embed(|e: &mut CreateEmbed| {
+                        e.title(format!(
+                            "There are currently {} people in space",
+                            pis.number
+                        ))
+                        .description(
+                            text_vec
+                                .iter()
+                                .map(std::string::String::as_str)
+                                .collect::<String>(),
+                        )
+                        .author(|a: &mut CreateEmbedAuthor| {
+                            a.name("People in space")
+                                .icon_url(DEFAULT_ICON)
+                        })
+                        .timestamp(Utc::now())
+                        .color(DEFAULT_COLOR)
                     })
-                    .timestamp(Utc::now())
-                    .color(DEFAULT_COLOR)
                 })
-            })
-        })
+            },
+        )
         .await?;
 
     Ok(())
@@ -505,57 +520,66 @@ async fn get_star(
     let star = &res[0];
 
     interaction
-        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Star Information")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .color(DEFAULT_COLOR)
-                .title(star_name)
-                .timestamp(Utc::now())
-                .field(
-                    "System Data",
-                    format!(
-                        "**Number of planets in system:** {}\n\
+        .edit_original_interaction_response(
+            &ctx.http,
+            |e: &mut EditInteractionResponse| {
+                e.embed(|e: &mut CreateEmbed| {
+                    e.author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Star Information")
+                            .icon_url(DEFAULT_ICON)
+                    })
+                    .color(DEFAULT_COLOR)
+                    .title(star_name)
+                    .timestamp(Utc::now())
+                    .field(
+                        "System Data",
+                        format!(
+                            "**Number of planets in system:** {}\n\
                         **Letters used to designate planets in the system:** {}\n\
                         **Distance from us in lightyears:** {}\n\
                         **Distance from us in parsecs:** {}",
-                        star.sy_pnum,
-                        planets,
-                        star.get_lightyears_dist(),
-                        star.sy_dist
-                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
-                    ),
-                    false,
-                )
-                .field(
-                    "Star Data",
-                    format!(
-                        "**Stellar Age:** {}\n\
+                            star.sy_pnum,
+                            planets,
+                            star.get_lightyears_dist(),
+                            star.sy_dist
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| n.to_string()
+                                ),
+                        ),
+                        false,
+                    )
+                    .field(
+                        "Star Data",
+                        format!(
+                            "**Stellar Age:** {}\n\
                         **Spectral Type:** {}\n\
                         **Henry Draper Catalog Name:** {}\n\
                         **Radius Star:** {}\n\
                         **Mass of the star:** {}\n\
                         **Stellar Density:** {}",
-                        star.get_age(),
-                        star.st_spectype
-                            .as_ref()
-                            .cloned()
-                            .unwrap_or_else(|| "unknown".to_owned()),
-                        star.hd_name
-                            .as_ref()
-                            .cloned()
-                            .unwrap_or_else(|| "unknown".to_owned()),
-                        star.get_rad(),
-                        star.get_mass(),
-                        star.st_dens
-                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
-                    ),
-                    false,
-                )
-            })
-        })
+                            star.get_age(),
+                            star.st_spectype
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or_else(|| "unknown".to_owned()),
+                            star.hd_name
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or_else(|| "unknown".to_owned()),
+                            star.get_rad(),
+                            star.get_mass(),
+                            star.st_dens
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| n.to_string()
+                                ),
+                        ),
+                        false,
+                    )
+                })
+            },
+        )
         .await?;
 
     Ok(())
@@ -607,103 +631,139 @@ async fn get_planet(
         .ok_or("No planet like this found")?;
 
     interaction
-        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Planet Information")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .color(DEFAULT_COLOR)
-                .title(planet_name)
-                .timestamp(Utc::now())
-                .field(
-                    "Planet Data",
-                    format!(
-                        "**Planet Radius compared to Jupiter:** {}\n\
+        .edit_original_interaction_response(
+            &ctx.http,
+            |e: &mut EditInteractionResponse| {
+                e.embed(|e: &mut CreateEmbed| {
+                    e.author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Planet Information")
+                            .icon_url(DEFAULT_ICON)
+                    })
+                    .color(DEFAULT_COLOR)
+                    .title(planet_name)
+                    .timestamp(Utc::now())
+                    .field(
+                        "Planet Data",
+                        format!(
+                            "**Planet Radius compared to Jupiter:** {}\n\
                     **Planet Radius compared to Earth:** {}\n\
                     **Planet Density:** {}\n\
                     **Planet Mass compared to Jupiter:** {}\n\
                     **Planet Mass compared to Earth:** {}\n\
                     **Planet Equilibrium Temperature:** {}",
-                        planet
-                            .pl_radj
-                            .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
-                        planet
-                            .pl_rade
-                            .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
-                        planet
-                            .pl_dens
-                            .map_or_else(|| "unknown".to_owned(), |n| format!("{}g/cm\u{b3}", n)),
-                        planet
-                            .pl_massj
-                            .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
-                        planet
-                            .pl_masse
-                            .map_or_else(|| "unknown".to_owned(), |n| format!("{} times", n)),
-                        planet
-                            .pl_eqt
-                            .map_or_else(|| "unknown".to_owned(), |n| format!("{}K", n)),
-                    ),
-                    false,
-                )
-                .field(
-                    "Orbit Data",
-                    format!(
-                        "**Eccentricity:** {}\n\
+                            planet
+                                .pl_radj
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| format!("{} times", n)
+                                ),
+                            planet
+                                .pl_rade
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| format!("{} times", n)
+                                ),
+                            planet
+                                .pl_dens
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| format!("{}g/cm\u{b3}", n)
+                                ),
+                            planet
+                                .pl_massj
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| format!("{} times", n)
+                                ),
+                            planet
+                                .pl_masse
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| format!("{} times", n)
+                                ),
+                            planet
+                                .pl_eqt
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| format!("{}K", n)
+                                ),
+                        ),
+                        false,
+                    )
+                    .field(
+                        "Orbit Data",
+                        format!(
+                            "**Eccentricity:** {}\n\
                     **Inclination:** {}\n\
                     **Orbital Period:** {} days\n\
                     **Orbit Semi-Major Axis:** {}\n\
                     **Host Star:** {}",
-                        planet
-                            .pl_orbeccen
-                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
-                        planet
-                            .pl_orbincl
-                            .map_or_else(|| "unknown".to_owned(), |n| format!("{} degrees", n)),
-                        planet
-                            .pl_orbper
-                            .map_or_else(|| "unknown".to_owned(), |n| format!("{}K", n)),
-                        planet
-                            .pl_orbsmax
-                            .map_or_else(|| "unknown".to_owned(), |n| format!("{}AU", n)),
-                        planet
-                            .hostname
-                            .as_ref()
-                            .cloned()
-                            .unwrap_or_else(|| "unknown".to_owned()),
-                    ),
-                    false,
-                )
-                .field(
-                    "Discovery Info",
-                    format!(
-                        "**Year of Discovery:** {}\n\
+                            planet
+                                .pl_orbeccen
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| n.to_string()
+                                ),
+                            planet
+                                .pl_orbincl
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| format!("{} degrees", n)
+                                ),
+                            planet
+                                .pl_orbper
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| format!("{}K", n)
+                                ),
+                            planet
+                                .pl_orbsmax
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| format!("{}AU", n)
+                                ),
+                            planet
+                                .hostname
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or_else(|| "unknown".to_owned()),
+                        ),
+                        false,
+                    )
+                    .field(
+                        "Discovery Info",
+                        format!(
+                            "**Year of Discovery:** {}\n\
                     **Discovery Method:** {}\n\
                     **Location of observation of planet discovery:** {}\n\
                     **Name of telescoped used:** {}",
-                        planet
-                            .disc_year
-                            .map_or_else(|| "unknown".to_owned(), |n| n.to_string()),
-                        planet
-                            .discoverymethod
-                            .as_ref()
-                            .cloned()
-                            .unwrap_or_else(|| "unknown".to_owned()),
-                        planet
-                            .disc_locale
-                            .as_ref()
-                            .cloned()
-                            .unwrap_or_else(|| "unknown".to_owned()),
-                        planet
-                            .disc_telescope
-                            .as_ref()
-                            .cloned()
-                            .unwrap_or_else(|| "unknown".to_owned()),
-                    ),
-                    false,
-                )
-            })
-        })
+                            planet
+                                .disc_year
+                                .map_or_else(
+                                    || "unknown".to_owned(),
+                                    |n| n.to_string()
+                                ),
+                            planet
+                                .discoverymethod
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or_else(|| "unknown".to_owned()),
+                            planet
+                                .disc_locale
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or_else(|| "unknown".to_owned()),
+                            planet
+                                .disc_telescope
+                                .as_ref()
+                                .cloned()
+                                .unwrap_or_else(|| "unknown".to_owned()),
+                        ),
+                        false,
+                    )
+                })
+            },
+        )
         .await?;
 
     Ok(())

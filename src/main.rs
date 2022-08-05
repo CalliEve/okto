@@ -22,6 +22,21 @@ use std::{
     sync::Arc,
 };
 
+use commands::{
+    general::*,
+    help::*,
+    launches::*,
+    pictures::*,
+    reminders::*,
+};
+use models::caches::{
+    CommandListKey,
+    DatabaseKey,
+    EmbedSessionsKey,
+    InteractionKey,
+    LaunchesCacheKey,
+    PictureCacheKey,
+};
 use mongodb::Client as MongoClient;
 use serenity::{
     client::Client,
@@ -32,26 +47,10 @@ use serenity::{
         TypeMap,
     },
 };
-
-use commands::{
-    general::*,
-    help::*,
-    launches::*,
-    pictures::*,
-    reminders::*,
-};
-use models::caches::{
-    DatabaseKey,
-    EmbedSessionsKey,
-    InteractionKey,
-    LaunchesCacheKey,
-    PictureCacheKey,
-};
 use utils::{
     error_log,
     preloading::preload_data,
 };
-use models::caches::CommandListKey;
 
 #[tokio::main]
 async fn main() {
@@ -85,7 +84,10 @@ async fn main() {
                     .await;
                 error_log(
                     &ctx.http,
-                    format!("An error happened in {}:\n```{:?}```", cmd_name, why),
+                    format!(
+                        "An error happened in {}:\n```{:?}```",
+                        cmd_name, why
+                    ),
                 )
                 .await
             }
@@ -179,6 +181,9 @@ async fn main() {
         .start()
         .await
     {
-        println!("An error occurred while running the client: {:?}", why);
+        println!(
+            "An error occurred while running the client: {:?}",
+            why
+        );
     }
 }

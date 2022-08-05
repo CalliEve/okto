@@ -5,12 +5,17 @@ use std::{
 
 use futures::future::BoxFuture;
 use itertools::Itertools;
-use serenity::http::Http;
-use serenity::model::id::UserId;
 use serenity::{
-    model::application::{
-        component::ComponentType,
-        interaction::{Interaction, InteractionResponseType},
+    http::Http,
+    model::{
+        application::{
+            component::ComponentType,
+            interaction::{
+                Interaction,
+                InteractionResponseType,
+            },
+        },
+        id::UserId,
     },
     prelude::{
         RwLock,
@@ -23,8 +28,10 @@ use super::interaction_handler::{
     respond_to_interaction,
     InteractionHandler,
 };
-use crate::models::caches::InteractionKey;
-use crate::utils::interaction_builder::InteractionResponseBuilder;
+use crate::{
+    models::caches::InteractionKey,
+    utils::interaction_builder::InteractionResponseBuilder,
+};
 
 type Handler = Arc<Box<dyn Fn((String, String)) -> BoxFuture<'static, ()> + Send + Sync>>;
 
@@ -76,16 +83,17 @@ impl SelectMenu {
             let http_clone = http_clone.clone();
             let handler_clone = handler.clone();
             Box::pin(async move {
-                let _ = data.create_interaction_response(http_clone, |c| {
-                    c.kind(InteractionResponseType::DeferredUpdateMessage)
-                })
-                .await;
+                let _ = data
+                    .create_interaction_response(http_clone, |c| {
+                        c.kind(InteractionResponseType::DeferredUpdateMessage)
+                    })
+                    .await;
 
                 handler_clone((key, chosen.clone())).await
             })
         })
         .set_component_type(ComponentType::SelectMenu);
-        
+
         if let Some(user_id) = self.user_id {
             interaction_handler = interaction_handler.set_user(user_id);
         }
@@ -224,7 +232,7 @@ impl SelectMenuBuilder {
             .custom_id = Some(custom_id.to_string());
         self
     }
-    
+
     pub fn set_user(mut self, user_id: UserId) -> Self {
         self.inner
             .user_id = Some(user_id);

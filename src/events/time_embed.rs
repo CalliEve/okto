@@ -92,9 +92,10 @@ impl TimeEmbed {
                         .add_duration(Duration::minutes(5))
                         .show_embed()
                 })
-                .add_option(&StandardButton::Exit.to_button(), move |_| {
-                    (self_close.handler)(self_close.duration)
-                });
+                .add_option(
+                    &StandardButton::Exit.to_button(),
+                    move |_| (self_close.handler)(self_close.duration),
+                );
 
             if let Err(e) = embed
                 .show()

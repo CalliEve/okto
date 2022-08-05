@@ -15,9 +15,9 @@ use serenity::{
         EditInteractionResponse,
     },
     framework::standard::CommandResult,
-    model::application::{
-        interaction::application_command::ApplicationCommandInteraction,
-        interaction::InteractionResponseType,
+    model::application::interaction::{
+        application_command::ApplicationCommandInteraction,
+        InteractionResponseType,
     },
     prelude::Context,
 };
@@ -78,7 +78,13 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
     };
 
     let epic_image_data: EPICImage = DEFAULT_CLIENT
-        .get(format!("https://epic.gsfc.nasa.gov/api/{}", image_type).as_str())
+        .get(
+            format!(
+                "https://epic.gsfc.nasa.gov/api/{}",
+                image_type
+            )
+            .as_str(),
+        )
         .send()
         .await?
         .error_for_status()?
@@ -89,32 +95,35 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         .ok_or("No image received from the EPIC image api")?;
 
     interaction
-        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Earth Picture")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .color(DEFAULT_COLOR)
-                .description(format!(
+        .edit_original_interaction_response(
+            &ctx.http,
+            |e: &mut EditInteractionResponse| {
+                e.embed(|e: &mut CreateEmbed| {
+                    e.author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Earth Picture")
+                            .icon_url(DEFAULT_ICON)
+                    })
+                    .color(DEFAULT_COLOR)
+                    .description(format!(
                     "Most recent {} image from the EPIC camera onboard the NOAA DSCOVR spacecraft",
                     image_type
                 ))
-                .footer(|f: &mut CreateEmbedFooter| {
-                    f.text(format!(
-                        "Taken on: {}\nRun this command again with the {} argument!",
-                        epic_image_data.date, opposite
+                    .footer(|f: &mut CreateEmbedFooter| {
+                        f.text(format!(
+                            "Taken on: {}\nRun this command again with the {} argument!",
+                            epic_image_data.date, opposite
+                        ))
+                    })
+                    .image(format!(
+                        "https://epic.gsfc.nasa.gov/archive/{}/{}/png/{}.png",
+                        image_type,
+                        get_date_epic_image(&epic_image_data.date),
+                        epic_image_data.image
                     ))
+                    .timestamp(Utc::now())
                 })
-                .image(format!(
-                    "https://epic.gsfc.nasa.gov/archive/{}/{}/png/{}.png",
-                    image_type,
-                    get_date_epic_image(&epic_image_data.date),
-                    epic_image_data.image
-                ))
-                .timestamp(Utc::now())
-            })
-        })
+            },
+        )
         .await?;
 
     Ok(())
@@ -199,22 +208,28 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         );
 
     interaction
-        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Astronomy Picture of Today")
-                        .icon_url(DEFAULT_ICON)
+        .edit_original_interaction_response(
+            &ctx.http,
+            |e: &mut EditInteractionResponse| {
+                e.embed(|e: &mut CreateEmbed| {
+                    e.author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Astronomy Picture of Today")
+                            .icon_url(DEFAULT_ICON)
+                    })
+                    .title(&apod_image.title)
+                    .color(DEFAULT_COLOR)
+                    .description(explanation)
+                    .footer(|f: &mut CreateEmbedFooter| {
+                        f.text(format!(
+                            "APOD of {}",
+                            date.format("%Y-%m-%d")
+                        ))
+                    })
+                    .image(apod_image.url)
+                    .timestamp(Utc::now())
                 })
-                .title(&apod_image.title)
-                .color(DEFAULT_COLOR)
-                .description(explanation)
-                .footer(|f: &mut CreateEmbedFooter| {
-                    f.text(format!("APOD of {}", date.format("%Y-%m-%d")))
-                })
-                .image(apod_image.url)
-                .timestamp(Utc::now())
-            })
-        })
+            },
+        )
         .await?;
 
     Ok(())
@@ -233,29 +248,32 @@ async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> C
     let (pic, sol) = fetch_rover_camera_picture("spirit", 1..2186).await;
 
     interaction
-        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Random Picture made by the Spirit mars rover")
-                        .icon_url(DEFAULT_ICON)
+        .edit_original_interaction_response(
+            &ctx.http,
+            |e: &mut EditInteractionResponse| {
+                e.embed(|e: &mut CreateEmbed| {
+                    e.author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Random Picture made by the Spirit mars rover")
+                            .icon_url(DEFAULT_ICON)
+                    })
+                    .color(DEFAULT_COLOR)
+                    .field(
+                        "info:",
+                        format!(
+                            "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
+                            sol,
+                            pic.earth_date,
+                            pic.camera
+                                .full_name
+                        ),
+                        false,
+                    )
+                    .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
+                    .image(pic.img_src)
+                    .timestamp(Utc::now())
                 })
-                .color(DEFAULT_COLOR)
-                .field(
-                    "info:",
-                    format!(
-                        "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                        sol,
-                        pic.earth_date,
-                        pic.camera
-                            .full_name
-                    ),
-                    false,
-                )
-                .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
-                .image(pic.img_src)
-                .timestamp(Utc::now())
-            })
-        })
+            },
+        )
         .await?;
 
     Ok(())
@@ -274,29 +292,32 @@ async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction)
     let (pic, sol) = fetch_rover_camera_picture("opportunity", 1..5112).await;
 
     interaction
-        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Random Picture made by the Opportunity mars rover")
-                        .icon_url(DEFAULT_ICON)
+        .edit_original_interaction_response(
+            &ctx.http,
+            |e: &mut EditInteractionResponse| {
+                e.embed(|e: &mut CreateEmbed| {
+                    e.author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Random Picture made by the Opportunity mars rover")
+                            .icon_url(DEFAULT_ICON)
+                    })
+                    .color(DEFAULT_COLOR)
+                    .field(
+                        "info:",
+                        format!(
+                            "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
+                            sol,
+                            pic.earth_date,
+                            pic.camera
+                                .full_name
+                        ),
+                        false,
+                    )
+                    .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
+                    .image(pic.img_src)
+                    .timestamp(Utc::now())
                 })
-                .color(DEFAULT_COLOR)
-                .field(
-                    "info:",
-                    format!(
-                        "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                        sol,
-                        pic.earth_date,
-                        pic.camera
-                            .full_name
-                    ),
-                    false,
-                )
-                .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
-                .image(pic.img_src)
-                .timestamp(Utc::now())
-            })
-        })
+            },
+        )
         .await?;
 
     Ok(())
@@ -317,29 +338,32 @@ async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -
     let (pic, sol) = fetch_rover_camera_picture("curiosity", 1..max_sol).await;
 
     interaction
-        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Random Picture made by the Curiosity mars rover")
-                        .icon_url(DEFAULT_ICON)
+        .edit_original_interaction_response(
+            &ctx.http,
+            |e: &mut EditInteractionResponse| {
+                e.embed(|e: &mut CreateEmbed| {
+                    e.author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Random Picture made by the Curiosity mars rover")
+                            .icon_url(DEFAULT_ICON)
+                    })
+                    .color(DEFAULT_COLOR)
+                    .field(
+                        "info:",
+                        format!(
+                            "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
+                            sol,
+                            pic.earth_date,
+                            pic.camera
+                                .full_name
+                        ),
+                        false,
+                    )
+                    .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
+                    .image(pic.img_src)
+                    .timestamp(Utc::now())
                 })
-                .color(DEFAULT_COLOR)
-                .field(
-                    "info:",
-                    format!(
-                        "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                        sol,
-                        pic.earth_date,
-                        pic.camera
-                            .full_name
-                    ),
-                    false,
-                )
-                .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
-                .image(pic.img_src)
-                .timestamp(Utc::now())
-            })
-        })
+            },
+        )
         .await?;
 
     Ok(())
@@ -360,29 +384,32 @@ async fn perseverance(ctx: &Context, interaction: &ApplicationCommandInteraction
     let (pic, sol) = fetch_rover_camera_picture("perseverance", 1..max_sol).await;
 
     interaction
-        .edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-            e.embed(|e: &mut CreateEmbed| {
-                e.author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Random Picture made by the Perseverance mars rover")
-                        .icon_url(DEFAULT_ICON)
+        .edit_original_interaction_response(
+            &ctx.http,
+            |e: &mut EditInteractionResponse| {
+                e.embed(|e: &mut CreateEmbed| {
+                    e.author(|a: &mut CreateEmbedAuthor| {
+                        a.name("Random Picture made by the Perseverance mars rover")
+                            .icon_url(DEFAULT_ICON)
+                    })
+                    .color(DEFAULT_COLOR)
+                    .field(
+                        "info:",
+                        format!(
+                            "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
+                            sol,
+                            pic.earth_date,
+                            pic.camera
+                                .full_name
+                        ),
+                        false,
+                    )
+                    .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
+                    .image(pic.img_src)
+                    .timestamp(Utc::now())
                 })
-                .color(DEFAULT_COLOR)
-                .field(
-                    "info:",
-                    format!(
-                        "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                        sol,
-                        pic.earth_date,
-                        pic.camera
-                            .full_name
-                    ),
-                    false,
-                )
-                .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
-                .image(pic.img_src)
-                .timestamp(Utc::now())
-            })
-        })
+            },
+        )
         .await?;
 
     Ok(())

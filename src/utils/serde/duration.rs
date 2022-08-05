@@ -17,5 +17,7 @@ pub fn deserialize<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where
     D: Deserializer<'de>,
 {
-    Ok(Duration::seconds(i64::deserialize(deserializer)?))
+    Ok(Duration::seconds(i64::deserialize(
+        deserializer,
+    )?))
 }

@@ -1,5 +1,7 @@
-use std::io::ErrorKind as IoErrorKind;
-use std::sync::Arc;
+use std::{
+    io::ErrorKind as IoErrorKind,
+    sync::Arc,
+};
 
 use mongodb::{
     bson::{
@@ -23,7 +25,11 @@ pub async fn get_user_settings(db: &Database, id: u64) -> MongoResult<UserSettin
     db.collection("user_settings")
         .find_one(doc! { "user": id as i64 }, None)
         .await?
-        .ok_or_else(|| MongoError::from(MongoErrorKind::Io(Arc::new(IoErrorKind::NotFound.into()))))
+        .ok_or_else(|| {
+            MongoError::from(MongoErrorKind::Io(Arc::new(
+                IoErrorKind::NotFound.into(),
+            )))
+        })
         .and_then(|d| bson::from_document::<UserSettings>(d).map_err(Into::into))
 }
 
@@ -31,6 +37,10 @@ pub async fn get_guild_settings(db: &Database, id: u64) -> MongoResult<GuildSett
     db.collection("guild_settings")
         .find_one(doc! { "guild": id as i64 }, None)
         .await?
-        .ok_or_else(|| MongoError::from(MongoErrorKind::Io(Arc::new(IoErrorKind::NotFound.into()))))
+        .ok_or_else(|| {
+            MongoError::from(MongoErrorKind::Io(Arc::new(
+                IoErrorKind::NotFound.into(),
+            )))
+        })
         .and_then(|d| bson::from_document::<GuildSettings>(d).map_err(Into::into))
 }

@@ -6,8 +6,14 @@ extern crate proc_macro;
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{parse2, Path};
-use utils::{add_suffix, CommandAttributeContent};
+use syn::{
+    parse2,
+    Path,
+};
+use utils::{
+    add_suffix,
+    CommandAttributeContent,
+};
 
 use crate::structs::CommandFunc;
 
@@ -53,9 +59,10 @@ fn command_inner(item: TokenStream) -> TokenStream {
                 .as_str()
             {
                 "name" => {
-                    command_name =
-                        propagate_err!(propagate_err!(attr.parse_args::<CommandAttributeContent>())
-                            .get_string())
+                    command_name = propagate_err!(propagate_err!(
+                        attr.parse_args::<CommandAttributeContent>()
+                    )
+                    .get_string())
                 },
                 "description" => {
                     description = description
@@ -66,19 +73,22 @@ fn command_inner(item: TokenStream) -> TokenStream {
                         .get_string())
                 },
                 "default_permission" => {
-                    default_permission =
-                        propagate_err!(propagate_err!(attr.parse_args::<CommandAttributeContent>())
-                            .get_boolean())
+                    default_permission = propagate_err!(propagate_err!(
+                        attr.parse_args::<CommandAttributeContent>()
+                    )
+                    .get_boolean())
                 },
                 "options" => {
-                    options =
-                        propagate_err!(propagate_err!(attr.parse_args::<CommandAttributeContent>())
-                            .get_options())
+                    options = propagate_err!(propagate_err!(
+                        attr.parse_args::<CommandAttributeContent>()
+                    )
+                    .get_options())
                 },
                 "required_permissions" => {
-                    required_permissions =
-                        propagate_err!(propagate_err!(attr.parse_args::<CommandAttributeContent>())
-                            .get_permissions())
+                    required_permissions = propagate_err!(propagate_err!(attr
+                        .parse_args::<CommandAttributeContent>(
+                    ))
+                    .get_permissions())
                 },
                 "only_in" => {
                     let tmp = propagate_err!(propagate_err!(

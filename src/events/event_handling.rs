@@ -157,7 +157,10 @@ impl EventHandler for Handler {
                 .cache
                 .guild_channel(755401788294955070)
             {
-                let content = format!("Left the following guild: {}", incomplete.id);
+                let content = format!(
+                    "Left the following guild: {}",
+                    incomplete.id
+                );
                 let _ = channel
                     .send_message(&ctx.http, |m| m.content(content))
                     .await;

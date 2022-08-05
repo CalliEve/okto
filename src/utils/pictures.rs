@@ -91,18 +91,28 @@ where
     R: RngCore + ?Sized,
 {
     let cams: &[&str] = match rover {
-        "spirit" | "opportunity" => &["NAVCAM", "PANCAM", "FHAZ", "RHAZ", "MINITES"],
-        "curiosity" => &["MAST", "FHAZ", "NAVCAM", "RHAZ", "MAHLI", "CHEMCAM"],
-        "perseverance" => &[
-            "MCZ_RIGHT",
-            "MCZ_LEFT",
-            "FRONT_HAZCAM_LEFT_A",
-            "FRONT_HAZCAM_RIGHT_A",
-            "NAVCAM_RIGHT",
-            "NAVCAM_LEFT",
-            "REAR_HAZCAM_LEFT",
-            "REAR_HAZCAM_RIGHT",
-        ],
+        "spirit" | "opportunity" => {
+            &[
+                "NAVCAM", "PANCAM", "FHAZ", "RHAZ", "MINITES",
+            ]
+        },
+        "curiosity" => {
+            &[
+                "MAST", "FHAZ", "NAVCAM", "RHAZ", "MAHLI", "CHEMCAM",
+            ]
+        },
+        "perseverance" => {
+            &[
+                "MCZ_RIGHT",
+                "MCZ_LEFT",
+                "FRONT_HAZCAM_LEFT_A",
+                "FRONT_HAZCAM_RIGHT_A",
+                "NAVCAM_RIGHT",
+                "NAVCAM_LEFT",
+                "REAR_HAZCAM_LEFT",
+                "REAR_HAZCAM_RIGHT",
+            ]
+        },
         _ => panic!("unknown rover provided"),
     };
 

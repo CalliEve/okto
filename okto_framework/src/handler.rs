@@ -6,7 +6,10 @@ use serenity::{
     framework::standard::CommandResult,
     http::Http,
     model::{
-        application::{command::CommandPermissionType, interaction::Interaction},
+        application::{
+            command::CommandPermissionType,
+            interaction::Interaction,
+        },
         id::CommandId,
         Permissions,
     },
@@ -14,8 +17,14 @@ use serenity::{
 };
 
 use crate::{
-    structs::{Command, CommandDetails},
-    utils::{get_all_guilds, get_roles_with_permission},
+    structs::{
+        Command,
+        CommandDetails,
+    },
+    utils::{
+        get_all_guilds,
+        get_roles_with_permission,
+    },
 };
 
 #[derive(Clone, Debug)]
@@ -129,9 +138,11 @@ impl Handler {
             .create_global_application_commands(&body)
             .await?
             .into_iter()
-            .map(|c| DiscordCommand {
-                id: c.id,
-                name: c.name,
+            .map(|c| {
+                DiscordCommand {
+                    id: c.id,
+                    name: c.name,
+                }
             })
             .collect();
 
@@ -160,7 +171,9 @@ impl Handler {
                     let discord_perms = cmd
                         .perms
                         .iter()
-                        .fold(Permissions::empty(), |acc, p| acc.union(*p));
+                        .fold(Permissions::empty(), |acc, p| {
+                            acc.union(*p)
+                        });
 
                     let mut c_perms = Vec::new();
                     for role in get_roles_with_permission(&g, discord_perms) {

@@ -22,15 +22,15 @@ use serenity::{
         CommandResult,
         OnlyIn,
     },
-    model::prelude::{
-        Channel,
-        Message,
-        ReactionType,
-    },
     model::{
         application::{
             component::ButtonStyle,
             interaction::application_command::ApplicationCommandInteraction,
+        },
+        prelude::{
+            Channel,
+            Message,
+            ReactionType,
         },
         Permissions,
     },
@@ -107,44 +107,47 @@ async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
         };
 
         interaction
-            .edit_original_interaction_response(&ctx.http, |i: &mut EditInteractionResponse| {
-                let args = command
-                    .options
-                    .options
-                    .iter()
-                    .fold("".to_owned(), |acc, opt| {
-                        let name = if opt.required {
-                            format!("<{}> ", opt.name)
-                        } else {
-                            format!("[{}] ", opt.name)
-                        };
-                        acc + &name
-                    });
+            .edit_original_interaction_response(
+                &ctx.http,
+                |i: &mut EditInteractionResponse| {
+                    let args = command
+                        .options
+                        .options
+                        .iter()
+                        .fold("".to_owned(), |acc, opt| {
+                            let name = if opt.required {
+                                format!("<{}> ", opt.name)
+                            } else {
+                                format!("[{}] ", opt.name)
+                            };
+                            acc + &name
+                        });
 
-                i.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name(format!(
-                            "Help /{}",
+                    i.embed(|e: &mut CreateEmbed| {
+                        e.author(|a: &mut CreateEmbedAuthor| {
+                            a.name(format!(
+                                "Help /{}",
+                                command
+                                    .options
+                                    .name
+                            ))
+                            .icon_url(DEFAULT_ICON)
+                        })
+                        .color(DEFAULT_COLOR)
+                        .description(format!(
+                            "**Description:** {}{}",
                             command
                                 .options
-                                .name
+                                .description,
+                            if args.is_empty() {
+                                "".to_owned()
+                            } else {
+                                format!("\n**Arguments:** {args}")
+                            }
                         ))
-                        .icon_url(DEFAULT_ICON)
                     })
-                    .color(DEFAULT_COLOR)
-                    .description(format!(
-                        "**Description:** {}{}",
-                        command
-                            .options
-                            .description,
-                        if args.is_empty() {
-                            "".to_owned()
-                        } else {
-                            format!("\n**Arguments:** {args}")
-                        }
-                    ))
-                })
-            })
+                },
+            )
             .await?;
         return Ok(());
     }
@@ -494,11 +497,17 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
 
     let res = db
         .collection::<Document>("general_settings")
-        .find_one(doc! { "guild": msg.guild_id.unwrap().0 as i64 }, None)
+        .find_one(
+            doc! { "guild": msg.guild_id.unwrap().0 as i64 },
+            None,
+        )
         .await;
 
     if res.is_err() {
-        println!("Error in getting prefix: {:?}", res.unwrap_err());
+        println!(
+            "Error in getting prefix: {:?}",
+            res.unwrap_err()
+        );
         return ";".to_owned();
     }
 
@@ -506,7 +515,10 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
         .and_then(|c| {
             let settings = from_bson::<GuildSettings>(c.into());
             if settings.is_err() {
-                println!("Error in getting prefix: {:?}", settings.unwrap_err());
+                println!(
+                    "Error in getting prefix: {:?}",
+                    settings.unwrap_err()
+                );
                 return None;
             }
             let settings = settings.unwrap();

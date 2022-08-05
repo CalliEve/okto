@@ -44,7 +44,7 @@ pub async fn role_select_menu<F>(
     })
     .set_description("Select a role")
     .set_custom_id(&format!("{}-role-select", user_id))
-                    .set_user(user_id)
+    .set_user(user_id)
     .make_ephemeral()
     .set_options(
         roles
@@ -83,7 +83,7 @@ pub async fn channel_select_menu<F>(
     })
     .set_description("Select a channel")
     .set_custom_id(&format!("{}-channel-select", user_id))
-                    .set_user(user_id)
+    .set_user(user_id)
     .make_ephemeral()
     .set_options(
         channels
@@ -100,15 +100,19 @@ pub async fn channel_select_menu<F>(
 
 fn get_guild(interaction: &Interaction) -> GuildId {
     match interaction {
-        Interaction::MessageComponent(comp) => comp
-            .guild_id
-            .expect("Trying to get channels in a non-guild menu"),
-        Interaction::ModalSubmit(modal) => modal
-            .guild_id
-            .expect("Trying to get channels in a non-guild modal"),
-        Interaction::ApplicationCommand(cmd) => cmd
-            .guild_id
-            .expect("Trying to get channels in a non-guild command"),
+        Interaction::MessageComponent(comp) => {
+            comp.guild_id
+                .expect("Trying to get channels in a non-guild menu")
+        },
+        Interaction::ModalSubmit(modal) => {
+            modal
+                .guild_id
+                .expect("Trying to get channels in a non-guild modal")
+        },
+        Interaction::ApplicationCommand(cmd) => {
+            cmd.guild_id
+                .expect("Trying to get channels in a non-guild command")
+        },
         _ => panic!("Unsupported interaction"),
     }
 }

@@ -105,7 +105,9 @@ pub fn filter_launches(
                 })
                 .collect::<Vec<LaunchData>>();
             if filtered.is_empty() {
-                return Err("this launch vehicle does not have any upcoming launches :(".to_owned());
+                return Err(
+                    "this launch vehicle does not have any upcoming launches :(".to_owned(),
+                );
             }
             return Ok(filtered);
         }
