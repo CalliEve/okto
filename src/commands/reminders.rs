@@ -5,6 +5,7 @@ use std::{
     },
     io::ErrorKind as IoErrorKind,
     sync::Arc,
+    fmt::Write,
 };
 
 use chrono::{
@@ -321,10 +322,11 @@ fn reminders_page(
             Ok(reminders) if !reminders.is_empty() => {
                 let mut text = "The following reminders have been set:".to_owned();
                 for reminder in &reminders {
-                    text.push_str(&format!(
+                    write!(
+                        text,
                         "\n- {}",
                         format_duration(reminder.get_duration(), false)
-                    ))
+                    ).expect("write to String: can't fail");
                 }
                 text
             },
@@ -445,7 +447,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     {
                         let mut text = "The following agency filters have been set:".to_owned();
                         for filter in &settings.filters {
-                            text.push_str(&format!("\n`{}`", filter))
+                            write!(text, "\n`{}`", filter).expect("write to String: can't fail");
                         }
                         text
                     },
@@ -462,7 +464,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     {
                         let mut text = "The following agency filters have been set:".to_owned();
                         for filter in &settings.filters {
-                            text.push_str(&format!("\n`{}`", filter))
+                            write!(text, "\n`{}`", filter).expect("write to String: can't fail");
                         }
                         text
                     },
@@ -654,7 +656,7 @@ fn allow_filters_page(
                         let mut text =
                             "The following agency allow filters have been set:".to_owned();
                         for filter in &settings.allow_filters {
-                            text.push_str(&format!("\n`{}`", filter))
+                            write!(text, "\n`{}`", filter).expect("write to String: can't fail");
                         }
                         text
                     },
@@ -672,7 +674,7 @@ fn allow_filters_page(
                         let mut text =
                             "The following agency allow filters have been set:".to_owned();
                         for filter in &settings.allow_filters {
-                            text.push_str(&format!("\n`{}`", filter))
+                            write!(text, "\n`{}`", filter).expect("write to String: can't fail");
                         }
                         text
                     },
@@ -858,7 +860,7 @@ fn mentions_page(
                                     .clone(),
                             );
                             if let Some(role) = role_opt {
-                                text.push_str(&format!("\n`{}`", role.name))
+                                write!(text, "\n`{}`", role.name).expect("write to String: can't fail");
                             } else {
                                 remove_mention(&ses, id, *role_id).await
                             }

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, fmt::Write};
 
 use itertools::Itertools;
 use mongodb::bson::{
@@ -226,12 +226,13 @@ fn help_menu(
                         .await
                         .unwrap_or(false)
                     {
-                        cmds.push_str(&format!(
+                        write!(
+                            cmds,
                             "\n- **/{}**",
                             command
                                 .options
                                 .name
-                        ));
+                        ).expect("write to String: can't fail");
                     }
                 }
 

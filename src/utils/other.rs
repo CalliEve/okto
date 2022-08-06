@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use chrono::{
     Duration,
     Utc,
@@ -77,8 +79,8 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
     let mut res = String::new();
 
     match days {
-        1 => res.push_str(&format!("{} day", days)),
-        x if x > 1 => res.push_str(&format!("{} days", days)),
+        1 => write!(res, "{} day", days).expect("write to String: can't fail"),
+        x if x > 1 => write!(res, "{} days", days).expect("write to String: can't fail"),
         _ => {},
     }
 
@@ -90,9 +92,9 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
 
         if hours == 1 {
-            res.push_str(&format!("{} hour", hours));
+            write!(res, "{} hour", hours).expect("write to String: can't fail");
         } else {
-            res.push_str(&format!("{} hours", hours));
+            write!(res, "{} hours", hours).expect("write to String: can't fail");
         }
     }
 
@@ -104,9 +106,9 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
 
         if minutes == 1 {
-            res.push_str(&format!("{} minute", minutes));
+            write!(res,"{} minute", minutes).expect("write to String: can't fail");
         } else {
-            res.push_str(&format!("{} minutes", minutes));
+            write!(res, "{} minutes", minutes).expect("write to String: can't fail");
         }
     }
 
@@ -116,9 +118,9 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
 
         if seconds == 1 {
-            res.push_str(&format!("{} second", seconds));
+            write!(res, "{} second", seconds).expect("write to String: can't fail");
         } else {
-            res.push_str(&format!("{} seconds", seconds));
+            write!(res, "{} seconds", seconds).expect("write to String: can't fail");
         }
     }
     if res.is_empty() {

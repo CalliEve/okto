@@ -138,8 +138,7 @@ impl SelectMenu {
                                 "{}-{}",
                                 self.custom_id
                                     .as_ref()
-                                    .map(|s| s.as_str())
-                                    .unwrap_or("select-row"),
+                                    .map_or("select-row", |s| s.as_str()),
                                 i
                             ))
                             .max_values(1)

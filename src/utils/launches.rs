@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, fmt::Write};
 
 use serenity::model::application::interaction::application_command::ApplicationCommandInteraction;
 
@@ -21,7 +21,8 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
             if let Some(mut domain) = link.domain() {
                 domain = domain.trim_start_matches("www.");
 
-                res.push_str(&format!(
+                write!(
+                    res,
                     "\"{}\"\n[{}]({})\n\n",
                     link_obj
                         .title
@@ -29,7 +30,7 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
                         .map_or("unknown url", String::as_str),
                     domain,
                     &link_obj.url
-                ));
+                ).expect("write to String: can't fail");
             }
         }
     }
