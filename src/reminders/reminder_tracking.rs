@@ -33,6 +33,7 @@ use serenity::{
         CreateMessage,
     },
     http::client::Http,
+    model::Timestamp,
     prelude::RwLock,
 };
 
@@ -293,9 +294,11 @@ fn reminder_embed<'a>(
             live
         ))
         .timestamp(
-            l.net
-                .format("%Y-%m-%dT%H:%M:%S")
-                .to_string(),
+            Timestamp::from_unix_timestamp(
+                l.net
+                    .timestamp(),
+            )
+            .expect("Invalid timestamp"),
         );
 
     if let Some(img) = &l.rocket_img {

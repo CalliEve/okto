@@ -12,16 +12,12 @@ use serenity::{
     model::{
         application::interaction::application_command::ApplicationCommandInteraction,
         channel::ChannelType,
-        Permissions,
     },
 };
-
-// FIXME: remove permissions as they are now
 
 #[derive(Clone)]
 pub struct Command {
     pub options: &'static CommandDetails,
-    pub perms: &'static [Permissions],
     pub func: CommandFunc,
     pub info: &'static CommandInfo,
 }
@@ -106,7 +102,6 @@ impl fmt::Debug for Command {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Command")
             .field("options", self.options)
-            .field("perms", &self.perms)
             .field("info", self.info)
             .finish()
     }

@@ -2,10 +2,10 @@ use std::{
     fmt::{
         self,
         Display,
+        Write,
     },
     io::ErrorKind as IoErrorKind,
     sync::Arc,
-    fmt::Write,
 };
 
 use chrono::{
@@ -93,7 +93,6 @@ use crate::{
 };
 
 #[command]
-#[required_permissions(MANAGE_GUILD)]
 #[default_permission(false)]
 #[options(
     {
@@ -195,11 +194,29 @@ async fn notifyme(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
 
 fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
+        let name = if let ID::Channel((channel, _)) = id {
+            format!(
+                "Launch Reminder Settings for {}",
+                channel
+                    .name(
+                        &ses.read()
+                            .await
+                            .cache
+                    )
+                    .await
+                    .map_or("guild channel".to_string(), |n| {
+                        "#".to_owned() + &n
+                    })
+            )
+        } else {
+            "Launch Reminder Settings for your DMs".to_owned()
+        };
+
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
                 .timestamp(Utc::now())
                 .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Launch Reminder Settings")
+                    a.name(name)
                         .icon_url(DEFAULT_ICON)
                 })
         });
@@ -326,7 +343,8 @@ fn reminders_page(
                         text,
                         "\n- {}",
                         format_duration(reminder.get_duration(), false)
-                    ).expect("write to String: can't fail");
+                    )
+                    .expect("write to String: can't fail");
                 }
                 text
             },
@@ -860,7 +878,8 @@ fn mentions_page(
                                     .clone(),
                             );
                             if let Some(role) = role_opt {
-                                write!(text, "\n`{}`", role.name).expect("write to String: can't fail");
+                                write!(text, "\n`{}`", role.name)
+                                    .expect("write to String: can't fail");
                             } else {
                                 remove_mention(&ses, id, *role_id).await
                             }

@@ -6,10 +6,7 @@ extern crate proc_macro;
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{
-    parse2,
-    Path,
-};
+use syn::parse2;
 use utils::{
     add_suffix,
     CommandAttributeContent,
@@ -43,7 +40,6 @@ fn command_inner(item: TokenStream) -> TokenStream {
     let mut description = String::new();
     let mut options = Vec::new();
     let mut default_permission = true;
-    let mut required_permissions: Vec<Path> = Vec::new();
     let mut only_in = quote! {::serenity::framework::standard::OnlyIn::None};
 
     for attr in command_fun
@@ -83,12 +79,6 @@ fn command_inner(item: TokenStream) -> TokenStream {
                         attr.parse_args::<CommandAttributeContent>()
                     )
                     .get_options())
-                },
-                "required_permissions" => {
-                    required_permissions = propagate_err!(propagate_err!(attr
-                        .parse_args::<CommandAttributeContent>(
-                    ))
-                    .get_permissions())
                 },
                 "only_in" => {
                     let tmp = propagate_err!(propagate_err!(
@@ -158,7 +148,6 @@ fn command_inner(item: TokenStream) -> TokenStream {
         #(#command_cooked)*
         pub static #command_struct_name: #command_struct_path = #command_struct_path {
             options: &#details_struct_name,
-            perms: &[#(#required_permissions),*],
             info: &#info_struct_name,
             func: #fun_name,
         };
@@ -175,7 +164,6 @@ mod tests {
     fn test() {
         let stream: TokenStream = "
         /// just testing this stuff
-        #[required_permissions(MANAGE_GUILD)]
         #[options(
             {
                 option_type: String,

@@ -100,7 +100,6 @@ async fn main() {
         // the commands:
         help,
         ping,
-        invite,
         info,
         websites,
         peopleinspace,
@@ -141,6 +140,7 @@ async fn main() {
     let mut intents = GatewayIntents::empty();
     intents.insert(GatewayIntents::GUILDS);
     intents.insert(GatewayIntents::DIRECT_MESSAGES);
+    intents.insert(GatewayIntents::MESSAGE_CONTENT); // FIXME: remove this before august 31st
 
     let mut client = Client::builder(&token, intents)
         .application_id(application_id)

@@ -1,6 +1,5 @@
 mod handler;
 pub mod structs;
-mod utils;
 
 pub mod macros {
     pub use slash_command_macros::command;

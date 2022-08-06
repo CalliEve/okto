@@ -1,4 +1,11 @@
-use std::{str::FromStr, fmt::Write};
+use std::{
+    fmt::{
+        self,
+        Display,
+        Write,
+    },
+    str::FromStr,
+};
 
 use serenity::model::application::interaction::application_command::ApplicationCommandInteraction;
 
@@ -30,7 +37,8 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
                         .map_or("unknown url", String::as_str),
                     domain,
                     &link_obj.url
-                ).expect("write to String: can't fail");
+                )
+                .expect("write to String: can't fail");
             }
         }
     }
@@ -45,7 +53,7 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
 pub fn filter_launches(
     launches: Vec<LaunchData>,
     interaction: &ApplicationCommandInteraction,
-) -> Result<Vec<LaunchData>, String> {
+) -> Result<Vec<LaunchData>, FilterErrorType> {
     let agency_filter = interaction
         .data
         .options
@@ -57,7 +65,7 @@ pub fn filter_launches(
         })
         .and_then(|v| {
             v.as_str()
-                .map(ToOwned::to_owned)
+                .map(str::to_lowercase)
         });
 
     if let Some(lsp) = agency_filter {
@@ -67,17 +75,12 @@ pub fn filter_launches(
                 .filter(|l| l.lsp == *filter)
                 .collect::<Vec<LaunchData>>();
             if filtered.is_empty() {
-                return Err(
-                    "this launch provider does not have any upcoming launches :(".to_owned(),
-                );
+                return Err(FilterErrorType::Lsp);
             }
             return Ok(filtered);
         }
 
-        return Err(
-            "This is not a valid filter, please take a look at those listed in `/filtersinfo`"
-                .to_owned(),
-        );
+        return Err(FilterErrorType::Invalid);
     }
 
     let rocket_filter = interaction
@@ -106,18 +109,30 @@ pub fn filter_launches(
                 })
                 .collect::<Vec<LaunchData>>();
             if filtered.is_empty() {
-                return Err(
-                    "this launch vehicle does not have any upcoming launches :(".to_owned(),
-                );
+                return Err(FilterErrorType::Vehicle);
             }
             return Ok(filtered);
         }
 
-        return Err(
-            "This is not a valid filter, please take a look at those listed in `/filtersinfo`"
-                .to_owned(),
-        );
+        return Err(FilterErrorType::Invalid);
     }
 
     Ok(launches)
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum FilterErrorType {
+    Vehicle,
+    Lsp,
+    Invalid,
+}
+
+impl Display for FilterErrorType {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            Self::Vehicle => fmt.write_str("launch vehicle"),
+            Self::Lsp => fmt.write_str("launch provider"),
+            Self::Invalid => fmt.write_str("invalid"),
+        }
+    }
 }

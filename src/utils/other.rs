@@ -106,7 +106,7 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
 
         if minutes == 1 {
-            write!(res,"{} minute", minutes).expect("write to String: can't fail");
+            write!(res, "{} minute", minutes).expect("write to String: can't fail");
         } else {
             write!(res, "{} minutes", minutes).expect("write to String: can't fail");
         }
@@ -219,5 +219,17 @@ impl StandardButton {
                 }
             },
         }
+    }
+}
+
+pub fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => {
+            f.to_uppercase()
+                .collect::<String>()
+                + c.as_str()
+        },
     }
 }

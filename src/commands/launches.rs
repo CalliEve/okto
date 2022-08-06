@@ -20,6 +20,7 @@ use serenity::{
         },
         channel::ReactionType,
         id::EmojiId,
+        Timestamp,
     },
     prelude::{
         Context,
@@ -116,7 +117,15 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
                     |m: &mut CreateInteractionResponse| {
                         m.interaction_response_data(|c| {
                             c.flags(MessageFlags::EPHEMERAL)
-                                .embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
+                                .embed(|e: &mut CreateEmbed| default_embed(
+                                    e,
+                                    &if let FilterErrorType::Invalid = err {
+                                        "This is not a valid filter, please take a look at those listed in `/filtersinfo`".to_owned()
+                                    } else {
+                                        format!("This {} does not have any upcoming launches listed as certain :(", err)
+                                    },
+                                    false
+                                ))
                         })
                     },
                 )
@@ -144,10 +153,12 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
                                     .icon_url(DEFAULT_ICON)
                             })
                             .timestamp(
-                                launch
-                                    .net
-                                    .format("%Y-%m-%dT%H:%M:%S")
-                                    .to_string(),
+                                Timestamp::from_unix_timestamp(
+                                    launch
+                                        .net
+                                        .timestamp(),
+                                )
+                                .expect("Invalid timestamp"),
                             )
                             .title(format!(
                                 "{}\nStatus: {}",
@@ -490,7 +501,15 @@ async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction
                     |m: &mut CreateInteractionResponse| {
                         m.interaction_response_data(|c| {
                             c.flags(MessageFlags::EPHEMERAL)
-                                .embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
+                            .embed(|e: &mut CreateEmbed| default_embed(
+                                e,
+                                &if let FilterErrorType::Invalid = err {
+                                    "This is not a valid filter, please take a look at those listed in `/filtersinfo`".to_owned()
+                                } else {
+                                    format!("This {} does not have any upcoming launches :(", err)
+                                },
+                                false
+                            ))
                         })
                     },
                 )
@@ -592,7 +611,9 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
                     .author(|a: &mut CreateEmbedAuthor| {
                         a.name("Detailed info").icon_url(DEFAULT_ICON)
                     })
-                    .timestamp(launch.net.format("%Y-%m-%dT%H:%M:%S").to_string())
+                    .timestamp(Timestamp::from_unix_timestamp(launch
+                        .net.timestamp()
+                    ).expect("Invalid timestamp"))
                     .title(format!(
                         "{}\nStatus: {}",
                         &launch.vehicle,

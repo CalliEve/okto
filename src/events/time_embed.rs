@@ -52,10 +52,16 @@ impl TimeEmbed {
                 self.session
                     .clone(),
                 |em| {
-                    em.description(if self.duration > Duration::zero() {format!(
-                        "Setting a reminder for {} before the moment of launch.",
-                        format_duration(self.duration, false)
-                    )} else {"Please start specifying a duration using the buttons below:".to_owned()})
+                    em.description(
+                        if self.duration > Duration::zero() {
+                            format!(
+                                "Setting a reminder for {} before the moment of launch.",
+                                format_duration(self.duration, false)
+                            )
+                        } else {
+                            "Please start specifying a duration using the buttons below:".to_owned()
+                        },
+                    )
                 },
             );
 

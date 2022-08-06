@@ -27,6 +27,7 @@ use serenity::{
     model::{
         channel::Message,
         id::ChannelId,
+        Timestamp,
     },
     utils::Colour,
     Error as SerenityError,
@@ -248,9 +249,11 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
     );
 
     e.timestamp(
-        new.net
-            .format("%Y-%m-%dT%H:%M:%S")
-            .to_string(),
+        Timestamp::from_unix_timestamp(
+            new.net
+                .timestamp(),
+        )
+        .expect("Invalid timestamp"),
     );
 
     e

@@ -1,4 +1,7 @@
-use std::{sync::Arc, fmt::Write};
+use std::{
+    fmt::Write,
+    sync::Arc,
+};
 
 use itertools::Itertools;
 use mongodb::bson::{
@@ -53,13 +56,16 @@ use crate::{
         },
         settings::GuildSettings,
     },
-    utils::constants::{
-        BACK_EMOJI,
-        DEFAULT_COLOR,
-        DEFAULT_ICON,
-        EXIT_EMOJI,
-        NUMBER_EMOJIS,
-        OWNERS,
+    utils::{
+        capitalize,
+        constants::{
+            BACK_EMOJI,
+            DEFAULT_COLOR,
+            DEFAULT_ICON,
+            EXIT_EMOJI,
+            NUMBER_EMOJIS,
+            OWNERS,
+        },
     },
 };
 
@@ -209,9 +215,9 @@ fn help_menu(
                 .0
                 .split('/')
                 .last()
-                .unwrap()
-                .to_owned();
-            if group_name == "help" {
+                .map(capitalize)
+                .unwrap();
+            if group_name == "Help" {
                 continue;
             }
 
@@ -232,7 +238,8 @@ fn help_menu(
                             command
                                 .options
                                 .name
-                        ).expect("write to String: can't fail");
+                        )
+                        .expect("write to String: can't fail");
                     }
                 }
 
@@ -427,14 +434,13 @@ async fn allowed(
         return Ok(false);
     }
 
-    // FIXME: what to do about perms?
-    let req_perms = cmds
+    if cmds
         .iter()
-        .flat_map(|c| c.perms)
-        .copied()
-        .collect::<Permissions>();
-
-    if !req_perms.is_empty() {
+        .all(|c| {
+            !c.options
+                .default_permission
+        })
+    {
         if let Channel::Guild(channel) = &channel {
             let guild = if let Some(guild) = interaction
                 .guild_id
@@ -461,7 +467,9 @@ async fn allowed(
             };
 
             if let Ok(perms) = guild.user_permissions_in(channel, member) {
-                if !perms.contains(req_perms) {
+                if !(perms.contains(Permissions::ADMINISTRATOR)
+                    || perms.contains(Permissions::MANAGE_GUILD))
+                {
                     return Ok(false);
                 }
             } else {

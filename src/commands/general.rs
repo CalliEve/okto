@@ -72,32 +72,6 @@ async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
 }
 
 #[command]
-/// Invite the bot to your server!
-async fn invite(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
-    let user_id = ctx
-        .cache
-        .current_user()
-        .id;
-    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.content(format!(
-            "**OKTO** | `4.0`\n{}, I hope you enjoy using me on your server!",
-            interaction.user.name
-        )).embed(|e: &mut CreateEmbed| {
-            e.title("Invite Links")
-            .description(
-                format!(
-                    "**__[Bot Invite](https://discord.com/api/oauth2/authorize?client_id={}&permissions=388160&scope=bot%20applications.commands)__**\n\
-                    **__[OKTO server](https://discord.gg/dXPHfPJ)__**",
-                    user_id
-                )
-            )
-        })})
-    }).await?;
-
-    Ok(())
-}
-
-#[command]
 /// Get some general information about the bot
 async fn info(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let user_id = ctx
@@ -111,7 +85,7 @@ async fn info(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
                 format!(
                     "This is a bot to show upcoming launches and provide additional information on everything to do with spaceflight\n\
                     **Author:** Calli#3141\n\
-                    **Version:** 4.0 \"slash-commands\"\n\
+                    **Version:** `4.0` \"slash-commands\"\n\
                     **Source Code:** [GitHub link](https://github.com/callieve/okto)\n\
                     **Library:** [Serenity](https://github.com/serenity-rs/serenity)\n\
                     <:RustRainbow:752508751675654204>\n\

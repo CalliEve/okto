@@ -335,7 +335,6 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
             None
         };
 
-        // TODO: pass update boolean to here
         if let Some(handler) = handler {
             let r = interaction
                 .create_interaction_response(&ctx.http, |c| {

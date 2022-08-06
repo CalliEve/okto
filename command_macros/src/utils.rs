@@ -28,7 +28,6 @@ use syn::{
     LitFloat,
     LitInt,
     LitStr,
-    Path,
     Token,
 };
 
@@ -51,7 +50,6 @@ impl<T: Parse> Parse for ParenthesisedItems<T> {
 pub enum CommandAttributeContent {
     String(String),
     Boolean(bool),
-    Permissions(Vec<Path>),
     Options(Vec<CommandOption>),
 }
 
@@ -91,18 +89,6 @@ impl CommandAttributeContent {
             },
         }
     }
-
-    pub fn get_permissions(self) -> Result<Vec<Path>> {
-        match self {
-            Self::Permissions(o) => Ok(o),
-            _ => {
-                Err(Error::new(
-                    Span::call_site(),
-                    "invalid command attribute",
-                ))
-            },
-        }
-    }
 }
 
 impl Parse for CommandAttributeContent {
@@ -121,21 +107,6 @@ impl Parse for CommandAttributeContent {
                     .value()
                     .trim()
                     .to_owned(),
-            ));
-        } else if lookahead.peek(Ident) {
-            return Ok(Self::Permissions(
-                input
-                    .parse_terminated::<_, Token![,]>(Ident::parse)?
-                    .into_iter()
-                    .map(|p| {
-                        syn::parse_str::<Path>(&format!(
-                            "::serenity::model::Permissions::{}",
-                            p.to_string()
-                                .to_uppercase()
-                        ))
-                        .expect("permissions ident is invalid")
-                    })
-                    .collect(),
             ));
         } else if lookahead.peek(Brace) {
             return Ok(Self::Options(
@@ -238,7 +209,7 @@ impl ToTokens for CommandOption {
         } = self.clone();
         let min_value = tokenize_option(min_value);
         let max_value = tokenize_option(max_value);
-        let choices = tokenize_option(choices.clone());
+        let choices = tokenize_option(choices);
 
         stream.extend(quote! {
             okto_framework::structs::CommandOption {
