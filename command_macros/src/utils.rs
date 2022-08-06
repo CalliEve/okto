@@ -180,6 +180,7 @@ macro_rules! get_field {
     }};
 }
 
+#[derive(Debug, Clone)]
 pub struct CommandOption {
     pub option_type: CommandOptionType,
     pub name: String,
@@ -235,8 +236,8 @@ impl ToTokens for CommandOption {
             max_value,
             choices,
         } = self.clone();
-        let min_value = tokenize_option(*min_value);
-        let max_value = tokenize_option(*max_value);
+        let min_value = tokenize_option(min_value);
+        let max_value = tokenize_option(max_value);
         let choices = tokenize_option(choices.clone());
 
         stream.extend(quote! {
@@ -288,7 +289,7 @@ impl ToTokens for StructField {
 
 #[derive(Debug, Clone)]
 enum StructFieldValue {
-    Expr(Expr),
+    Expr(Box<Expr>),
     List(Punctuated<StructFieldValue, Comma>),
     Map(Punctuated<StructField, Comma>),
 }
@@ -371,16 +372,16 @@ impl ToTokens for CommandOptionType {
     fn to_tokens(&self, stream: &mut proc_macro2::TokenStream) {
         let ident = Ident::new(
             match self {
-                &Self::SubCommand => "SubCommand",
-                &Self::SubCommandGroup => "SubCommandGroup",
-                &Self::String => "String",
-                &Self::Integer => "Integer",
-                &Self::Boolean => "Boolean",
-                &Self::User => "User",
-                &Self::Channel => "Channel",
-                &Self::Role => "Role",
-                &Self::Mentionable => "Mentionable",
-                &Self::Number => "Number",
+                Self::SubCommand => "SubCommand",
+                Self::SubCommandGroup => "SubCommandGroup",
+                Self::String => "String",
+                Self::Integer => "Integer",
+                Self::Boolean => "Boolean",
+                Self::User => "User",
+                Self::Channel => "Channel",
+                Self::Role => "Role",
+                Self::Mentionable => "Mentionable",
+                Self::Number => "Number",
             },
             Span::call_site(),
         );

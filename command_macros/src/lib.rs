@@ -110,7 +110,7 @@ fn command_inner(item: TokenStream) -> TokenStream {
         }
     }
 
-    if description.len() < 1 {
+    if description.is_empty() {
         let error = format!(
             "No description has been provided for the {} command",
             command_name

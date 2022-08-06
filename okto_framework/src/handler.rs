@@ -64,7 +64,7 @@ impl Handler {
     pub fn get_command_list(&self) -> Vec<&'static Command> {
         self.cmds
             .values()
-            .map(|v| *v)
+            .copied()
             .collect()
     }
 
