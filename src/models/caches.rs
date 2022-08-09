@@ -4,12 +4,9 @@ use std::{
 };
 
 use mongodb::Database;
+use okto_framework::structs::Command;
 use serenity::{
-    model::id::{
-        ChannelId,
-        MessageId,
-        UserId,
-    },
+    model::id::MessageId,
     prelude::{
         RwLock,
         TypeMapKey,
@@ -21,8 +18,8 @@ use super::{
     pictures::MarsRoverPicture,
 };
 use crate::events::{
+    interaction_handler::InteractionHandler,
     statefulembed::EmbedSession,
-    waitfor::WaitFor,
 };
 
 #[derive(Debug, Clone)]
@@ -50,14 +47,22 @@ impl TypeMapKey for EmbedSessionsKey {
     type Value = HashMap<MessageId, Arc<RwLock<EmbedSession>>>;
 }
 
-pub struct WaitForKey;
+pub struct InteractionKey;
 
-impl TypeMapKey for WaitForKey {
-    type Value = HashMap<(ChannelId, UserId), WaitFor>;
+impl TypeMapKey for InteractionKey {
+    type Value = InteractionHandlerHolder;
 }
+
+pub struct InteractionHandlerHolder(pub Vec<InteractionHandler>);
 
 pub struct DatabaseKey;
 
 impl TypeMapKey for DatabaseKey {
     type Value = Database;
+}
+
+pub struct CommandListKey;
+
+impl TypeMapKey for CommandListKey {
+    type Value = Vec<&'static Command>;
 }

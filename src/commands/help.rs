@@ -1,35 +1,41 @@
 use std::{
-    collections::HashSet,
+    fmt::Write,
     sync::Arc,
 };
 
+use itertools::Itertools;
 use mongodb::bson::{
     doc,
     document::Document,
     from_bson,
 };
+use okto_framework::{
+    macros::command,
+    structs::Command,
+};
 use serenity::{
     builder::{
         CreateEmbed,
         CreateEmbedAuthor,
+        EditInteractionResponse,
     },
     framework::standard::{
-        macros::{
-            help,
-            hook,
-        },
-        Args,
-        CommandGroup,
+        macros::hook,
+        CommandError,
         CommandResult,
-        CommonOptions,
-        HelpOptions,
         OnlyIn,
     },
-    model::prelude::{
-        Channel,
-        Message,
-        ReactionType,
-        UserId,
+    model::{
+        application::{
+            component::ButtonStyle,
+            interaction::application_command::ApplicationCommandInteraction,
+        },
+        prelude::{
+            Channel,
+            Message,
+            ReactionType,
+        },
+        Permissions,
     },
     prelude::{
         Context,
@@ -39,38 +45,120 @@ use serenity::{
 
 use crate::{
     events::statefulembed::{
+        ButtonType,
         EmbedSession,
         StatefulEmbed,
     },
     models::{
-        caches::DatabaseKey,
+        caches::{
+            CommandListKey,
+            DatabaseKey,
+        },
         settings::GuildSettings,
     },
-    utils::constants::{
-        DEFAULT_COLOR,
-        DEFAULT_ICON,
-        EXIT_EMOJI,
-        NUMBER_EMOJIS,
+    utils::{
+        capitalize,
+        constants::{
+            BACK_EMOJI,
+            DEFAULT_COLOR,
+            DEFAULT_ICON,
+            EXIT_EMOJI,
+            NUMBER_EMOJIS,
+            OWNERS,
+        },
     },
 };
 
-#[help]
-async fn help_cmd(
-    ctx: &Context,
-    msg: &Message,
-    _args: Args,
-    _help_options: &'static HelpOptions,
-    groups: &[&'static CommandGroup],
-    owners: HashSet<UserId>,
-) -> CommandResult {
-    let ses = EmbedSession::new(
-        ctx,
-        msg.channel_id,
-        msg.author
-            .id,
-    );
+#[command]
+#[options(
+    {
+        option_type: String,
+        name: "command",
+        description: "Get information about a specific command"
+    }
+)]
+/// Get information about the commands within the bot
+async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    let ses = EmbedSession::new(ctx, interaction.clone(), false).await?;
 
-    help_menu(ses, ctx.clone(), msg.clone(), groups.to_vec(), owners).await;
+    if let Some(command_name) = interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "command")
+        .and_then(|o| {
+            o.value
+                .clone()
+        })
+        .and_then(|v| {
+            v.as_str()
+                .map(ToOwned::to_owned)
+        })
+    {
+        let command = if let Some(cmd) = ctx
+            .data
+            .read()
+            .await
+            .get::<CommandListKey>()
+            .unwrap()
+            .iter()
+            .find(|c| {
+                c.options
+                    .name
+                    == command_name
+            }) {
+            *cmd
+        } else {
+            return Ok(());
+        };
+
+        interaction
+            .edit_original_interaction_response(
+                &ctx.http,
+                |i: &mut EditInteractionResponse| {
+                    let args = command
+                        .options
+                        .options
+                        .iter()
+                        .fold("".to_owned(), |acc, opt| {
+                            let name = if opt.required {
+                                format!("<{}> ", opt.name)
+                            } else {
+                                format!("[{}] ", opt.name)
+                            };
+                            acc + &name
+                        });
+
+                    i.embed(|e: &mut CreateEmbed| {
+                        e.author(|a: &mut CreateEmbedAuthor| {
+                            a.name(format!(
+                                "Help /{}",
+                                command
+                                    .options
+                                    .name
+                            ))
+                            .icon_url(DEFAULT_ICON)
+                        })
+                        .color(DEFAULT_COLOR)
+                        .description(format!(
+                            "**Description:** {}{}",
+                            command
+                                .options
+                                .description,
+                            if args.is_empty() {
+                                "".to_owned()
+                            } else {
+                                format!("\n**Arguments:** {args}")
+                            }
+                        ))
+                    })
+                },
+            )
+            .await?;
+        return Ok(());
+    }
+
+    help_menu(ses, ctx.clone(), interaction.clone()).await;
 
     Ok(())
 }
@@ -78,43 +166,80 @@ async fn help_cmd(
 fn help_menu(
     ses: Arc<RwLock<EmbedSession>>,
     ctx: Context,
-    msg: Message,
-    groups: Vec<&'static CommandGroup>,
-    owners: HashSet<UserId>,
+    interaction: ApplicationCommandInteraction,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let prefix = calc_prefix(&ctx, &msg)
-            .await
-            .unwrap_or_else(|| ";".to_owned());
-
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
             .author(
                 |a: &mut CreateEmbedAuthor| a.name("Help Menu").icon_url(&DEFAULT_ICON)
-            ).description("Use the reactions to get the descriptions for the commands in that group.\nCurrently available commands:")
+            ).description("Use the buttons to get the descriptions for the commands in that group.\nCurrently available commands:")
         });
 
-        for (i, group) in groups
+        let grouped = ctx
+            .data
+            .read()
+            .await
+            .get::<CommandListKey>()
+            .unwrap()
             .iter()
+            .sorted_by_key(|c| {
+                c.info
+                    .file
+            })
+            .group_by(|c| {
+                c.info
+                    .file
+            })
+            .into_iter()
+            .fold(
+                Vec::<(&str, Vec<&'static Command>)>::new(),
+                |mut acc, (k, g)| {
+                    acc.push((
+                        k,
+                        g.into_iter()
+                            .copied()
+                            .collect(),
+                    ));
+                    acc
+                },
+            );
+
+        for (i, (key, group)) in grouped
+            .into_iter()
             .enumerate()
         {
-            if allowed(&ctx, &group.options, &msg, &owners).await {
+            let group_name = key
+                .split_once('.')
+                .unwrap()
+                .0
+                .split('/')
+                .last()
+                .map(capitalize)
+                .unwrap();
+            if group_name == "Help" {
+                continue;
+            }
+
+            if allowed(&ctx, &group, &interaction)
+                .await
+                .unwrap_or(false)
+            {
                 let mut cmds = String::new();
 
-                for command in group
-                    .options
-                    .commands
-                {
-                    if allowed(&ctx, &command.options, &msg, &owners).await {
-                        cmds.push_str(&format!(
-                            "\n- **{}{}**",
-                            &prefix,
+                for command in &group {
+                    if allowed(&ctx, &[command], &interaction)
+                        .await
+                        .unwrap_or(false)
+                    {
+                        write!(
+                            cmds,
+                            "\n- **/{}**",
                             command
                                 .options
-                                .names
-                                .first()
-                                .expect("no command name")
-                        ));
+                                .name
+                        )
+                        .expect("write to String: can't fail");
                     }
                 }
 
@@ -124,53 +249,62 @@ fn help_menu(
 
                 let details_ses = ses.clone();
                 let details_ctx = ctx.clone();
-                let details_msg = msg.clone();
-                let details_owners = owners.clone();
-                let all_groups = groups.clone();
-                let group = *group;
-                em.add_field(group.name, &cmds, true, &NUMBER_EMOJIS[i], move || {
-                    let details_ses = details_ses.clone();
-                    let details_ctx = details_ctx.clone();
-                    let details_msg = details_msg.clone();
-                    let details_owners = details_owners.clone();
-                    let all_groups = all_groups.clone();
-                    Box::pin(async move {
-                        command_details(
-                            details_ses.clone(),
-                            details_ctx,
-                            details_msg,
-                            all_groups,
-                            details_owners,
-                            group,
-                        )
-                        .await
-                    })
-                });
+                let details_interaction = interaction.clone();
+                em.add_field(
+                    &group_name.clone(),
+                    &cmds,
+                    true,
+                    &ButtonType {
+                        label: group_name.clone(),
+                        style: ButtonStyle::Primary,
+                        emoji: Some(NUMBER_EMOJIS[i].clone()),
+                    },
+                    move |_| {
+                        let details_ses = details_ses.clone();
+                        let details_ctx = details_ctx.clone();
+                        let details_group = group.clone();
+                        let details_interaction = details_interaction.clone();
+                        let group_name = group_name.clone();
+                        Box::pin(async move {
+                            command_details(
+                                details_ses.clone(),
+                                details_ctx,
+                                details_interaction,
+                                details_group,
+                                group_name,
+                            )
+                            .await
+                        })
+                    },
+                );
             }
         }
 
-        em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
-            let ses = ses.clone();
-            Box::pin(async move {
-                let lock = ses
-                    .read()
-                    .await;
-                if let Some(m) = lock
-                    .message
-                    .as_ref()
-                {
-                    let _ = m
-                        .delete(&lock.http)
+        em.add_option(
+            &ButtonType {
+                label: "Exit".to_owned(),
+                style: ButtonStyle::Danger,
+                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+            },
+            move |_| {
+                let close_ses = ses.clone();
+                Box::pin(async move {
+                    let lock = close_ses
+                        .read()
                         .await;
-                };
-            })
-        });
+                    let _ = lock
+                        .interaction
+                        .delete_original_interaction_response(&lock.http)
+                        .await;
+                })
+            },
+        );
 
         let show_res = em
             .show()
             .await;
         if let Err(e) = show_res {
-            println!("Error in help: {}", e);
+            eprintln!("Error in help: {}", e);
         }
     })
 }
@@ -178,65 +312,56 @@ fn help_menu(
 fn command_details(
     ses: Arc<RwLock<EmbedSession>>,
     ctx: Context,
-    msg: Message,
-    groups: Vec<&'static CommandGroup>,
-    owners: HashSet<UserId>,
-    selected_group: &'static CommandGroup,
+    interaction: ApplicationCommandInteraction,
+    selected_group: Vec<&'static Command>,
+    group_name: String,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let prefix = calc_prefix(&ctx, &msg)
-            .await
-            .unwrap_or_else(|| ";".to_owned());
-
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
                 .author(|a: &mut CreateEmbedAuthor| {
-                    a.name(format!("{} Commands", selected_group.name))
+                    a.name(format!("{} Commands", &group_name))
                         .icon_url(&DEFAULT_ICON)
                 })
                 .description("More Detailed information about the commands in this group")
         });
 
-        for command in selected_group
-            .options
-            .commands
-        {
-            if allowed(&ctx, &command.options, &msg, &owners).await {
-                let aliases: Vec<&str> = command
+        for command in &selected_group {
+            if allowed(&ctx, &[command], &interaction)
+                .await
+                .unwrap_or(false)
+            {
+                let args = command
                     .options
-                    .names
+                    .options
                     .iter()
-                    .skip(1)
-                    .copied()
-                    .collect();
-                let aliases = if aliases.is_empty() {
-                    None
-                } else {
-                    Some(aliases)
-                };
+                    .fold("".to_owned(), |acc, opt| {
+                        let name = if opt.required {
+                            format!("<{}> ", opt.name)
+                        } else {
+                            format!("[{}] ", opt.name)
+                        };
+                        acc + &name
+                    });
 
                 em.inner
                     .field(
-                        command
-                            .options
-                            .names
-                            .first()
-                            .map(|s| format!("{}{}", &prefix, s))
-                            .expect("no command name"),
                         format!(
-                            "{}{}{}",
-                            aliases.map_or("".to_owned(), |a| format!(
-                                "**Aliases**: {}",
-                                a.join(", ")
-                            )),
+                            "/{}",
                             command
                                 .options
-                                .desc
-                                .map_or("".to_owned(), |d| format!("\n**Description:** {}", d)),
+                                .name
+                        ),
+                        format!(
+                            "**Description:** {}{}",
                             command
                                 .options
-                                .usage
-                                .map_or("".to_owned(), |u| format!("\n{}", u))
+                                .description,
+                            if args.is_empty() {
+                                "".to_owned()
+                            } else {
+                                format!("\n**Arguments:** {args}")
+                            }
                         ),
                         false,
                     );
@@ -247,16 +372,16 @@ fn command_details(
             "Back",
             "Back to help menu",
             false,
-            &ReactionType::Unicode("◀️".into()),
-            move || {
+            &ButtonType {
+                label: "Back".to_owned(),
+                style: ButtonStyle::Danger,
+                emoji: Some(BACK_EMOJI.into()),
+            },
+            move |_| {
                 let back_ses = ses.clone();
                 let back_ctx = ctx.clone();
-                let back_msg = msg.clone();
-                let back_groups = groups.clone();
-                let back_owners = owners.clone();
-                Box::pin(async move {
-                    help_menu(back_ses, back_ctx, back_msg, back_groups, back_owners).await
-                })
+                let back_interaction = interaction.clone();
+                Box::pin(async move { help_menu(back_ses, back_ctx, back_interaction).await })
             },
         );
 
@@ -264,89 +389,107 @@ fn command_details(
             .show()
             .await;
         if let Err(e) = show_res {
-            println!("Error in help: {}", e);
+            eprintln!("Error in help: {}", e);
         }
     })
 }
 
 async fn allowed(
     ctx: &Context,
-    options: &impl CommonOptions,
-    msg: &Message,
-    owners: &HashSet<UserId>,
-) -> bool {
-    if options.owners_only()
-        && !owners.contains(
-            &msg.author
-                .id,
-        )
+    cmds: &[&'static Command],
+    interaction: &ApplicationCommandInteraction,
+) -> Result<bool, CommandError> {
+    if OWNERS.contains(
+        &interaction
+            .user
+            .id,
+    ) {
+        return Ok(true);
+    }
+
+    let channel = interaction
+        .channel_id
+        .to_channel(&ctx)
+        .await?;
+
+    if cmds
+        .iter()
+        .all(|c| c.only_in() == OnlyIn::Dm)
+        && channel
+            .clone()
+            .private()
+            .is_none()
     {
-        return false;
+        return Ok(false);
     }
 
-    if options.only_in() == OnlyIn::Dm && !msg.is_private() {
-        return false;
+    if cmds
+        .iter()
+        .all(|c| c.only_in() == OnlyIn::Guild)
+        && channel
+            .clone()
+            .private()
+            .is_some()
+    {
+        return Ok(false);
     }
 
-    if options.only_in() == OnlyIn::Guild && msg.is_private() {
-        return false;
-    }
-
-    let req_perms = *options.required_permissions();
-
-    if !req_perms.is_empty() {
-        if let Some(Channel::Guild(channel)) = msg
-            .channel(&ctx)
-            .await
-        {
-            let guild = if let Some(guild) = msg
-                .guild(&ctx)
-                .await
+    if cmds
+        .iter()
+        .all(|c| {
+            !c.options
+                .default_permission
+        })
+    {
+        if let Channel::Guild(channel) = &channel {
+            let guild = if let Some(guild) = interaction
+                .guild_id
+                .unwrap()
+                .to_guild_cached(&ctx)
             {
                 guild
             } else {
-                return false;
+                return Ok(false);
             };
 
-            if msg
-                .author
+            if interaction
+                .user
                 .id
                 == guild.owner_id
             {
-                return true;
+                return Ok(true);
             }
 
-            let member = if let Ok(member) = msg
-                .member(&ctx)
-                .await
-            {
+            let member = if let Some(member) = &interaction.member {
                 member
             } else {
-                return false;
+                return Ok(false);
             };
 
-            if let Ok(perms) = guild.user_permissions_in(&channel, &member) {
-                if !perms.contains(req_perms) {
-                    return false;
+            if let Ok(perms) = guild.user_permissions_in(channel, member) {
+                if !(perms.contains(Permissions::ADMINISTRATOR)
+                    || perms.contains(Permissions::MANAGE_GUILD))
+                {
+                    return Ok(false);
                 }
             } else {
-                return false;
+                return Ok(false);
             }
         } else {
-            return false;
+            return Ok(false);
         }
     }
 
-    true
+    Ok(true)
 }
 
 #[hook]
-pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
+pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
     if msg
         .guild_id
         .is_none()
     {
-        return Some(";".to_owned());
+        return ";".to_owned();
     }
 
     let db = if let Some(db) = ctx
@@ -357,29 +500,63 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> Option<String> {
     {
         db.clone()
     } else {
-        println!("No database found");
-        return Some(";".to_owned());
+        eprintln!("No database found");
+        return ";".to_owned();
     };
 
     let res = db
         .collection::<Document>("general_settings")
-        .find_one(doc! { "guild": msg.guild_id.unwrap().0 as i64 }, None)
+        .find_one(
+            doc! { "guild": msg.guild_id.unwrap().0 as i64 },
+            None,
+        )
         .await;
 
     if res.is_err() {
-        println!("Error in getting prefix: {:?}", res.unwrap_err());
-        return Some(";".to_owned());
+        eprintln!(
+            "Error in getting prefix: {:?}",
+            res.unwrap_err()
+        );
+        return ";".to_owned();
     }
 
     res.unwrap()
         .and_then(|c| {
             let settings = from_bson::<GuildSettings>(c.into());
             if settings.is_err() {
-                println!("Error in getting prefix: {:?}", settings.unwrap_err());
+                eprintln!(
+                    "Error in getting prefix: {:?}",
+                    settings.unwrap_err()
+                );
                 return None;
             }
             let settings = settings.unwrap();
             Some(settings)
         })
-        .map_or_else(|| Some(";".to_owned()), |s| Some(s.prefix))
+        .map_or_else(|| ";".to_owned(), |s| s.prefix)
+}
+
+pub async fn slash_command_message(ctx: &Context, msg: &Message) {
+    let prefix = calc_prefix(ctx, msg).await;
+
+    if !(msg
+        .content
+        .starts_with(&(prefix.clone() + "help"))
+        || msg
+            .content
+            .starts_with(&(prefix + "ping"))
+        || msg
+            .content
+            .starts_with(&format!(
+                "<@{}>",
+                ctx.cache
+                    .current_user_id()
+            )))
+    {
+        return;
+    }
+
+    let _ = msg
+        .reply_ping(&ctx, "Hi! OKTO has moved over to using slash-commands.\nThis means that you should use / as the prefix, for example `/help`.")
+        .await;
 }

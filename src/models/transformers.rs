@@ -34,7 +34,10 @@ impl From<LaunchInfo> for LaunchData {
             payload: info
                 .mission
                 .clone()
-                .map_or_else(|| String::from("payload unknown"), |m| m.name),
+                .map_or_else(
+                    || String::from("payload unknown"),
+                    |m| m.name,
+                ),
             vid_urls: info
                 .vid_urls
                 .unwrap_or_default(),
@@ -51,7 +54,10 @@ impl From<LaunchInfo> for LaunchData {
             mission_type: info
                 .mission
                 .clone()
-                .map_or_else(|| String::from("mission type unknown"), |m| m.mission_type),
+                .map_or_else(
+                    || String::from("mission type unknown"),
+                    |m| m.mission_type,
+                ),
             mission_description: info
                 .mission
                 .clone()
@@ -61,7 +67,10 @@ impl From<LaunchInfo> for LaunchData {
                 ),
             lsp: info
                 .launch_service_provider
-                .map_or_else(|| String::from("Unknown launch provider"), |l| l.name),
+                .map_or_else(
+                    || String::from("Unknown launch provider"),
+                    |l| l.name,
+                ),
         }
     }
 }

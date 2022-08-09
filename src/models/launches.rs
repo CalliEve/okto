@@ -170,7 +170,7 @@ pub struct VidURL {
     pub url: String,
 }
 
-#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, PartialEq)]
+#[derive(Serialize_repr, Deserialize_repr, Debug, Clone, PartialEq, Eq)]
 #[repr(u8)]
 pub enum LaunchStatus {
     Go = 1,

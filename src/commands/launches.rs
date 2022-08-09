@@ -1,27 +1,26 @@
 use std::sync::Arc;
 
 use chrono::Utc;
+use okto_framework::macros::command;
 use serenity::{
     builder::{
         CreateEmbed,
         CreateEmbedAuthor,
         CreateEmbedFooter,
-        CreateMessage,
+        CreateInteractionResponse,
     },
-    framework::standard::{
-        macros::{
-            command,
-            group,
-        },
-        Args,
-        CommandResult,
-    },
+    framework::standard::CommandResult,
     model::{
-        channel::{
-            Message,
-            ReactionType,
+        application::{
+            component::ButtonStyle,
+            interaction::{
+                application_command::ApplicationCommandInteraction,
+                MessageFlags,
+            },
         },
+        channel::ReactionType,
         id::EmojiId,
+        Timestamp,
     },
     prelude::{
         Context,
@@ -31,6 +30,7 @@ use serenity::{
 
 use crate::{
     events::statefulembed::{
+        ButtonType,
         EmbedSession,
         StatefulEmbed,
     },
@@ -43,22 +43,31 @@ use crate::{
     },
     utils::{
         constants::*,
+        cutoff_on_last_dot,
         default_embed,
         format_duration,
-        cutoff_on_last_dot,
         launches::*,
+        StandardButton,
     },
 };
 
-#[group]
-#[commands(nextlaunch, listlaunches, launchinfo, filtersinfo)]
-struct Launches;
-
 #[command]
-#[aliases(nl)]
-#[description("Get information about the next launch that has been marked as certain")]
-#[usage("Provide the name of a rocket or lsp to filter the launches on, see filtersinfo for more information")]
-async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+/// Get information about the next launch that has been marked as certain
+#[options(
+    {
+        option_type: String,
+        name: "lsp",
+        description: "Launch Service Provider to filter the launches on",
+        required: false
+    },
+    {
+        option_type: String,
+        name: "rocket",
+        description: "Rocket name to filter the launches on",
+        required: false
+    }
+)]
+async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx
             .data
@@ -79,27 +88,47 @@ async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
     .collect();
 
     if launches.is_empty() {
-        msg.channel_id
-            .send_message(&ctx.http, |m: &mut CreateMessage| {
-                m.embed(|e: &mut CreateEmbed| {
-                    default_embed(
-                        e,
-                        "I found no upcoming launches that have been marked as certain :(",
-                        false,
-                    )
-                })
-            })
+        interaction
+            .create_interaction_response(
+                &ctx.http,
+                |m: &mut CreateInteractionResponse| {
+                    m.interaction_response_data(|c| {
+                        c.flags(MessageFlags::EPHEMERAL)
+                            .embed(|e: &mut CreateEmbed| {
+                                default_embed(
+                                e,
+                                "I found no upcoming launches that have been marked as certain :(",
+                                false,
+                            )
+                            })
+                    })
+                },
+            )
             .await?;
         return Ok(());
     }
 
-    launches = match filter_launches(launches, &args) {
+    launches = match filter_launches(launches, interaction) {
         Ok(ls) => ls,
         Err(err) => {
-            msg.channel_id
-                .send_message(&ctx.http, |m: &mut CreateMessage| {
-                    m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
-                })
+            interaction
+                .create_interaction_response(
+                    &ctx.http,
+                    |m: &mut CreateInteractionResponse| {
+                        m.interaction_response_data(|c| {
+                            c.flags(MessageFlags::EPHEMERAL)
+                                .embed(|e: &mut CreateEmbed| default_embed(
+                                    e,
+                                    &if let FilterErrorType::Invalid = err {
+                                        "This is not a valid filter, please take a look at those listed in `/filtersinfo`".to_owned()
+                                    } else {
+                                        format!("This {} does not have any upcoming launches listed as certain :(", err)
+                                    },
+                                    false
+                                ))
+                        })
+                    },
+                )
                 .await?;
             return Ok(());
         },
@@ -107,63 +136,73 @@ async fn nextlaunch(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
 
     let launch = &launches[0];
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
-                let mut window = format_duration(launch.launch_window, true);
-                if window.is_empty() {
-                    window.push_str("instantaneous")
-                }
+    interaction
+        .create_interaction_response(
+            &ctx.http,
+            |m: &mut CreateInteractionResponse| {
+                m.interaction_response_data(|c| {
+                    c.embed(|e: &mut CreateEmbed| {
+                        let mut window = format_duration(launch.launch_window, true);
+                        if window.is_empty() {
+                            window.push_str("instantaneous")
+                        }
 
-                e.color(DEFAULT_COLOR)
-                    .author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Next Launch")
-                            .icon_url(DEFAULT_ICON)
-                    })
-                    .timestamp(
-                        launch
-                            .net
-                            .format("%Y-%m-%dT%H:%M:%S")
-                            .to_string(),
-                    )
-                    .title(format!(
-                        "{}\nStatus: {}",
-                        &launch.vehicle,
-                        launch
-                            .status
-                            .as_str()
-                    ))
-                    .description(format!(
-                        "**Payload:** {}\n\
+                        e.color(DEFAULT_COLOR)
+                            .author(|a: &mut CreateEmbedAuthor| {
+                                a.name("Next Launch")
+                                    .icon_url(DEFAULT_ICON)
+                            })
+                            .timestamp(
+                                Timestamp::from_unix_timestamp(
+                                    launch
+                                        .net
+                                        .timestamp(),
+                                )
+                                .expect("Invalid timestamp"),
+                            )
+                            .title(format!(
+                                "{}\nStatus: {}",
+                                &launch.vehicle,
+                                launch
+                                    .status
+                                    .as_str()
+                            ))
+                            .description(format!(
+                                "**Payload:** {}\n\
                         **NET:** <t:{}>\n\
                         **Provider:** {}\n\
                         **Location:** {}\n\
                         **Launch Window:** {}",
-                        &launch.payload,
-                        launch
-                            .net
-                            .timestamp(),
-                        &launch.lsp,
-                        &launch.location,
-                        window
-                    ))
-                    .field(
-                        "Time until launch:",
-                        format_duration(launch.net - Utc::now().naive_utc(), true),
-                        false,
-                    );
+                                &launch.payload,
+                                launch
+                                    .net
+                                    .timestamp(),
+                                &launch.lsp,
+                                &launch.location,
+                                window
+                            ))
+                            .field(
+                                "Time until launch:",
+                                format_duration(
+                                    launch.net - Utc::now().naive_utc(),
+                                    true,
+                                ),
+                                false,
+                            );
 
-                if let Some(img) = &launch.rocket_img {
-                    e.thumbnail(img);
-                }
+                        if let Some(img) = &launch.rocket_img {
+                            e.thumbnail(img);
+                        }
 
-                if let Some(links) = format_links(&launch.vid_urls) {
-                    e.field("links", links, false);
-                }
+                        if let Some(links) = format_links(&launch.vid_urls) {
+                            e.field("links", links, false);
+                        }
 
-                e
-            })
-        })
+                        e
+                    })
+                })
+            },
+        )
         .await?;
 
     Ok(())
@@ -194,89 +233,101 @@ fn list_page(
             launches.len()
         };
 
-        let mut em = StatefulEmbed::new_with(session.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.icon_url(DEFAULT_ICON)
-                        .name("List of upcoming launches")
-                })
-                .timestamp(&Utc::now())
-                .footer(|f: &mut CreateEmbedFooter| {
-                    f.text(format!("Source: {}", LAUNCH_LIBRARY_URL))
-                });
+        let mut em = StatefulEmbed::new_with(
+            session.clone(),
+            |e: &mut CreateEmbed| {
+                e.color(DEFAULT_COLOR)
+                    .author(|a: &mut CreateEmbedAuthor| {
+                        a.icon_url(DEFAULT_ICON)
+                            .name("List of upcoming launches")
+                    })
+                    .timestamp(Utc::now())
+                    .footer(|f: &mut CreateEmbedFooter| {
+                        f.text(format!(
+                            "Source: {}",
+                            LAUNCH_LIBRARY_URL
+                        ))
+                    });
 
-            if all {
-                e.description("
+                if all {
+                    e.description("
             This list shows the upcoming launches (max 100), both certain and uncertain.\n\
             Use the arrow reactions to get to other pages and the green reaction to filter on only the launches that are certain.
             ");
-            } else {
-                e.description("
+                } else {
+                    e.description("
             This list shows upcoming launches that are certain.\n\
             Use the arrow reactions to get to other pages and the red reaction to get all the launches.
             ");
-            }
+                }
 
-            #[allow(clippy::needless_range_loop)]
-            for launch in &launches[min..top] {
-                e.field(
-                    format!(
-                        "{}: {} - {}",
-                        launch.id,
-                        &launch.vehicle,
-                        launch
-                            .status
-                            .as_str()
-                    ),
-                    format!(
-                        "**Payload:** {}\n**NET:** <t:{}>\n**Provider:** {}\n**Location:** {}",
-                        &launch.payload,
-                        launch
-                            .net
-                            .timestamp(),
-                        &launch.lsp,
-                        &launch.location
-                    ),
-                    false,
-                );
-            }
-            e
-        });
+                #[allow(clippy::needless_range_loop)]
+                for launch in &launches[min..top] {
+                    e.field(
+                        format!(
+                            "{}: {} - {}",
+                            launch.id,
+                            &launch.vehicle,
+                            launch
+                                .status
+                                .as_str()
+                        ),
+                        format!(
+                            "**Payload:** {}\n**NET:** <t:{}>\n**Provider:** {}\n**Location:** {}",
+                            &launch.payload,
+                            launch
+                                .net
+                                .timestamp(),
+                            &launch.lsp,
+                            &launch.location
+                        ),
+                        false,
+                    );
+                }
+                e
+            },
+        );
 
         if page_num > 0 {
             let first_page_launches = list.clone();
             let first_page_session = session.clone();
-            em.add_option(&ReactionType::from(FIRST_PAGE_EMOJI), move || {
-                let first_page_session = first_page_session.clone();
-                let first_page_launches = first_page_launches.clone();
-                Box::pin(async move {
-                    list_page(
-                        first_page_session.clone(),
-                        first_page_launches.clone(),
-                        0,
-                        true,
-                    )
-                    .await
-                })
-            });
+            em.add_option(
+                &StandardButton::First.to_button(),
+                move |_| {
+                    let first_page_session = first_page_session.clone();
+                    let first_page_launches = first_page_launches.clone();
+                    Box::pin(async move {
+                        list_page(
+                            first_page_session.clone(),
+                            first_page_launches.clone(),
+                            0,
+                            true,
+                        )
+                        .await
+                    })
+                },
+            );
         }
 
         if page_num > 0 {
             let last_page_launches = list.clone();
             let last_page_session = session.clone();
-            em.add_option(&ReactionType::from(LAST_PAGE_EMOJI), move || {
-                let last_page_launches = last_page_launches.clone();
-                let last_page_session = last_page_session.clone();
-                Box::pin(async move {
-                    list_page(
-                        last_page_session.clone(),
-                        last_page_launches.clone(),
-                        page_num - 1,
-                        true,
-                    )
-                    .await
-                })
-            });
+            em.add_option(
+                &StandardButton::Back.to_button(),
+                move |_| {
+                    let last_page_launches = last_page_launches.clone();
+                    let last_page_session = last_page_session.clone();
+                    Box::pin(async move {
+                        list_page(
+                            last_page_session.clone(),
+                            last_page_launches.clone(),
+                            page_num - 1,
+                            true,
+                        )
+                        .await
+                    })
+                },
+            );
         }
 
         if all
@@ -287,12 +338,16 @@ fn list_page(
             let certain_page_launches = list.clone();
             let certain_page_session = session.clone();
             em.add_option(
-                &ReactionType::Custom {
-                    animated: false,
-                    name: Some("certain".to_owned()),
-                    id: EmojiId::from(CERTAIN_EMOJI),
+                &ButtonType {
+                    label: "Only certain launches".to_owned(),
+                    style: ButtonStyle::Primary,
+                    emoji: Some(ReactionType::Custom {
+                        animated: false,
+                        name: Some("certain".to_owned()),
+                        id: EmojiId::from(CERTAIN_EMOJI),
+                    }),
                 },
-                move || {
+                move |_| {
                     let certain_page_session = certain_page_session.clone();
                     let certain_page_launches = certain_page_launches.clone();
                     Box::pin(async move {
@@ -310,12 +365,16 @@ fn list_page(
             let uncertain_page_launches = list.clone();
             let uncertain_page_session = session.clone();
             em.add_option(
-                &ReactionType::Custom {
-                    animated: false,
-                    name: Some("uncertain".to_owned()),
-                    id: EmojiId::from(UNCERTAIN_EMOJI),
+                &ButtonType {
+                    label: "Include uncertain launches".to_owned(),
+                    style: ButtonStyle::Primary,
+                    emoji: Some(ReactionType::Custom {
+                        animated: false,
+                        name: Some("uncertain".to_owned()),
+                        id: EmojiId::from(UNCERTAIN_EMOJI),
+                    }),
                 },
-                move || {
+                move |_| {
                     let uncertain_page_session = uncertain_page_session.clone();
                     let uncertain_page_launches = uncertain_page_launches.clone();
                     Box::pin(async move {
@@ -334,55 +393,60 @@ fn list_page(
         if page_num < max_page {
             let next_page_launches = list.clone();
             let next_page_session = session.clone();
-            em.add_option(&ReactionType::from(NEXT_PAGE_EMOJI), move || {
-                let next_page_launches = next_page_launches.clone();
-                let next_page_session = next_page_session.clone();
-                Box::pin(async move {
-                    list_page(
-                        next_page_session.clone(),
-                        next_page_launches.clone(),
-                        page_num + 1,
-                        true,
-                    )
-                    .await
-                })
-            });
+            em.add_option(
+                &StandardButton::Forward.to_button(),
+                move |_| {
+                    let next_page_launches = next_page_launches.clone();
+                    let next_page_session = next_page_session.clone();
+                    Box::pin(async move {
+                        list_page(
+                            next_page_session.clone(),
+                            next_page_launches.clone(),
+                            page_num + 1,
+                            true,
+                        )
+                        .await
+                    })
+                },
+            );
         }
 
         if page_num < max_page {
             let final_page_launches = list;
             let final_page_session = session.clone();
-            em.add_option(&ReactionType::from(FINAL_PAGE_EMOJI), move || {
-                let final_page_launches = final_page_launches.clone();
-                let final_page_session = final_page_session.clone();
-                Box::pin(async move {
-                    list_page(
-                        final_page_session.clone(),
-                        final_page_launches.clone(),
-                        final_page_launches.len() / 10 - 1,
-                        true,
-                    )
-                    .await
-                })
-            });
+            em.add_option(
+                &StandardButton::Last.to_button(),
+                move |_| {
+                    let final_page_launches = final_page_launches.clone();
+                    let final_page_session = final_page_session.clone();
+                    Box::pin(async move {
+                        list_page(
+                            final_page_session.clone(),
+                            final_page_launches.clone(),
+                            final_page_launches.len() / 10 - 1,
+                            true,
+                        )
+                        .await
+                    })
+                },
+            );
         }
 
-        em.add_option(&ReactionType::from(EXIT_EMOJI), move || {
-            let session = session.clone();
-            Box::pin(async move {
-                let lock = session
-                    .read()
-                    .await;
-                if let Some(m) = lock
-                    .message
-                    .as_ref()
-                {
-                    let _ = m
-                        .delete(&lock.http)
+        em.add_option(
+            &StandardButton::Exit.to_button(),
+            move |_| {
+                let session = session.clone();
+                Box::pin(async move {
+                    let lock = session
+                        .read()
                         .await;
-                };
-            })
-        });
+                    let _ = lock
+                        .interaction
+                        .delete_original_interaction_response(&lock.http)
+                        .await;
+                })
+            },
+        );
 
         let res = em
             .show()
@@ -394,10 +458,20 @@ fn list_page(
 }
 
 #[command]
-#[aliases(ll)]
-#[description("Get a list of the next 100 upcoming launches")]
-#[usage("Provide the name of a rocket or lsp to filter the launches on, see filtersinfo for more information")]
-async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+/// Get a list of the next 100 upcoming launches
+#[options(
+    {
+        option_type: String,
+        name: "lsp",
+        description: "Launch Service Provider to filter the launches on"
+    },
+    {
+        option_type: String,
+        name: "rocket",
+        description: "Rocket name to filter the launches on"
+    }
+)]
+async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx
             .data
@@ -418,24 +492,33 @@ async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult
         return Err("No launches found".into());
     }
 
-    launches = match filter_launches(launches, &args) {
+    launches = match filter_launches(launches, interaction) {
         Ok(ls) => ls,
         Err(err) => {
-            msg.channel_id
-                .send_message(&ctx.http, |m: &mut CreateMessage| {
-                    m.embed(|e: &mut CreateEmbed| default_embed(e, &err, false))
-                })
+            interaction
+                .create_interaction_response(
+                    &ctx.http,
+                    |m: &mut CreateInteractionResponse| {
+                        m.interaction_response_data(|c| {
+                            c.flags(MessageFlags::EPHEMERAL)
+                            .embed(|e: &mut CreateEmbed| default_embed(
+                                e,
+                                &if let FilterErrorType::Invalid = err {
+                                    "This is not a valid filter, please take a look at those listed in `/filtersinfo`".to_owned()
+                                } else {
+                                    format!("This {} does not have any upcoming launches :(", err)
+                                },
+                                false
+                            ))
+                        })
+                    },
+                )
                 .await?;
             return Ok(());
         },
     };
 
-    let session = EmbedSession::new(
-        ctx,
-        msg.channel_id,
-        msg.author
-            .id,
-    );
+    let session = EmbedSession::new(ctx, interaction.clone(), false).await?;
 
     list_page(session, launches, 0, true).await;
 
@@ -443,10 +526,14 @@ async fn listlaunches(ctx: &Context, msg: &Message, args: Args) -> CommandResult
 }
 
 #[command]
-#[aliases(li)]
-#[description("Get more detailed information about a launch")]
-#[usage("Provide the number of the launch, or the LaunchLibrary ID")]
-async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
+/// Get more detailed information about a launch
+#[options({
+    option_type: Integer,
+    name: "launch",
+    description: "The number of the launch to get more information about",
+    required: true,
+})]
+async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
     let launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx
             .data
@@ -467,52 +554,54 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
         return Err("No launches found".into());
     }
 
-    let launch = match args
-        .current()
-        .map(str::parse::<i32>)
+    let launch_id = interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "launch")
+        .and_then(|o| {
+            o.value
+                .clone()
+        })
+        .and_then(|v| {
+            v.as_i64()
+                .map(|i| {
+                    let o: i32 = i
+                        .try_into()
+                        .expect("Got a launch id that was too big to be possible");
+                    o
+                })
+        })
+        .ok_or("No launch id provided while it was a required argument")?;
+
+    let launch = if let Some(l) = launches
+        .into_iter()
+        .find(|l| l.id == launch_id)
     {
-        Some(Ok(id)) => {
-            if let Some(l) = launches
-                .into_iter()
-                .find(|l| l.id == id)
-            {
-                l
-            } else {
-                msg.channel_id
-                    .send_message(&ctx.http, |m: &mut CreateMessage| {
-                        m.embed(|e: &mut CreateEmbed| {
-                            default_embed(e, "No launch was found with that ID :(", false)
-                        })
+        l
+    } else {
+        interaction
+            .create_interaction_response(
+                &ctx.http,
+                |m: &mut CreateInteractionResponse| {
+                    m.interaction_response_data(|c| {
+                        c.flags(MessageFlags::EPHEMERAL)
+                            .embed(|e: &mut CreateEmbed| {
+                                default_embed(
+                                    e,
+                                    "No launch was found with that ID :(",
+                                    false,
+                                )
+                            })
                     })
-                    .await?;
-                return Ok(());
-            }
-        },
-        Some(_) => {
-            if let Ok(l) = request_launch(
-                args.current()
-                    .expect("no arg supplied while it should have been"),
+                },
             )
-            .await
-            {
-                l
-            } else {
-                msg.channel_id
-                    .send_message(&ctx.http, |m: &mut CreateMessage| {
-                        m.embed(|e: &mut CreateEmbed| {
-                            default_embed(e, "No launch was found with that ID :(", false)
-                        })
-                    })
-                    .await?;
-                return Ok(());
-            }
-        },
-        None => launches[0].clone(),
+            .await?;
+        return Ok(());
     };
 
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
+    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
+            m.interaction_response_data(|c| {c.embed(|e: &mut CreateEmbed| {
                 let mut window = format_duration(launch.launch_window, true);
                 if window.is_empty() {
                     window.push_str("instantaneous")
@@ -522,7 +611,9 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     .author(|a: &mut CreateEmbedAuthor| {
                         a.name("Detailed info").icon_url(DEFAULT_ICON)
                     })
-                    .timestamp(launch.net.format("%Y-%m-%dT%H:%M:%S").to_string())
+                    .timestamp(Timestamp::from_unix_timestamp(launch
+                        .net.timestamp()
+                    ).expect("Invalid timestamp"))
                     .title(format!(
                         "{}\nStatus: {}",
                         &launch.vehicle,
@@ -578,45 +669,50 @@ async fn launchinfo(ctx: &Context, msg: &Message, args: Args) -> CommandResult {
                     ),
                     false,
                 )
-            })
+            })})
         }).await?;
 
     Ok(())
 }
 
 #[command]
-#[description("Get a list of all things you can filter launches on")]
-async fn filtersinfo(ctx: &Context, msg: &Message) -> CommandResult {
-    msg.channel_id
-        .send_message(&ctx.http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
-                e.color(DEFAULT_COLOR)
-                    .author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Filters Info")
-                            .icon_url(DEFAULT_ICON)
+/// Get a list of all things you can filter launches on
+async fn filtersinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    interaction
+        .create_interaction_response(
+            &ctx.http,
+            |m: &mut CreateInteractionResponse| {
+                m.interaction_response_data(|c| {
+                    c.embed(|e: &mut CreateEmbed| {
+                        e.color(DEFAULT_COLOR)
+                            .author(|a: &mut CreateEmbedAuthor| {
+                                a.name("Filters Info")
+                                    .icon_url(DEFAULT_ICON)
+                            })
+                            .timestamp(Utc::now())
+                            .title("The following filters can be used to filter launches:")
+                            .field(
+                                "Vehicles:",
+                                LAUNCH_VEHICLES
+                                    .keys()
+                                    .copied()
+                                    .collect::<Vec<&str>>()
+                                    .join(", "),
+                                false,
+                            )
+                            .field(
+                                "Launch Service Provider abbreviations with their full names:",
+                                LAUNCH_AGENCIES
+                                    .iter()
+                                    .map(|(k, v)| format!("{}: {}", k, v))
+                                    .collect::<Vec<String>>()
+                                    .join("\n"),
+                                false,
+                            )
                     })
-                    .timestamp(&Utc::now())
-                    .title("The following filters can be used to filter launches:")
-                    .field(
-                        "Vehicles:",
-                        LAUNCH_VEHICLES
-                            .keys()
-                            .copied()
-                            .collect::<Vec<&str>>()
-                            .join(", "),
-                        false,
-                    )
-                    .field(
-                        "Launch Service Provider abbreviations with their full names:",
-                        LAUNCH_AGENCIES
-                            .iter()
-                            .map(|(k, v)| format!("{}: {}", k, v))
-                            .collect::<Vec<String>>()
-                            .join("\n"),
-                        false,
-                    )
-            })
-        })
+                })
+            },
+        )
         .await?;
 
     Ok(())

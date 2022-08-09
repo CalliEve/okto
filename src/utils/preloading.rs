@@ -95,8 +95,11 @@ async fn host_stars() -> reqwest::Result<Vec<String>> {
 }
 
 pub async fn preload_data() -> PictureDataCache {
-    let (curiosity_mardi, exoplanets, host_stars) =
-        tokio::join!(curiosity_mardi(), exoplanets(), host_stars());
+    let (curiosity_mardi, exoplanets, host_stars) = tokio::join!(
+        curiosity_mardi(),
+        exoplanets(),
+        host_stars()
+    );
 
     PictureDataCache {
         curiosity_mardi: curiosity_mardi.unwrap_or_else(|e| {

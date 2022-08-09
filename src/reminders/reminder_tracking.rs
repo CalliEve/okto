@@ -33,11 +33,12 @@ use serenity::{
         CreateMessage,
     },
     http::client::Http,
+    model::Timestamp,
     prelude::RwLock,
 };
 
+use super::launch_tracking;
 use crate::{
-    launch_tracking,
     models::{
         launches::{
             LaunchData,
@@ -71,7 +72,11 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
         println!("running loop {}", loop_count);
 
         if loop_count % 5 == 0 {
-            tokio::spawn(launch_tracking(http.clone(), db.clone(), cache.clone()));
+            tokio::spawn(launch_tracking(
+                http.clone(),
+                db.clone(),
+                cache.clone(),
+            ));
         }
 
         loop_count += 1;
@@ -117,7 +122,10 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
                     if let Err(e) = handle.await {
                         error_log(
                             http.clone(),
-                            &format!("A panic happened in reminders: ```{:?}```", e),
+                            &format!(
+                                "A panic happened in reminders: ```{:?}```",
+                                e
+                            ),
                         )
                         .await
                     }
@@ -268,8 +276,11 @@ fn reminder_embed<'a>(
 
     e.color(DEFAULT_COLOR)
         .author(|a: &mut CreateEmbedAuthor| {
-            a.name(format!("{} till launch", &format_duration(diff, false)))
-                .icon_url(DEFAULT_ICON)
+            a.name(format!(
+                "{} till launch",
+                &format_duration(diff, false)
+            ))
+            .icon_url(DEFAULT_ICON)
         })
         .description(format!(
             "**Payload:** {}\n\
@@ -283,9 +294,11 @@ fn reminder_embed<'a>(
             live
         ))
         .timestamp(
-            l.net
-                .format("%Y-%m-%dT%H:%M:%S")
-                .to_string(),
+            Timestamp::from_unix_timestamp(
+                l.net
+                    .timestamp(),
+            )
+            .expect("Invalid timestamp"),
         );
 
     if let Some(img) = &l.rocket_img {

@@ -1,0 +1,18 @@
+[package]
+name = "okto_framework"
+version = "0.1.0"
+authors = ["Calli <me@calli.dev>"]
+edition = "2021"
+license = "MIT"
+
+[dependencies.slash_command_macros]
+path = "../command_macros"
+version = "0.1.0"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_repr = "0.1"
+serenity = {version="^0.11.2", features=["unstable_discord_api"]}
+futures = "0.3"
+paste = "1.0"

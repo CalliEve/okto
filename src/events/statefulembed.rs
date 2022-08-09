@@ -1,18 +1,30 @@
 use std::sync::Arc;
 
 use futures::future::BoxFuture;
+use itertools::Itertools;
 use serenity::{
-    builder::CreateEmbed,
+    builder::{
+        CreateActionRow,
+        CreateButton,
+        CreateComponents,
+        CreateEmbed,
+        EditInteractionResponse,
+    },
     cache::Cache,
     http::Http,
     model::{
-        channel::{
-            Message,
-            Reaction,
-            ReactionType,
+        application::{
+            component::ButtonStyle,
+            interaction::{
+                application_command::ApplicationCommandInteraction,
+                message_component::MessageComponentInteraction,
+                Interaction,
+                InteractionResponseType,
+                MessageFlags,
+            },
         },
+        channel::ReactionType,
         id::{
-            ChannelId,
             MessageId,
             UserId,
         },
@@ -22,16 +34,26 @@ use serenity::{
         RwLock,
         TypeMap,
     },
-    Error,
+    Result,
 };
 
-use crate::models::caches::EmbedSessionsKey;
+use crate::{
+    models::caches::EmbedSessionsKey,
+    utils::error_log,
+};
 
-type Handler = dyn Fn() -> BoxFuture<'static, ()> + Send + Sync;
+type Handler = dyn Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync;
+
+#[derive(Debug, Clone)]
+pub struct ButtonType {
+    pub style: ButtonStyle,
+    pub label: String,
+    pub emoji: Option<ReactionType>,
+}
 
 #[derive(Clone)]
 pub struct StatefulOption {
-    pub emoji: ReactionType,
+    pub button: ButtonType,
     pub handler: Arc<Handler>,
 }
 
@@ -71,77 +93,85 @@ impl StatefulEmbed {
         name: &str,
         value: &str,
         inline: bool,
-        emoji: &ReactionType,
+        button: &ButtonType,
         handler: F,
-    ) where
-        F: Fn() -> BoxFuture<'static, ()> + Send + Sync + 'static,
+    ) -> &mut Self
+    where
+        F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
-        let full_name = format!("{} {}", &emoji, name);
+        let full_name = if let Some(e) = &button.emoji {
+            format!("{} {}", e, name)
+        } else {
+            name.to_owned()
+        };
         self.inner
             .field(full_name, value, inline);
         self.options
             .push(StatefulOption {
-                emoji: emoji.clone(),
+                button: button.clone(),
                 handler: Arc::new(Box::new(handler)),
-            })
+            });
+
+        self
     }
 
-    pub fn add_option<F>(&mut self, emoji: &ReactionType, handler: F)
+    pub fn add_option<F>(&mut self, button: &ButtonType, handler: F) -> &mut Self
     where
-        F: Fn() -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         self.options
             .push(StatefulOption {
-                emoji: emoji.clone(),
+                button: button.clone(),
                 handler: Arc::new(Box::new(handler)),
-            })
+            });
+
+        self
     }
 
-    async fn add_reactions(&self) -> serenity::Result<()> {
-        let session = self
-            .session
-            .read()
-            .await;
-        let message: &Message = session
-            .message
-            .as_ref()
-            .ok_or(Error::Other("No message in session"))?;
+    fn get_components(&self) -> CreateComponents {
+        let mut components = CreateComponents::default();
 
-        let res = message
-            .delete_reactions(&session.http)
-            .await;
-        if res.is_err() {
-            for r in &message.reactions {
-                if r.me {
-                    let _ = message
-                        .channel_id
-                        .delete_reaction(
-                            &session.http,
-                            message.id,
-                            Some(
-                                message
-                                    .author
-                                    .id,
-                            ),
-                            r.reaction_type
-                                .clone(),
+        for option_batch in &self
+            .options
+            .iter()
+            .chunks(5)
+        {
+            components.create_action_row(|r: &mut CreateActionRow| {
+                for option in option_batch {
+                    r.create_button(|b: &mut CreateButton| {
+                        b.style(
+                            option
+                                .button
+                                .style,
                         )
-                        .await;
+                        .label(
+                            option
+                                .button
+                                .label
+                                .to_string(),
+                        )
+                        .custom_id(
+                            option
+                                .button
+                                .label
+                                .to_string(),
+                        );
+
+                        if let Some(e) = &option
+                            .button
+                            .emoji
+                        {
+                            b.emoji(e.clone());
+                        }
+
+                        b
+                    });
                 }
-            }
+                r
+            });
         }
 
-        for opt in &self.options {
-            message
-                .react(
-                    &session.http,
-                    opt.emoji
-                        .clone(),
-                )
-                .await?;
-        }
-
-        Ok(())
+        components
     }
 
     pub async fn show(&self) -> serenity::Result<()> {
@@ -155,54 +185,46 @@ impl StatefulEmbed {
                 .clone();
             session.set_embed(self.clone());
 
-            if let Some(message) = session
-                .message
-                .as_mut()
+            session
+                .interaction
+                .edit_original_interaction_response(
+                    &http,
+                    |e: &mut EditInteractionResponse| {
+                        e.components(|c: &mut CreateComponents| {
+                            *c = self.get_components();
+
+                            c
+                        })
+                        .content("")
+                        .embed(|e: &mut CreateEmbed| {
+                            e.0 = self
+                                .inner
+                                .0
+                                .clone();
+                            e
+                        })
+                    },
+                )
+                .await?;
+
+            let msg = session
+                .interaction
+                .get_interaction_response(&http)
+                .await?;
+
+            if let Some(embeds) = session
+                .data
+                .write()
+                .await
+                .get_mut::<EmbedSessionsKey>()
             {
-                message
-                    .edit(&http, |m| {
-                        m.embed(|e: &mut CreateEmbed| {
-                            e.0 = self
-                                .inner
-                                .0
-                                .clone();
-                            e
-                        })
-                    })
-                    .await?;
-            } else {
-                let msg = session
-                    .channel
-                    .send_message(&http, |m| {
-                        m.embed(|e: &mut CreateEmbed| {
-                            e.0 = self
-                                .inner
-                                .0
-                                .clone();
-                            e
-                        })
-                    })
-                    .await?;
-
-                if let Some(embeds) = session
-                    .data
-                    .write()
-                    .await
-                    .get_mut::<EmbedSessionsKey>()
-                {
-                    embeds.insert(
-                        msg.id,
-                        self.session
-                            .clone(),
-                    );
-                }
-
-                session.message = Some(msg);
-            }
+                embeds.insert(
+                    msg.id,
+                    self.session
+                        .clone(),
+                );
+            };
         }
-
-        self.add_reactions()
-            .await?;
 
         Ok(())
     }
@@ -211,31 +233,47 @@ impl StatefulEmbed {
 #[derive(Clone)]
 pub struct EmbedSession {
     pub current_state: Option<StatefulEmbed>,
-    pub message: Option<Message>,
-    pub channel: ChannelId,
-    pub author: UserId,
+    pub interaction: ApplicationCommandInteraction,
     pub http: Arc<Http>,
     pub data: Arc<RwLock<TypeMap>>,
     pub cache: Arc<Cache>,
+    pub author: UserId,
 }
 
 impl EmbedSession {
-    pub fn new(ctx: &Context, channel: ChannelId, author: UserId) -> Arc<RwLock<Self>> {
-        Arc::new(RwLock::new(Self {
-            channel,
-            author,
+    pub async fn new(
+        ctx: &Context,
+        interaction: ApplicationCommandInteraction,
+        ephemeral: bool,
+    ) -> Result<Arc<RwLock<Self>>> {
+        interaction
+            .create_interaction_response(&ctx.http, |c| {
+                c.kind(InteractionResponseType::DeferredChannelMessageWithSource);
+
+                if ephemeral {
+                    c.interaction_response_data(|d| d.flags(MessageFlags::EPHEMERAL));
+                }
+
+                c
+            })
+            .await?;
+
+        Ok(Arc::new(RwLock::new(Self {
             http: ctx
                 .http
                 .clone(),
             current_state: None,
-            message: None,
+            author: interaction
+                .user
+                .id,
+            interaction,
             data: ctx
                 .data
                 .clone(),
             cache: ctx
                 .cache
                 .clone(),
-        }))
+        })))
     }
 
     fn set_embed(&mut self, em: StatefulEmbed) {
@@ -243,19 +281,27 @@ impl EmbedSession {
     }
 }
 
-pub async fn on_reaction_add(ctx: &Context, add_reaction: Reaction) {
-    if let Some(user_id) = add_reaction.user_id {
+pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
+    if let Interaction::MessageComponent(interaction) = full_interaction {
         let handler = if let Some(cache) = ctx
             .data
             .read()
             .await
             .get::<EmbedSessionsKey>()
         {
-            if let Some(session_lock) = cache.get(&add_reaction.message_id) {
+            if let Some(session_lock) = cache.get(
+                &interaction
+                    .message
+                    .id,
+            ) {
                 let session = session_lock
                     .read()
                     .await;
-                if session.author != user_id || session.channel != add_reaction.channel_id {
+                if session.author
+                    != interaction
+                        .user
+                        .id
+                {
                     return;
                 }
 
@@ -266,7 +312,13 @@ pub async fn on_reaction_add(ctx: &Context, add_reaction: Reaction) {
                         let mut handler: Option<Arc<Handler>> = None;
 
                         for opt in &embed.options {
-                            if opt.emoji == add_reaction.emoji {
+                            if opt
+                                .button
+                                .label
+                                == interaction
+                                    .data
+                                    .custom_id
+                            {
                                 handler = Some(
                                     opt.handler
                                         .clone(),
@@ -285,7 +337,24 @@ pub async fn on_reaction_add(ctx: &Context, add_reaction: Reaction) {
         };
 
         if let Some(handler) = handler {
-            handler().await;
+            let r = interaction
+                .create_interaction_response(&ctx.http, |c| {
+                    c.kind(InteractionResponseType::DeferredUpdateMessage)
+                })
+                .await;
+
+            if let Err(e) = r {
+                error_log(
+                    &ctx.http,
+                    format!(
+                        "Got error when responding to interaction: {:?}",
+                        e
+                    ),
+                )
+                .await;
+            } else {
+                handler(interaction.clone()).await;
+            }
         }
     }
 }

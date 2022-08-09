@@ -1,25 +1,22 @@
 use std::{
-    collections::HashMap,
+    fmt::{
+        self,
+        Display,
+        Write,
+    },
     str::FromStr,
 };
 
-use reqwest::header::AUTHORIZATION;
-use serenity::framework::standard::{
-    Args,
-    CommandError,
-};
+use serenity::model::application::interaction::application_command::ApplicationCommandInteraction;
 
 use crate::{
     models::launches::{
         LaunchData,
-        LaunchInfo,
         VidURL,
     },
     utils::constants::{
-        DEFAULT_CLIENT,
         LAUNCH_AGENCIES,
         LAUNCH_VEHICLES,
-        LL_KEY,
     },
 };
 
@@ -31,7 +28,8 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
             if let Some(mut domain) = link.domain() {
                 domain = domain.trim_start_matches("www.");
 
-                res.push_str(&format!(
+                write!(
+                    res,
                     "\"{}\"\n[{}]({})\n\n",
                     link_obj
                         .title
@@ -39,7 +37,8 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
                         .map_or("unknown url", String::as_str),
                     domain,
                     &link_obj.url
-                ));
+                )
+                .expect("write to String: can't fail");
             }
         }
     }
@@ -51,55 +50,89 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
     }
 }
 
-pub fn filter_launches(launches: Vec<LaunchData>, args: &Args) -> Result<Vec<LaunchData>, String> {
-    let filter_arg = if let Some(f) = args.remains() {
-        f.to_lowercase()
-    } else {
-        return Ok(launches);
-    };
+pub fn filter_launches(
+    launches: Vec<LaunchData>,
+    interaction: &ApplicationCommandInteraction,
+) -> Result<Vec<LaunchData>, FilterErrorType> {
+    let agency_filter = interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "lsp")
+        .and_then(|o| {
+            o.value
+                .clone()
+        })
+        .and_then(|v| {
+            v.as_str()
+                .map(str::to_lowercase)
+        });
 
-    if let Some(filter) = LAUNCH_AGENCIES.get(&filter_arg.as_str()) {
-        let filtered = launches
-            .into_iter()
-            .filter(|l| l.lsp == *filter)
-            .collect::<Vec<LaunchData>>();
-        if filtered.is_empty() {
-            return Err("this launch provider does not have any upcoming launches :(".to_owned());
+    if let Some(lsp) = agency_filter {
+        if let Some(filter) = LAUNCH_AGENCIES.get(&lsp.as_str()) {
+            let filtered = launches
+                .into_iter()
+                .filter(|l| l.lsp == *filter)
+                .collect::<Vec<LaunchData>>();
+            if filtered.is_empty() {
+                return Err(FilterErrorType::Lsp);
+            }
+            return Ok(filtered);
         }
-        return Ok(filtered);
+
+        return Err(FilterErrorType::Invalid);
     }
 
-    if let Some(filter) = LAUNCH_VEHICLES.get(&filter_arg.as_str()) {
-        let filtered = launches
-            .into_iter()
-            .filter(|l| {
-                filter.contains(
-                    &l.vehicle
-                        .as_str(),
-                )
-            })
-            .collect::<Vec<LaunchData>>();
-        if filtered.is_empty() {
-            return Err("this launch vehicle does not have any upcoming launches :(".to_owned());
+    let rocket_filter = interaction
+        .data
+        .options
+        .iter()
+        .find(|o| o.name == "rocket")
+        .and_then(|o| {
+            o.value
+                .clone()
+        })
+        .and_then(|v| {
+            v.as_str()
+                .map(ToOwned::to_owned)
+        });
+
+    if let Some(rocket) = rocket_filter {
+        if let Some(filter) = LAUNCH_VEHICLES.get(rocket.as_str()) {
+            let filtered = launches
+                .into_iter()
+                .filter(|l| {
+                    filter.contains(
+                        &l.vehicle
+                            .as_str(),
+                    )
+                })
+                .collect::<Vec<LaunchData>>();
+            if filtered.is_empty() {
+                return Err(FilterErrorType::Vehicle);
+            }
+            return Ok(filtered);
         }
-        return Ok(filtered);
+
+        return Err(FilterErrorType::Invalid);
     }
 
     Ok(launches)
 }
 
-pub async fn request_launch(id: &str) -> Result<LaunchData, CommandError> {
-    let mut params = HashMap::new();
-    params.insert("mode", "detailed");
+#[derive(Debug, Clone, Copy)]
+pub enum FilterErrorType {
+    Vehicle,
+    Lsp,
+    Invalid,
+}
 
-    let res: LaunchInfo = DEFAULT_CLIENT
-        .get(&format!("https://ll.thespacedevs.com/2.0.0/launch/{}/", id))
-        .header(AUTHORIZATION, LL_KEY.as_str())
-        .query(&params)
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await?;
-    Ok(res.into())
+impl Display for FilterErrorType {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match self {
+            Self::Vehicle => fmt.write_str("launch vehicle"),
+            Self::Lsp => fmt.write_str("launch provider"),
+            Self::Invalid => fmt.write_str("invalid"),
+        }
+    }
 }

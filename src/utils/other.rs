@@ -1,32 +1,35 @@
+use std::fmt::Write;
+
 use chrono::{
     Duration,
     Utc,
 };
-use lazy_static::lazy_static;
-use regex::Regex;
 use serenity::{
     builder::{
         CreateEmbed,
         CreateEmbedAuthor,
     },
     http::Http,
-    model::id::ChannelId,
+    model::{
+        application::component::ButtonStyle,
+        channel::ReactionType,
+        id::ChannelId,
+    },
     utils::Colour,
 };
 
 use super::constants::{
     DEFAULT_COLOR,
     DEFAULT_ICON,
-    ID_REGEX,
-    MENTION_REGEX,
+    EXIT_EMOJI,
+    FINAL_PAGE_EMOJI,
+    FIRST_PAGE_EMOJI,
+    LAST_PAGE_EMOJI,
+    NEXT_PAGE_EMOJI,
+    PROGRADE,
+    RETROGRADE,
 };
-
-lazy_static! {
-    static ref WEEK_REGEX: Regex = Regex::new(r"(^|\b)([0-9]+)[wW]").unwrap();
-    static ref DAY_REGEX: Regex = Regex::new(r"(^|\b)([0-9]+)[dD]").unwrap();
-    static ref HOUR_REGEX: Regex = Regex::new(r"(^|\b)([0-9]+)[hH]").unwrap();
-    static ref MINUTE_REGEX: Regex = Regex::new(r"(^|\b)([0-9]+)[mM]").unwrap();
-}
+use crate::events::statefulembed::ButtonType;
 
 pub fn cutoff_on_last_dot(text: &str, length: usize) -> &str {
     let mut last: usize = 0;
@@ -64,7 +67,7 @@ pub fn default_embed<'a>(
             },
         )
         .description(content)
-        .timestamp(&Utc::now())
+        .timestamp(Utc::now())
 }
 
 pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
@@ -76,8 +79,8 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
     let mut res = String::new();
 
     match days {
-        1 => res.push_str(&format!("{} day", days)),
-        x if x > 1 => res.push_str(&format!("{} days", days)),
+        1 => write!(res, "{} day", days).expect("write to String: can't fail"),
+        x if x > 1 => write!(res, "{} days", days).expect("write to String: can't fail"),
         _ => {},
     }
 
@@ -89,9 +92,9 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
 
         if hours == 1 {
-            res.push_str(&format!("{} hour", hours));
+            write!(res, "{} hour", hours).expect("write to String: can't fail");
         } else {
-            res.push_str(&format!("{} hours", hours));
+            write!(res, "{} hours", hours).expect("write to String: can't fail");
         }
     }
 
@@ -103,9 +106,9 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
 
         if minutes == 1 {
-            res.push_str(&format!("{} minute", minutes));
+            write!(res, "{} minute", minutes).expect("write to String: can't fail");
         } else {
-            res.push_str(&format!("{} minutes", minutes));
+            write!(res, "{} minutes", minutes).expect("write to String: can't fail");
         }
     }
 
@@ -115,9 +118,9 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
 
         if seconds == 1 {
-            res.push_str(&format!("{} second", seconds));
+            write!(res, "{} second", seconds).expect("write to String: can't fail");
         } else {
-            res.push_str(&format!("{} seconds", seconds));
+            write!(res, "{} seconds", seconds).expect("write to String: can't fail");
         }
     }
     if res.is_empty() {
@@ -125,92 +128,6 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
     }
 
     res
-}
-
-pub fn parse_duration(text: &str) -> Duration {
-    let mut dur = Duration::zero();
-
-    if let Some(num_raw) = WEEK_REGEX.captures(text) {
-        if let Ok(num) = num_raw
-            .get(2)
-            .unwrap()
-            .as_str()
-            .parse()
-        {
-            dur = dur + Duration::weeks(num)
-        }
-    }
-
-    if let Some(num_raw) = DAY_REGEX.captures(text) {
-        if let Ok(num) = num_raw
-            .get(2)
-            .unwrap()
-            .as_str()
-            .parse()
-        {
-            dur = dur + Duration::days(num)
-        }
-    }
-
-    if let Some(num_raw) = HOUR_REGEX.captures(text) {
-        if let Ok(num) = num_raw
-            .get(2)
-            .unwrap()
-            .as_str()
-            .parse()
-        {
-            dur = dur + Duration::hours(num)
-        }
-    }
-
-    if let Some(num_raw) = MINUTE_REGEX.captures(text) {
-        if let Ok(num) = num_raw
-            .get(2)
-            .unwrap()
-            .as_str()
-            .parse()
-        {
-            dur = dur + Duration::minutes(num)
-        }
-    }
-
-    dur
-}
-
-pub fn parse_id(text: &str) -> Option<u64> {
-    if ID_REGEX.is_match(text) {
-        return text
-            .parse()
-            .ok();
-    }
-
-    if let Some(captures) = MENTION_REGEX.captures(text) {
-        return captures
-            .get(1)
-            .unwrap()
-            .as_str()
-            .parse()
-            .ok();
-    }
-
-    None
-}
-
-pub async fn temp_message(channel: ChannelId, http: impl AsRef<Http>, text: &str, delay: Duration) {
-    if let Ok(message) = channel
-        .send_message(&http, |m| m.content(text))
-        .await
-    {
-        tokio::time::sleep(
-            delay
-                .to_std()
-                .unwrap(),
-        )
-        .await;
-        let _ = channel
-            .delete_message(http, message.id)
-            .await;
-    }
 }
 
 #[allow(dead_code)]
@@ -231,8 +148,88 @@ pub async fn error_log(http: impl AsRef<Http>, text: impl AsRef<str>) {
             m.embed(|em| {
                 em.description(text.as_ref())
                     .color(Colour::RED)
-                    .timestamp(&Utc::now())
+                    .timestamp(Utc::now())
             })
         })
         .await;
+}
+
+#[allow(dead_code)]
+#[derive(Debug, Clone, Copy)]
+pub enum StandardButton {
+    First,
+    Last,
+    Forward,
+    Back,
+    Exit,
+    Prograde,
+    Retrograde,
+}
+
+impl StandardButton {
+    pub fn to_button(self) -> ButtonType {
+        match self {
+            Self::Last => {
+                ButtonType {
+                    label: "Last page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(FINAL_PAGE_EMOJI)),
+                }
+            },
+            Self::First => {
+                ButtonType {
+                    label: "First page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(FIRST_PAGE_EMOJI)),
+                }
+            },
+            Self::Forward => {
+                ButtonType {
+                    label: "Forward one page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(NEXT_PAGE_EMOJI)),
+                }
+            },
+            Self::Back => {
+                ButtonType {
+                    label: "Back one page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(LAST_PAGE_EMOJI)),
+                }
+            },
+            Self::Exit => {
+                ButtonType {
+                    label: "Exit".to_owned(),
+                    style: ButtonStyle::Danger,
+                    emoji: Some(ReactionType::from(EXIT_EMOJI)),
+                }
+            },
+            Self::Prograde => {
+                ButtonType {
+                    label: "Next".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(PROGRADE.clone()),
+                }
+            },
+            Self::Retrograde => {
+                ButtonType {
+                    label: "Back".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(RETROGRADE.clone()),
+                }
+            },
+        }
+    }
+}
+
+pub fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => {
+            f.to_uppercase()
+                .collect::<String>()
+                + c.as_str()
+        },
+    }
 }

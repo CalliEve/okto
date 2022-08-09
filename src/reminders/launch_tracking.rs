@@ -19,11 +19,11 @@ use serenity::{
     prelude::RwLock,
 };
 
+use super::{
+    notify_outcome,
+    notify_scrub,
+};
 use crate::{
-    events::change_notifications::{
-        notify_outcome,
-        notify_scrub,
-    },
     models::launches::{
         LaunchContainer,
         LaunchData,
@@ -43,11 +43,12 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
 
     // Get new set of launches
     let mut launches: Vec<LaunchData> = match get_new_launches().await {
-        Ok(ls) => ls
-            .results
-            .into_iter()
-            .map(LaunchData::from)
-            .collect(),
+        Ok(ls) => {
+            ls.results
+                .into_iter()
+                .map(LaunchData::from)
+                .collect()
+        },
         Err(e) => {
             dbg!(e);
             return;
@@ -82,7 +83,6 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
     // Send out notifications
     let notif_http = http.clone();
     let notif_res = tokio::spawn(async move {
-        println!("sending out scrub notifications");
         launches
             .iter()
             .filter_map(|nl| {
@@ -102,7 +102,6 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
             .collect::<Vec<_>>()
             .await;
 
-        println!("sending out outcome notifications");
         launches
             .iter()
             .filter(|nl| {
@@ -132,7 +131,11 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
             .await;
     });
     if let Err(p) = notif_res.await {
-        error_log(http, format!("Panic in sending notifications: {}", p)).await;
+        error_log(
+            http,
+            format!("Panic in sending notifications: {}", p),
+        )
+        .await;
     }
 }
 
@@ -141,7 +144,7 @@ async fn get_new_launches() -> Result<LaunchContainer> {
     params.insert("limit", "100");
     params.insert("mode", "detailed");
 
-    Ok(DEFAULT_CLIENT
+    DEFAULT_CLIENT
         .get("https://ll.thespacedevs.com/2.0.0/launch/upcoming/")
         .header(AUTHORIZATION, LL_KEY.as_str())
         .query(&params)
@@ -149,5 +152,5 @@ async fn get_new_launches() -> Result<LaunchContainer> {
         .await?
         .error_for_status()?
         .json()
-        .await?)
+        .await
 }

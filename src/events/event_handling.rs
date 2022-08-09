@@ -3,18 +3,17 @@ use std::{
     time::Duration,
 };
 
+use okto_framework::Handler as InteractionHandler;
 use reqwest::header::AUTHORIZATION;
 use serenity::{
     async_trait,
     model::{
-        channel::{
-            Message,
-            Reaction,
-        },
+        application::interaction::Interaction,
+        channel::Message,
         gateway::Ready,
         guild::{
             Guild,
-            GuildUnavailable,
+            UnavailableGuild,
         },
         id::{
             ChannelId,
@@ -30,23 +29,30 @@ use serenity::{
 };
 
 use crate::{
+    commands::help::slash_command_message,
     events::{
+        interaction_handler::handle_interaction,
         statefulembed::{
+            on_button_click as embed_button_click,
             on_message_delete as embed_delete,
-            on_reaction_add as embed_reactions,
-        },
-        waitfor::{
-            waitfor_message,
-            waitfor_reaction,
         },
     },
-    utils::constants::{
-        DEFAULT_CLIENT,
-        TOPGG_TOKEN,
+    utils::{
+        constants::{
+            DEFAULT_CLIENT,
+            TOPGG_TOKEN,
+        },
+        error_log,
     },
 };
 
-pub struct Handler;
+pub struct Handler(InteractionHandler);
+
+impl Handler {
+    pub fn new(interaction_handler: InteractionHandler) -> Self {
+        Self(interaction_handler)
+    }
+}
 
 #[async_trait]
 impl EventHandler for Handler {
@@ -78,9 +84,8 @@ impl EventHandler for Handler {
         let _ = ChannelId(448224720177856513)
             .send_message(&ctx.http, |m| m.content(content))
             .await;
-        
-        let status = format!("{} servers", ready.guilds.len());
-        ctx.set_activity(Activity::listening(&status))
+
+        ctx.set_activity(Activity::listening("slash-commands"))
             .await;
 
         tokio::spawn(async move {
@@ -89,11 +94,10 @@ impl EventHandler for Handler {
                 {
                     let amount: usize = ctx
                         .cache
-                        .guild_count()
-                        .await;
-                    let status = format!("{} servers", amount);
-                    ctx.set_activity(Activity::listening(&status))
-                        .await;
+                        .guild_count();
+                    // let status = format!("{} servers", amount);
+                    // ctx.set_activity(Activity::listening(&status))
+                    //     .await;
 
                     let mut map = HashMap::new();
                     map.insert("server_count", amount);
@@ -116,11 +120,6 @@ impl EventHandler for Handler {
         });
     }
 
-    async fn reaction_add(&self, ctx: Context, add_reaction: Reaction) {
-        waitfor_reaction(&ctx, add_reaction.clone()).await;
-        embed_reactions(&ctx, add_reaction.clone()).await;
-    }
-
     async fn message_delete(
         &self,
         ctx: Context,
@@ -132,7 +131,7 @@ impl EventHandler for Handler {
     }
 
     async fn message(&self, ctx: Context, message: Message) {
-        waitfor_message(&ctx, message).await
+        slash_command_message(&ctx, &message).await;
     }
 
     async fn guild_create(&self, ctx: Context, guild: Guild, is_new: bool) {
@@ -140,7 +139,6 @@ impl EventHandler for Handler {
             if let Some(channel) = ctx
                 .cache
                 .guild_channel(755401788294955070)
-                .await
             {
                 let content = format!(
                     "Joined a new guild: {} ({})\nIt has {} members",
@@ -153,18 +151,48 @@ impl EventHandler for Handler {
         }
     }
 
-    async fn guild_delete(&self, ctx: Context, incomplete: GuildUnavailable, _full: Option<Guild>) {
+    async fn guild_delete(&self, ctx: Context, incomplete: UnavailableGuild, _full: Option<Guild>) {
         if !incomplete.unavailable {
             if let Some(channel) = ctx
                 .cache
                 .guild_channel(755401788294955070)
-                .await
             {
-                let content = format!("Left the following guild: {}", incomplete.id);
+                let content = format!(
+                    "Left the following guild: {}",
+                    incomplete.id
+                );
                 let _ = channel
                     .send_message(&ctx.http, |m| m.content(content))
                     .await;
             }
         }
+    }
+
+    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
+        let res = self
+            .0
+            .handle_interaction(&ctx, &interaction)
+            .await;
+        if let Err(e) = res {
+            error_log(
+                &ctx.http,
+                format!(
+                    "An error happened in {}:\n```{:?}```",
+                    interaction
+                        .application_command()
+                        .expect("not a command")
+                        .data
+                        .name,
+                    e
+                ),
+            )
+            .await;
+            return;
+        };
+
+        futures::join!(
+            embed_button_click(&ctx, &interaction),
+            handle_interaction(&ctx, &interaction)
+        );
     }
 }

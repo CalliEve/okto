@@ -13,6 +13,11 @@ jobs:
       - name: Check
         run: cargo check --verbose
       - name: Lint
-        run: cargo clippy -- -D warnings
+        run: |
+          cargo clippy -- -D warnings
+          cd command_macros
+          cargo clippy -- -D warnings
+          cd ../okto_framework
+          cargo clippy -- -D warnings
       - name: Test
         run: cargo test

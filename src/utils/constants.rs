@@ -21,7 +21,10 @@ use reqwest::{
 use serenity::{
     model::{
         channel::ReactionType,
-        id::EmojiId,
+        id::{
+            EmojiId,
+            UserId,
+        },
     },
     prelude::Mutex,
 };
@@ -32,7 +35,8 @@ pub const FINAL_PAGE_EMOJI: char = '⏭';
 pub const NEXT_PAGE_EMOJI: char = '▶';
 pub const LAST_PAGE_EMOJI: char = '◀';
 pub const FIRST_PAGE_EMOJI: char = '⏮';
-pub const EXIT_EMOJI: char = '❌';
+pub const EXIT_EMOJI: char = '\u{2716}';
+pub const BACK_EMOJI: char = '◀';
 pub const CERTAIN_EMOJI: u64 = 447805610482728964;
 pub const UNCERTAIN_EMOJI: u64 = 447805624923717642;
 pub const LAUNCH_LIBRARY_URL: &str = "https://thespacedevs.com";
@@ -76,11 +80,13 @@ lazy_static! {
     };
     pub static ref MENTION_REGEX: Regex = Regex::new("<[@#][!&]?([0-9]{17,20})>").unwrap();
     pub static ref ID_REGEX: Regex = Regex::new("^[0-9]{17,20}$").unwrap();
-    pub static ref NUMBER_EMOJIS: Vec<ReactionType> =
-        ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
-            .iter()
-            .map(|e| ReactionType::Unicode((*e).to_string()))
-            .collect();
+    pub static ref NUMBER_EMOJIS: Vec<ReactionType> = [
+        "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"
+    ]
+    .iter()
+    .map(|e| ReactionType::Unicode((*e).to_string()))
+    .collect();
+    pub static ref OWNERS: Vec<UserId> = vec![247745860979392512.into()];
 }
 
 fn agency_map() -> HashMap<&'static str, &'static str> {
@@ -97,23 +103,58 @@ fn agency_map() -> HashMap<&'static str, &'static str> {
     res.insert("isck", "ISC Kosmotras");
     res.insert("ils", "International Launch Services");
     res.insert("iai", "Israel Aerospace Industries");
-    res.insert("nces", "National Center of Space Research");
-    res.insert("kcst", "Korean Committee of Space Technology");
+    res.insert(
+        "nces",
+        "National Center of Space Research",
+    );
+    res.insert(
+        "kcst",
+        "Korean Committee of Space Technology",
+    );
     res.insert("ula", "United Launch Alliance");
-    res.insert("isro", "Indian Space Research Organization");
+    res.insert(
+        "isro",
+        "Indian Space Research Organization",
+    );
     res.insert("isa", "Israeli Space Agency");
-    res.insert("jaxa", "Japan Aerospace Exploration Agency");
-    res.insert("nasa", "National Aeronautics and Space Administration");
-    res.insert("roscosmos", "Russian Federal Space Agency (ROSCOSMOS)");
+    res.insert(
+        "jaxa",
+        "Japan Aerospace Exploration Agency",
+    );
+    res.insert(
+        "nasa",
+        "National Aeronautics and Space Administration",
+    );
+    res.insert(
+        "roscosmos",
+        "Russian Federal Space Agency (ROSCOSMOS)",
+    );
     res.insert("mhi", "Mitsubishi Heavy Industries");
     res.insert("arianespace", "Arianespace");
     res.insert("eurockot", "Eurockot Launch Services");
     res.insert("rocketlab", "Rocket Lab Ltd");
-    res.insert("ngis", "Northrop Grumman Innovation Systems");
-    res.insert("casc", "China Aerospace Science and Technology Corporation");
-    res.insert("casic", "China Aerospace Science and Industry Corporation");
-    res.insert("cnsa", "China National Space Administration");
+    res.insert("relativity", "Relativity Space");
+    res.insert(
+        "ngis",
+        "Northrop Grumman Innovation Systems",
+    );
+    res.insert(
+        "casc",
+        "China Aerospace Science and Technology Corporation",
+    );
+    res.insert(
+        "casic",
+        "China Aerospace Science and Industry Corporation",
+    );
+    res.insert(
+        "cnsa",
+        "China National Space Administration",
+    );
+    res.insert("galactic-energy", "Galactic Energy");
+    res.insert("landspace", "LandSpace");
     res.insert("astra", "Astra Space");
+    res.insert("firefly", "Firefly Aerospace");
+    res.insert("abl", "ABL Space Systems");
 
     res
 }
@@ -133,7 +174,11 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
     );
     res.insert(
         "angara",
-        vec!["Angara-1.2pp", "Angara A5/Briz-M", "Angara 1.2"],
+        vec![
+            "Angara-1.2pp",
+            "Angara A5/Briz-M",
+            "Angara 1.2",
+        ],
     );
     res.insert("astra", vec!["Astra Rocket 3"]);
     res.insert("falconheavy", vec!["Falcon Heavy"]);
@@ -197,21 +242,71 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
             "Delta II 7925-10L",
         ],
     );
-    res.insert("minotaur", vec!["Minotaur I", "Minotaur V"]);
+    res.insert(
+        "minotaur",
+        vec!["Minotaur I", "Minotaur V"],
+    );
     res.insert("pegasus", vec!["Pegasus XL"]);
-    res.insert("ariane5", vec!["Ariane 5 ES", "Ariane 5 ECA"]);
+    res.insert(
+        "ariane5",
+        vec!["Ariane 5 ES", "Ariane 5 ECA"],
+    );
     res.insert("h-iib", vec!["H-IIB"]);
-    res.insert("zenit", vec!["Zenit 3SL", "Zenit 3F", "Zenit 3SLB"]);
-    res.insert("pslv", vec!["PSLV", "PSLV XL", "PSLV-CA"]);
-    res.insert("rokot", vec!["Rokot", "Rokot / Briz-KM"]);
+    res.insert(
+        "zenit",
+        vec!["Zenit 3SL", "Zenit 3F", "Zenit 3SLB"],
+    );
+    res.insert(
+        "pslv",
+        vec!["PSLV", "PSLV XL", "PSLV-CA"],
+    );
+    res.insert(
+        "rokot",
+        vec!["Rokot", "Rokot / Briz-KM"],
+    );
     res.insert("gslv", vec!["GSLV"]);
     res.insert("vega", vec!["VEGA"]);
     res.insert(
         "antares",
-        vec!["Antares 110", "Antares 120", "Antares 130", "Antares 230"],  
+        vec![
+            "Antares 110",
+            "Antares 120",
+            "Antares 130",
+            "Antares 230",
+        ],
     );
     res.insert("epsilon", vec!["Epsilon"]);
     res.insert("proton", vec!["Proton-M/Briz-M"]);
+
+    res.insert(
+        "long-march2",
+        vec![
+            "Long March 2C",
+            "Long March 2D",
+            "Long March 2F",
+            "Long March 2F/G",
+            "Long March 2C/YZ-1S",
+        ],
+    );
+    res.insert("long-march3", vec!["Long March 3B/E"]);
+    res.insert(
+        "long-march4",
+        vec!["Long March 4B", "Long March 4C"],
+    );
+    res.insert(
+        "long-march5",
+        vec!["Long March 5", "Long March 5B"],
+    );
+    res.insert(
+        "long-march6",
+        vec!["Long March 6", "Long March 6A"],
+    );
+    res.insert(
+        "long-march7",
+        vec!["Long March 7", "Long March 7A"],
+    );
+    res.insert("long-march8", vec!["Long March 8"]);
+    res.insert("long-march11", vec!["Long March 11"]);
 
     res
 }
