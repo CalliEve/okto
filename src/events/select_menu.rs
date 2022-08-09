@@ -63,7 +63,6 @@ impl SelectMenu {
             .clone();
         let http_clone = http.clone();
         let mut interaction_handler = InteractionHandler::builder(move |interaction| {
-            println!("select menu handler gets it");
             let data = interaction
                 .message_component()
                 .expect("Didn't get a message component in select menu");
@@ -128,8 +127,10 @@ impl SelectMenu {
                 for (i, chunk) in self
                     .options
                     .iter()
+                    .sorted_by_key(|t| t.1)
                     .chunks(25)
                     .into_iter()
+                    .take(5)
                     .enumerate()
                 {
                     comps.create_action_row(|row| {

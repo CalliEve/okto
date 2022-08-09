@@ -195,6 +195,7 @@ impl StatefulEmbed {
 
                             c
                         })
+                        .content("")
                         .embed(|e: &mut CreateEmbed| {
                             e.0 = self
                                 .inner

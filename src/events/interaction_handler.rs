@@ -69,21 +69,18 @@ impl InteractionHandler {
 
         match interaction {
             Interaction::MessageComponent(component) => {
-                println!("message component received");
                 if let Some(user) = self.user {
                     if component
                         .user
                         .id
                         != user
                     {
-                        println!("wrong user");
                         return false;
                     }
                 }
 
                 if let Some(channel) = self.channel {
                     if component.channel_id != channel {
-                        println!("wrong channel");
                         return false;
                     }
                 }
@@ -94,7 +91,6 @@ impl InteractionHandler {
                             .data
                             .component_type
                     {
-                        println!("wrong component type");
                         return false;
                     }
                 }
@@ -105,7 +101,6 @@ impl InteractionHandler {
                         .custom_id
                         .starts_with(custom_id)
                     {
-                        println!("wrong custom id");
                         return false;
                     }
                 }

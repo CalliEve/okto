@@ -25,15 +25,31 @@ pub async fn role_select_menu<F>(
     user_id: UserId,
     interaction: &Interaction,
     data: Arc<RwLock<TypeMap>>,
+    exclude: Option<Vec<RoleId>>,
+    include: Option<Vec<RoleId>>,
     callback: F,
 ) where
     F: Fn(RoleId) -> BoxFuture<'static, ()> + Send + Sync + 'static,
 {
     let guild = get_guild(interaction);
-    let roles = guild
+    let mut roles = guild
         .roles(&http)
         .await
         .expect("Can't get roles from guild");
+
+    if let Some(include) = include {
+        roles = roles
+            .into_iter()
+            .filter(|(id, _)| include.contains(id))
+            .collect();
+    }
+
+    if let Some(exclude) = exclude {
+        roles = roles
+            .into_iter()
+            .filter(|(id, _)| !exclude.contains(id))
+            .collect();
+    }
 
     SelectMenu::builder(move |(id, _)| {
         let id = RoleId(

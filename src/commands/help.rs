@@ -304,7 +304,7 @@ fn help_menu(
             .show()
             .await;
         if let Err(e) = show_res {
-            println!("Error in help: {}", e);
+            eprintln!("Error in help: {}", e);
         }
     })
 }
@@ -389,7 +389,7 @@ fn command_details(
             .show()
             .await;
         if let Err(e) = show_res {
-            println!("Error in help: {}", e);
+            eprintln!("Error in help: {}", e);
         }
     })
 }
@@ -500,7 +500,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
     {
         db.clone()
     } else {
-        println!("No database found");
+        eprintln!("No database found");
         return ";".to_owned();
     };
 
@@ -513,7 +513,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
         .await;
 
     if res.is_err() {
-        println!(
+        eprintln!(
             "Error in getting prefix: {:?}",
             res.unwrap_err()
         );
@@ -524,7 +524,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
         .and_then(|c| {
             let settings = from_bson::<GuildSettings>(c.into());
             if settings.is_err() {
-                println!(
+                eprintln!(
                     "Error in getting prefix: {:?}",
                     settings.unwrap_err()
                 );
@@ -541,10 +541,17 @@ pub async fn slash_command_message(ctx: &Context, msg: &Message) {
 
     if !(msg
         .content
-        .starts_with(&(prefix + "help"))
+        .starts_with(&(prefix.clone() + "help"))
         || msg
             .content
-            .starts_with("<@429306620439166977> "))
+            .starts_with(&(prefix + "ping"))
+        || msg
+            .content
+            .starts_with(&format!(
+                "<@{}>",
+                ctx.cache
+                    .current_user_id()
+            )))
     {
         return;
     }

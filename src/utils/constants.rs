@@ -35,7 +35,7 @@ pub const FINAL_PAGE_EMOJI: char = '⏭';
 pub const NEXT_PAGE_EMOJI: char = '▶';
 pub const LAST_PAGE_EMOJI: char = '◀';
 pub const FIRST_PAGE_EMOJI: char = '⏮';
-pub const EXIT_EMOJI: char = '❌';
+pub const EXIT_EMOJI: char = '\u{2716}';
 pub const BACK_EMOJI: char = '◀';
 pub const CERTAIN_EMOJI: u64 = 447805610482728964;
 pub const UNCERTAIN_EMOJI: u64 = 447805624923717642;
@@ -133,6 +133,7 @@ fn agency_map() -> HashMap<&'static str, &'static str> {
     res.insert("arianespace", "Arianespace");
     res.insert("eurockot", "Eurockot Launch Services");
     res.insert("rocketlab", "Rocket Lab Ltd");
+    res.insert("relativity", "Relativity Space");
     res.insert(
         "ngis",
         "Northrop Grumman Innovation Systems",
@@ -149,7 +150,11 @@ fn agency_map() -> HashMap<&'static str, &'static str> {
         "cnsa",
         "China National Space Administration",
     );
+    res.insert("galactic-energy", "Galactic Energy");
+    res.insert("landspace", "LandSpace");
     res.insert("astra", "Astra Space");
+    res.insert("firefly", "Firefly Aerospace");
+    res.insert("abl", "ABL Space Systems");
 
     res
 }
@@ -272,6 +277,36 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
     );
     res.insert("epsilon", vec!["Epsilon"]);
     res.insert("proton", vec!["Proton-M/Briz-M"]);
+
+    res.insert(
+        "long-march2",
+        vec![
+            "Long March 2C",
+            "Long March 2D",
+            "Long March 2F",
+            "Long March 2F/G",
+            "Long March 2C/YZ-1S",
+        ],
+    );
+    res.insert("long-march3", vec!["Long March 3B/E"]);
+    res.insert(
+        "long-march4",
+        vec!["Long March 4B", "Long March 4C"],
+    );
+    res.insert(
+        "long-march5",
+        vec!["Long March 5", "Long March 5B"],
+    );
+    res.insert(
+        "long-march6",
+        vec!["Long March 6", "Long March 6A"],
+    );
+    res.insert(
+        "long-march7",
+        vec!["Long March 7", "Long March 7A"],
+    );
+    res.insert("long-march8", vec!["Long March 8"]);
+    res.insert("long-march11", vec!["Long March 11"]);
 
     res
 }

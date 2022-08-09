@@ -140,6 +140,7 @@ async fn main() {
     let mut intents = GatewayIntents::empty();
     intents.insert(GatewayIntents::GUILDS);
     intents.insert(GatewayIntents::DIRECT_MESSAGES);
+    intents.insert(GatewayIntents::GUILD_MESSAGES);
     intents.insert(GatewayIntents::MESSAGE_CONTENT); // FIXME: remove this before august 31st
 
     let mut client = Client::builder(&token, intents)
@@ -181,7 +182,7 @@ async fn main() {
         .start()
         .await
     {
-        println!(
+        eprintln!(
             "An error occurred while running the client: {:?}",
             why
         );

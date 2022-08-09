@@ -336,9 +336,9 @@ fn reminders_page(
     Box::pin(async move {
         let reminders_res = get_reminders(&ses, id).await;
         let description = match reminders_res {
-            Ok(reminders) if !reminders.is_empty() => {
+            Ok(ref reminders) if !reminders.is_empty() => {
                 let mut text = "The following reminders have been set:".to_owned();
-                for reminder in &reminders {
+                for reminder in reminders {
                     write!(
                         text,
                         "\n- {}",
@@ -391,33 +391,35 @@ fn reminders_page(
             },
         );
 
-        let remove_ses = ses.clone();
-        em.add_option(
-            &ButtonType {
-                label: "Remove reminder".to_owned(),
-                style: ButtonStyle::Primary,
-                emoji: Some(RETROGRADE.clone()),
-            },
-            move |_| {
-                let remove_ses = remove_ses.clone();
-                Box::pin(async move {
-                    let inner_ses = remove_ses.clone();
-                    let wait_ses = remove_ses.clone();
+        if reminders_res.is_ok() {
+            let remove_ses = ses.clone();
+            em.add_option(
+                &ButtonType {
+                    label: "Remove reminder".to_owned(),
+                    style: ButtonStyle::Primary,
+                    emoji: Some(RETROGRADE.clone()),
+                },
+                move |_| {
+                    let remove_ses = remove_ses.clone();
+                    Box::pin(async move {
+                        let inner_ses = remove_ses.clone();
+                        let wait_ses = remove_ses.clone();
 
-                    TimeEmbed::new(inner_ses, move |dur| {
-                        let wait_ses = wait_ses.clone();
-                        Box::pin(async move {
-                            if !dur.is_zero() {
-                                remove_reminder(&wait_ses.clone(), id, dur).await;
-                            }
-                            reminders_page(wait_ses.clone(), id).await;
+                        TimeEmbed::new(inner_ses, move |dur| {
+                            let wait_ses = wait_ses.clone();
+                            Box::pin(async move {
+                                if !dur.is_zero() {
+                                    remove_reminder(&wait_ses.clone(), id, dur).await;
+                                }
+                                reminders_page(wait_ses.clone(), id).await;
+                            })
                         })
+                        .listen()
+                        .await;
                     })
-                    .listen()
-                    .await;
-                })
-            },
-        );
+                },
+            );
+        }
 
         em.add_option(
             &ButtonType {
@@ -448,7 +450,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
             return;
         };
 
-        let description = match id {
+        let (description, filters) = match id {
             ID::Channel(channel_id) => {
                 let settings_res = get_guild_settings(
                     &db,
@@ -465,11 +467,28 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     {
                         let mut text = "The following agency filters have been set:".to_owned();
                         for filter in &settings.filters {
-                            write!(text, "\n`{}`", filter).expect("write to String: can't fail");
+                            write!(
+                                text,
+                                "\n`{}`",
+                                LAUNCH_AGENCIES
+                                    .get(filter.as_str())
+                                    .unwrap_or(&"unknown agency")
+                            )
+                            .expect("write to String: can't fail");
                         }
-                        text
+                        (
+                            text,
+                            settings
+                                .filters
+                                .clone(),
+                        )
                     },
-                    _ => "No agency filters have been set yet".to_owned(),
+                    _ => {
+                        (
+                            "No agency filters have been set yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
             ID::User(user_id) => {
@@ -482,11 +501,28 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     {
                         let mut text = "The following agency filters have been set:".to_owned();
                         for filter in &settings.filters {
-                            write!(text, "\n`{}`", filter).expect("write to String: can't fail");
+                            write!(
+                                text,
+                                "\n`{}`",
+                                LAUNCH_AGENCIES
+                                    .get(filter.as_str())
+                                    .unwrap_or(&"unknown agency")
+                            )
+                            .expect("write to String: can't fail");
                         }
-                        text
+                        (
+                            text,
+                            settings
+                                .filters
+                                .clone(),
+                        )
                     },
-                    _ => "No agency filters have been set yet".to_owned(),
+                    _ => {
+                        (
+                            "No agency filters have been set yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
         };
@@ -502,6 +538,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
         });
 
         let add_ses = ses.clone();
+        let filters_clone = filters.clone();
         em.add_option(
             &ButtonType {
                 label: "Add filter".to_owned(),
@@ -510,6 +547,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
             },
             move |button_click| {
                 let add_ses = add_ses.clone();
+                let filters_clone = filters_clone.clone();
                 Box::pin(async move {
                     let inner_ses = add_ses.clone();
                     let wait_ses = add_ses.clone();
@@ -530,13 +568,11 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                     SelectMenu::builder(move |(choice, _)| {
                         let wait_ses = wait_ses.clone();
                         Box::pin(async move {
-                            println!("add filter received: {}", &choice);
                             if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
                                 add_filter(&wait_ses.clone(), id, choice, "filters").await;
                             } else {
                                 eprintln!("select menu returned unknown choice")
                             }
-                            println!("calling filters page again");
                             filters_page(wait_ses.clone(), id).await
                         })
                     })
@@ -549,6 +585,7 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
                         LAUNCH_AGENCIES
                             .iter()
                             .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
+                            .filter(|(k, _)| !filters_clone.contains(k))
                             .collect(),
                     )
                     .build()
@@ -563,65 +600,70 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
             },
         );
 
-        let remove_ses = ses.clone();
-        em.add_option(
-            &ButtonType {
-                label: "Remove filter".to_owned(),
-                style: ButtonStyle::Primary,
-                emoji: Some(RETROGRADE.clone()),
-            },
-            move |button_click| {
-                let remove_ses = remove_ses.clone();
-                Box::pin(async move {
-                    let inner_ses = remove_ses.clone();
-                    let wait_ses = remove_ses.clone();
+        if !filters.is_empty() {
+            let remove_ses = ses.clone();
+            let filters_clone = filters.clone();
+            em.add_option(
+                &ButtonType {
+                    label: "Remove filter".to_owned(),
+                    style: ButtonStyle::Primary,
+                    emoji: Some(RETROGRADE.clone()),
+                },
+                move |button_click| {
+                    let remove_ses = remove_ses.clone();
+                    let filters_clone = filters_clone.clone();
+                    Box::pin(async move {
+                        let inner_ses = remove_ses.clone();
+                        let wait_ses = remove_ses.clone();
 
-                    let (user_id, http, data) = {
-                        let s = inner_ses
-                            .read()
-                            .await;
-                        (
-                            s.author,
-                            s.http
-                                .clone(),
-                            s.data
-                                .clone(),
-                        )
-                    };
+                        let (user_id, http, data) = {
+                            let s = inner_ses
+                                .read()
+                                .await;
+                            (
+                                s.author,
+                                s.http
+                                    .clone(),
+                                s.data
+                                    .clone(),
+                            )
+                        };
 
-                    SelectMenu::builder(move |(choice, _)| {
-                        let wait_ses = wait_ses.clone();
-                        Box::pin(async move {
-                            if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
-                                remove_filter(&wait_ses.clone(), id, choice, "filters").await;
-                            } else {
-                                eprintln!("select menu returned unknown choice")
-                            }
-                            filters_page(wait_ses.clone(), id).await
+                        SelectMenu::builder(move |(choice, _)| {
+                            let wait_ses = wait_ses.clone();
+                            Box::pin(async move {
+                                if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
+                                    remove_filter(&wait_ses.clone(), id, choice, "filters").await;
+                                } else {
+                                    eprintln!("select menu returned unknown choice")
+                                }
+                                filters_page(wait_ses.clone(), id).await
+                            })
                         })
+                        .set_description(
+                            "Select the name of the agency you want to receive reminders for again",
+                        )
+                        .set_custom_id(&format!("{}-remove-filter", user_id))
+                        .set_user(user_id)
+                        .set_options(
+                            LAUNCH_AGENCIES
+                                .iter()
+                                .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
+                                .filter(|(k, _)| filters_clone.contains(k))
+                                .collect(),
+                        )
+                        .build()
+                        .unwrap()
+                        .listen(
+                            http,
+                            &Interaction::MessageComponent(button_click),
+                            data,
+                        )
+                        .await;
                     })
-                    .set_description(
-                        "Select the name of the agency you want to receive reminders for again",
-                    )
-                    .set_custom_id(&format!("{}-remove-filter", user_id))
-                    .set_user(user_id)
-                    .set_options(
-                        LAUNCH_AGENCIES
-                            .iter()
-                            .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
-                            .collect(),
-                    )
-                    .build()
-                    .unwrap()
-                    .listen(
-                        http,
-                        &Interaction::MessageComponent(button_click),
-                        data,
-                    )
-                    .await;
-                })
-            },
-        );
+                },
+            );
+        }
 
         em.add_option(
             &ButtonType {
@@ -641,7 +683,6 @@ fn filters_page(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxF
         if let Err(err) = result {
             dbg!(err);
         }
-        println!("handled filters page");
     })
 }
 
@@ -656,7 +697,7 @@ fn allow_filters_page(
             return;
         };
 
-        let description = match id {
+        let (description, allow_filters) = match id {
             ID::Channel(channel_id) => {
                 let settings_res = get_guild_settings(
                     &db,
@@ -674,11 +715,28 @@ fn allow_filters_page(
                         let mut text =
                             "The following agency allow filters have been set:".to_owned();
                         for filter in &settings.allow_filters {
-                            write!(text, "\n`{}`", filter).expect("write to String: can't fail");
+                            write!(
+                                text,
+                                "\n`{}`",
+                                LAUNCH_AGENCIES
+                                    .get(filter.as_str())
+                                    .unwrap_or(&"unknown agency")
+                            )
+                            .expect("write to String: can't fail");
                         }
-                        text
+                        (
+                            text,
+                            settings
+                                .allow_filters
+                                .clone(),
+                        )
                     },
-                    _ => "No agency allow filters have been set yet".to_owned(),
+                    _ => {
+                        (
+                            "No agency allow filters have been set yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
             ID::User(user_id) => {
@@ -692,11 +750,28 @@ fn allow_filters_page(
                         let mut text =
                             "The following agency allow filters have been set:".to_owned();
                         for filter in &settings.allow_filters {
-                            write!(text, "\n`{}`", filter).expect("write to String: can't fail");
+                            write!(
+                                text,
+                                "\n`{}`",
+                                LAUNCH_AGENCIES
+                                    .get(filter.as_str())
+                                    .unwrap_or(&"unknown agency")
+                            )
+                            .expect("write to String: can't fail");
                         }
-                        text
+                        (
+                            text,
+                            settings
+                                .allow_filters
+                                .clone(),
+                        )
                     },
-                    _ => "No agency allow filters have been set yet".to_owned(),
+                    _ => {
+                        (
+                            "No agency allow filters have been set yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
         };
@@ -712,6 +787,7 @@ fn allow_filters_page(
         });
 
         let add_ses = ses.clone();
+        let allow_filters_clone = allow_filters.clone();
         em.add_option(
             &ButtonType {
                 style: ButtonStyle::Primary,
@@ -720,6 +796,7 @@ fn allow_filters_page(
             },
             move |button_click| {
                 let add_ses = add_ses.clone();
+                let allow_filters_clone = allow_filters_clone.clone();
                 Box::pin(async move {
                     let inner_ses = add_ses.clone();
                     let wait_ses = add_ses.clone();
@@ -764,6 +841,7 @@ fn allow_filters_page(
                         LAUNCH_AGENCIES
                             .iter()
                             .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
+                            .filter(|(k, _)| !allow_filters_clone.contains(k))
                             .collect(),
                     )
                     .build()
@@ -778,54 +856,64 @@ fn allow_filters_page(
             },
         );
 
-        let remove_ses = ses.clone();
-        em.add_option(
-            &ButtonType {
-                label: "Remove allow filter".to_owned(),
-                style: ButtonStyle::Primary,
-                emoji: Some(RETROGRADE.clone())
-            },
-            move |button_click| {
-                let remove_ses = remove_ses.clone();
-                Box::pin(async move {
-                    let inner_ses = remove_ses.clone();
-                    let wait_ses = remove_ses.clone();
+        if !allow_filters.is_empty() {
+            let remove_ses = ses.clone();
+            let allow_filters_clone = allow_filters.clone();
+            em.add_option(
+                &ButtonType {
+                    label: "Remove allow filter".to_owned(),
+                    style: ButtonStyle::Primary,
+                    emoji: Some(RETROGRADE.clone())
+                },
+                move |button_click| {
+                    let remove_ses = remove_ses.clone();
+                    let allow_filters_clone = allow_filters_clone.clone();
+                    Box::pin(async move {
+                        let inner_ses = remove_ses.clone();
+                        let wait_ses = remove_ses.clone();
 
-                    let (user_id, http, data) = {
-                        let s = inner_ses
-                                .read()
-                                .await;
-                        (
-                            s.author,
-                            s.http
-                                .clone(),
-                            s.data
-                                .clone(),
-                        )
-                    };
+                        let (user_id, http, data) = {
+                            let s = inner_ses
+                                    .read()
+                                    .await;
+                            (
+                                s.author,
+                                s.http
+                                    .clone(),
+                                s.data
+                                    .clone(),
+                            )
+                        };
 
-                    SelectMenu::builder(move |(choice, _)| {
-                            let wait_ses = wait_ses.clone();
-                            Box::pin(async move {
-                                if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
-                                    remove_filter(&wait_ses.clone(), id, choice, "allow_filters").await;
-                                } else {
-                                    eprintln!("select menu returned unknown choice")
-                                }
-                                filters_page(wait_ses.clone(), id).await
-                            })
+                        SelectMenu::builder(move |(choice, _)| {
+                                let wait_ses = wait_ses.clone();
+                                Box::pin(async move {
+                                    if LAUNCH_AGENCIES.contains_key(choice.as_str()) {
+                                        remove_filter(&wait_ses.clone(), id, choice, "allow_filters").await;
+                                    } else {
+                                        eprintln!("select menu returned unknown choice")
+                                    }
+                                    filters_page(wait_ses.clone(), id).await
+                                })
+                        })
+                            .set_description("Select the name of the agency you do not want to receive reminders for again")
+                            .set_custom_id(&format!("{}-remove-allow-filter", user_id))
+                        .set_user(user_id)
+                            .make_ephemeral()
+                            .set_options(
+                                LAUNCH_AGENCIES
+                                    .iter()
+                                    .map(|(k, v)| ((*k).to_string(), (*v).to_string()))
+                                    .filter(|(k, _)| allow_filters_clone.contains(k))
+                                    .collect()
+                            )
+                            .build()
+                            .unwrap()
+                            .listen(http, &Interaction::MessageComponent(button_click), data).await;
                     })
-                        .set_description("Select the name of the agency you do not want to receive reminders for again")
-                        .set_custom_id(&format!("{}-remove-allow-filter", user_id))
-                    .set_user(user_id)
-                        .make_ephemeral()
-                        .set_options(LAUNCH_AGENCIES.iter().map(|(k, v)| ((*k).to_string(), (*v).to_string())).collect())
-                        .build()
-                        .unwrap()
-                        .listen(http, &Interaction::MessageComponent(button_click), data).await;
-                })
-            },
-        );
+                },
+            );
+        }
 
         em.add_option(
             &ButtonType {
@@ -859,7 +947,7 @@ fn mentions_page(
             return;
         };
 
-        let description = match id {
+        let (description, mentions) = match id {
             ID::Channel((_, guild_id)) => {
                 let settings_res = get_guild_settings(&db, guild_id.into()).await;
                 match settings_res {
@@ -884,9 +972,19 @@ fn mentions_page(
                                 remove_mention(&ses, id, *role_id).await
                             }
                         }
-                        text
+                        (
+                            text,
+                            settings
+                                .mentions
+                                .clone(),
+                        )
                     },
-                    _ => "No role mentions have been set yet".to_owned(),
+                    _ => {
+                        (
+                            "No role mentions have been set yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
             ID::User(_) => return,
@@ -903,6 +1001,7 @@ fn mentions_page(
         });
 
         let add_ses = ses.clone();
+        let mentions_clone = mentions.clone();
         em.add_option(
             &ButtonType {
                 label: "Add mention".to_owned(),
@@ -911,6 +1010,7 @@ fn mentions_page(
             },
             move |button_click| {
                 let add_ses = add_ses.clone();
+                let mentions_clone = mentions_clone.clone();
                 Box::pin(async move {
                     let (user_id, http, data) = {
                         let s = add_ses
@@ -930,6 +1030,8 @@ fn mentions_page(
                         user_id,
                         &Interaction::MessageComponent(button_click),
                         data,
+                        Some(mentions_clone),
+                        None,
                         move |role_id| {
                             let wait_ses = add_ses.clone();
                             Box::pin(async move {
@@ -943,46 +1045,52 @@ fn mentions_page(
             },
         );
 
-        let remove_ses = ses.clone();
-        em.add_option(
-            &ButtonType {
-                label: "Remove mention".to_owned(),
-                style: ButtonStyle::Primary,
-                emoji: Some(RETROGRADE.clone()),
-            },
-            move |button_click| {
-                let remove_ses = remove_ses.clone();
-                Box::pin(async move {
-                    let (user_id, http, data) = {
-                        let s = remove_ses
-                            .read()
-                            .await;
-                        (
-                            s.author,
-                            s.http
-                                .clone(),
-                            s.data
-                                .clone(),
-                        )
-                    };
+        if !mentions.is_empty() {
+            let remove_ses = ses.clone();
+            let mentions_clone = mentions.clone();
+            em.add_option(
+                &ButtonType {
+                    label: "Remove mention".to_owned(),
+                    style: ButtonStyle::Primary,
+                    emoji: Some(RETROGRADE.clone()),
+                },
+                move |button_click| {
+                    let remove_ses = remove_ses.clone();
+                    let mentions_clone = mentions_clone.clone();
+                    Box::pin(async move {
+                        let (user_id, http, data) = {
+                            let s = remove_ses
+                                .read()
+                                .await;
+                            (
+                                s.author,
+                                s.http
+                                    .clone(),
+                                s.data
+                                    .clone(),
+                            )
+                        };
 
-                    role_select_menu(
-                        http,
-                        user_id,
-                        &Interaction::MessageComponent(button_click),
-                        data,
-                        move |role_id| {
-                            let wait_ses = remove_ses.clone();
-                            Box::pin(async move {
-                                remove_mention(&wait_ses.clone(), id, role_id).await;
-                                mentions_page(wait_ses.clone(), id).await;
-                            })
-                        },
-                    )
-                    .await;
-                })
-            },
-        );
+                        role_select_menu(
+                            http,
+                            user_id,
+                            &Interaction::MessageComponent(button_click),
+                            data,
+                            None,
+                            Some(mentions_clone),
+                            move |role_id| {
+                                let wait_ses = remove_ses.clone();
+                                Box::pin(async move {
+                                    remove_mention(&wait_ses.clone(), id, role_id).await;
+                                    mentions_page(wait_ses.clone(), id).await;
+                                })
+                            },
+                        )
+                        .await;
+                    })
+                },
+            );
+        }
 
         em.add_option(
             &ButtonType {
@@ -1609,7 +1717,7 @@ async fn get_db(ses: &Arc<RwLock<EmbedSession>>) -> Option<Database> {
     {
         Some(db.clone())
     } else {
-        println!("Could not get a database");
+        eprintln!("Could not get a database");
         None
     }
 }
