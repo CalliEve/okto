@@ -537,21 +537,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
 }
 
 pub async fn slash_command_message(ctx: &Context, msg: &Message) {
-    let prefix = calc_prefix(ctx, msg).await;
-
-    if !(msg
-        .content
-        .starts_with(&(prefix.clone() + "help"))
-        || msg
-            .content
-            .starts_with(&(prefix + "ping"))
-        || msg
-            .content
-            .starts_with(&format!(
-                "<@{}>",
-                ctx.cache
-                    .current_user_id()
-            )))
+    if !msg.mentions_me(&ctx).await.unwrap_or(false)
     {
         return;
     }

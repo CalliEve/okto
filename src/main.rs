@@ -141,7 +141,6 @@ async fn main() {
     intents.insert(GatewayIntents::GUILDS);
     intents.insert(GatewayIntents::DIRECT_MESSAGES);
     intents.insert(GatewayIntents::GUILD_MESSAGES);
-    intents.insert(GatewayIntents::MESSAGE_CONTENT); // FIXME: remove this before august 31st
 
     let mut client = Client::builder(&token, intents)
         .application_id(application_id)
