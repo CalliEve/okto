@@ -80,11 +80,13 @@ lazy_static! {
     };
     pub static ref MENTION_REGEX: Regex = Regex::new("<[@#][!&]?([0-9]{17,20})>").unwrap();
     pub static ref ID_REGEX: Regex = Regex::new("^[0-9]{17,20}$").unwrap();
-    pub static ref NUMBER_EMOJIS: Vec<ReactionType> =
-        ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"]
-            .iter()
-            .map(|e| ReactionType::Unicode((*e).to_string()))
-            .collect();
+    pub static ref NUMBER_EMOJIS: Vec<ReactionType> = [
+        "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"
+    ]
+    .iter()
+    .map(|e| ReactionType::Unicode((*e).to_string()))
+    .collect();
+    pub static ref OWNERS: Vec<UserId> = vec![247745860979392512.into()];
 }
 
 fn agency_map() -> HashMap<&'static str, &'static str> {
