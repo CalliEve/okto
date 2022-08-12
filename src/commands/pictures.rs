@@ -26,6 +26,8 @@ use crate::{
     models::pictures::*,
     utils::{
         constants::*,
+        default_embed,
+        error_log,
         other::cutoff_on_last_dot,
         pictures::*,
     },
@@ -146,7 +148,7 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         })
         .await?;
 
-    let now = Utc::today();
+    let now = Utc::today() - Duration::hours(6);
 
     let date = if interaction
         .data
@@ -180,12 +182,35 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
     );
     params.insert("api_key", NASA_KEY.to_string());
 
-    let apod_image: APODImage = DEFAULT_CLIENT
+    let apod_image_req = DEFAULT_CLIENT
         .get("https://api.nasa.gov/planetary/apod")
         .query(&params)
         .send()
         .await?
-        .error_for_status()?
+        .error_for_status();
+
+    if let Err(err) = apod_image_req {
+        interaction
+            .edit_original_interaction_response(
+                &ctx.http,
+                |e: &mut EditInteractionResponse| {
+                    e.embed(|e: &mut CreateEmbed| {
+                        default_embed(e, "The APOD API returned an error so I couldn't get an image :c\nUnfortunately this happens quite often as that api is pretty unstable.", false)
+                    })
+                }
+            ).await?;
+
+        error_log(
+            &ctx.http,
+            format!("APOD API returned an error: {:?}", err),
+        )
+        .await;
+
+        return Ok(());
+    }
+
+    let apod_image: APODImage = apod_image_req
+        .unwrap()
         .json()
         .await?;
 

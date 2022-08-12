@@ -33,7 +33,7 @@ use serenity::{
         prelude::{
             Channel,
             Message,
-            ReactionType,
+            ReactionType, MessageType,
         },
         Permissions,
     },
@@ -537,7 +537,11 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
 }
 
 pub async fn slash_command_message(ctx: &Context, msg: &Message) {
-    if !msg.mentions_me(&ctx).await.unwrap_or(false)
+    if !msg
+        .mentions_me(&ctx)
+        .await
+        .unwrap_or(false)
+        || msg.kind == MessageType::InlineReply
     {
         return;
     }
