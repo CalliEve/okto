@@ -88,6 +88,7 @@ async fn info(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
                     **Version:** `4.0` \"slash-commands\"\n\
                     **Source Code:** [GitHub link](https://github.com/callieve/okto)\n\
                     **Library:** [Serenity](https://github.com/serenity-rs/serenity)\n\
+                    **Total servers:** {}\n\
                     <:RustRainbow:752508751675654204>\n\
                     \n<:discord:314003252830011395>\n\
                     [**Support Server**](https://discord.gg/dXPHfPJ)\n\
@@ -96,7 +97,7 @@ async fn info(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
                     \n<:botTag:230105988211015680>\n\
                     If you want OKTO on your server, click [**here**](https://discord.com/api/oauth2/authorize?client_id={}&permissions=388160&scope=bot%20applications.commands)\n\
                     If you like OKTO, please [**vote**](https://discordbots.org/bot/429306620439166977/vote) ^-^",
-                    user_id
+                    ctx.cache.guild_count(), user_id
                 )
             )
             .author(|a: &mut CreateEmbedAuthor| {

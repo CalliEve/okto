@@ -283,57 +283,59 @@ impl EmbedSession {
 
 pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
     if let Interaction::MessageComponent(interaction) = full_interaction {
-        let handler = if let Some(cache) = ctx
-            .data
-            .read()
-            .await
-            .get::<EmbedSessionsKey>()
-        {
-            if let Some(session_lock) = cache.get(
-                &interaction
-                    .message
-                    .id,
-            ) {
-                let session = session_lock
-                    .read()
-                    .await;
-                if session.author
-                    != interaction
-                        .user
-                        .id
-                {
-                    return;
-                }
+        let handler = {
+            let embed_session = ctx
+                .data
+                .read()
+                .await;
 
-                session
-                    .current_state
-                    .as_ref()
-                    .and_then(|embed| {
-                        let mut handler: Option<Arc<Handler>> = None;
+            if let Some(cache) = embed_session.get::<EmbedSessionsKey>() {
+                if let Some(session_lock) = cache.get(
+                    &interaction
+                        .message
+                        .id,
+                ) {
+                    let session = session_lock
+                        .read()
+                        .await;
+                    if session.author
+                        != interaction
+                            .user
+                            .id
+                    {
+                        return;
+                    }
 
-                        for opt in &embed.options {
-                            if opt
-                                .button
-                                .label
-                                == interaction
-                                    .data
-                                    .custom_id
-                            {
-                                handler = Some(
-                                    opt.handler
-                                        .clone(),
-                                );
-                                break;
+                    session
+                        .current_state
+                        .as_ref()
+                        .and_then(|embed| {
+                            let mut handler: Option<Arc<Handler>> = None;
+
+                            for opt in &embed.options {
+                                if opt
+                                    .button
+                                    .label
+                                    == interaction
+                                        .data
+                                        .custom_id
+                                {
+                                    handler = Some(
+                                        opt.handler
+                                            .clone(),
+                                    );
+                                    break;
+                                }
                             }
-                        }
 
-                        handler
-                    })
+                            handler
+                        })
+                } else {
+                    None
+                }
             } else {
                 None
             }
-        } else {
-            None
         };
 
         if let Some(handler) = handler {

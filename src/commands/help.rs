@@ -33,7 +33,8 @@ use serenity::{
         prelude::{
             Channel,
             Message,
-            ReactionType, MessageType,
+            MessageType,
+            ReactionType,
         },
         Permissions,
     },
