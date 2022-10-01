@@ -1,72 +1,30 @@
-use std::{
-    fmt::Write,
-    sync::Arc,
-};
+use std::{fmt::Write, sync::Arc};
 
 use itertools::Itertools;
-use mongodb::bson::{
-    doc,
-    document::Document,
-    from_bson,
-};
-use okto_framework::{
-    macros::command,
-    structs::Command,
-};
+use mongodb::bson::{doc, document::Document, from_bson};
+use okto_framework::{macros::command, structs::Command};
 use serenity::{
-    builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-        EditInteractionResponse,
-    },
-    framework::standard::{
-        macros::hook,
-        CommandError,
-        CommandResult,
-        OnlyIn,
-    },
+    builder::{CreateEmbed, CreateEmbedAuthor, EditInteractionResponse},
+    framework::standard::{macros::hook, CommandError, CommandResult, OnlyIn},
     model::{
         application::{
-            component::ButtonStyle,
-            interaction::application_command::ApplicationCommandInteraction,
+            component::ButtonStyle, interaction::application_command::ApplicationCommandInteraction,
         },
-        prelude::{
-            Channel,
-            Message,
-            MessageType,
-            ReactionType,
-        },
+        prelude::{Channel, Message, MessageType, ReactionType},
         Permissions,
     },
-    prelude::{
-        Context,
-        RwLock,
-    },
+    prelude::{Context, RwLock},
 };
 
 use crate::{
-    events::statefulembed::{
-        ButtonType,
-        EmbedSession,
-        StatefulEmbed,
-    },
+    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
     models::{
-        caches::{
-            CommandListKey,
-            DatabaseKey,
-        },
+        caches::{CommandListKey, DatabaseKey},
         settings::GuildSettings,
     },
     utils::{
         capitalize,
-        constants::{
-            BACK_EMOJI,
-            DEFAULT_COLOR,
-            DEFAULT_ICON,
-            EXIT_EMOJI,
-            NUMBER_EMOJIS,
-            OWNERS,
-        },
+        constants::{BACK_EMOJI, DEFAULT_COLOR, DEFAULT_ICON, EXIT_EMOJI, NUMBER_EMOJIS, OWNERS},
     },
 };
 
@@ -121,7 +79,7 @@ async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
                         .options
                         .options
                         .iter()
-                        .fold("".to_owned(), |acc, opt| {
+                        .fold(String::new(), |acc, opt| {
                             let name = if opt.required {
                                 format!("<{}> ", opt.name)
                             } else {
@@ -147,7 +105,7 @@ async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
                                 .options
                                 .description,
                             if args.is_empty() {
-                                "".to_owned()
+                                String::new()
                             } else {
                                 format!("\n**Arguments:** {args}")
                             }
@@ -173,7 +131,7 @@ fn help_menu(
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
             e.color(DEFAULT_COLOR)
             .author(
-                |a: &mut CreateEmbedAuthor| a.name("Help Menu").icon_url(&DEFAULT_ICON)
+                |a: &mut CreateEmbedAuthor| a.name("Help Menu").icon_url(DEFAULT_ICON)
             ).description("Use the buttons to get the descriptions for the commands in that group.\nCurrently available commands:")
         });
 
@@ -322,7 +280,7 @@ fn command_details(
             e.color(DEFAULT_COLOR)
                 .author(|a: &mut CreateEmbedAuthor| {
                     a.name(format!("{} Commands", &group_name))
-                        .icon_url(&DEFAULT_ICON)
+                        .icon_url(DEFAULT_ICON)
                 })
                 .description("More Detailed information about the commands in this group")
         });
@@ -336,7 +294,7 @@ fn command_details(
                     .options
                     .options
                     .iter()
-                    .fold("".to_owned(), |acc, opt| {
+                    .fold(String::new(), |acc, opt| {
                         let name = if opt.required {
                             format!("<{}> ", opt.name)
                         } else {
@@ -359,7 +317,7 @@ fn command_details(
                                 .options
                                 .description,
                             if args.is_empty() {
-                                "".to_owned()
+                                String::new()
                             } else {
                                 format!("\n**Arguments:** {args}")
                             }
@@ -446,7 +404,7 @@ async fn allowed(
             let guild = if let Some(guild) = interaction
                 .guild_id
                 .unwrap()
-                .to_guild_cached(&ctx)
+                .to_guild_cached(ctx)
             {
                 guild
             } else {

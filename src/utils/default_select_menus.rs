@@ -38,17 +38,11 @@ pub async fn role_select_menu<F>(
         .expect("Can't get roles from guild");
 
     if let Some(include) = include {
-        roles = roles
-            .into_iter()
-            .filter(|(id, _)| include.contains(id))
-            .collect();
+        roles.retain(|id, _| include.contains(id));
     }
 
     if let Some(exclude) = exclude {
-        roles = roles
-            .into_iter()
-            .filter(|(id, _)| !exclude.contains(id))
-            .collect();
+        roles.retain(|id, _| !exclude.contains(id));
     }
 
     SelectMenu::builder(move |(id, _)| {
