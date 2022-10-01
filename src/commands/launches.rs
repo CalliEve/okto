@@ -1,52 +1,31 @@
 use std::sync::Arc;
 
 use chrono::Utc;
+use itertools::Itertools;
 use okto_framework::macros::command;
 use serenity::{
-    builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-        CreateEmbedFooter,
-        CreateInteractionResponse,
-    },
+    builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateInteractionResponse},
     framework::standard::CommandResult,
     model::{
         application::{
             component::ButtonStyle,
-            interaction::{
-                application_command::ApplicationCommandInteraction,
-                MessageFlags,
-            },
+            interaction::{application_command::ApplicationCommandInteraction, MessageFlags},
         },
         channel::ReactionType,
         id::EmojiId,
         Timestamp,
     },
-    prelude::{
-        Context,
-        RwLock,
-    },
+    prelude::{Context, RwLock},
 };
 
 use crate::{
-    events::statefulembed::{
-        ButtonType,
-        EmbedSession,
-        StatefulEmbed,
-    },
+    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
     models::{
         caches::LaunchesCacheKey,
-        launches::{
-            LaunchData,
-            LaunchStatus,
-        },
+        launches::{LaunchData, LaunchStatus},
     },
     utils::{
-        constants::*,
-        cutoff_on_last_dot,
-        default_embed,
-        format_duration,
-        launches::*,
+        constants::*, cutoff_on_last_dot, default_embed, format_duration, launches::*,
         StandardButton,
     },
 };
@@ -678,6 +657,13 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
 #[command]
 /// Get a list of all things you can filter launches on
 async fn filtersinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+    let sorted_agencies = LAUNCH_AGENCIES
+        .iter()
+        .sorted()
+        .map(|(k, v)| (*k, *v))
+        .collect::<Vec<(&str, &str)>>();
+    let half_agency_count = sorted_agencies.len() / 2;
+
     interaction
         .create_interaction_response(
             &ctx.http,
@@ -695,16 +681,25 @@ async fn filtersinfo(ctx: &Context, interaction: &ApplicationCommandInteraction)
                                 "Vehicles:",
                                 LAUNCH_VEHICLES
                                     .keys()
-                                    .copied()
-                                    .collect::<Vec<&str>>()
+                                    .sorted()
                                     .join(", "),
                                 false,
                             )
                             .field(
-                                "Launch Service Provider abbreviations with their full names:",
-                                LAUNCH_AGENCIES
+                                "Launch Service Provider abbreviations with their full names (part 1):",
+                                sorted_agencies
                                     .iter()
-                                    .map(|(k, v)| format!("{}: {}", k, v))
+                                    .take(half_agency_count)
+                                    .map(|(k, v)| format!("**{}**: {}", k, v))
+                                    .collect::<Vec<String>>()
+                                    .join("\n"),
+                                false,
+                            ).field(
+                                "Launch Service Provider abbreviations with their full names (part 2):",
+                                sorted_agencies
+                                    .iter()
+                                    .skip(half_agency_count)
+                                    .map(|(k, v)| format!("**{}**: {}", k, v))
                                     .collect::<Vec<String>>()
                                     .join("\n"),
                                 false,
