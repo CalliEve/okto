@@ -156,6 +156,7 @@ fn agency_map() -> HashMap<&'static str, &'static str> {
     res.insert("firefly", "Firefly Aerospace");
     res.insert("abl", "ABL Space Systems");
     res.insert("expace", "ExPace");
+    res.insert("rsf", "Russian Space Forces");
 
     res
 }
