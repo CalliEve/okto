@@ -7,10 +7,7 @@ extern crate proc_macro;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::parse2;
-use utils::{
-    add_suffix,
-    CommandAttributeContent,
-};
+use utils::{add_suffix, CommandAttributeContent};
 
 use crate::structs::CommandFunc;
 
@@ -40,7 +37,7 @@ fn command_inner(item: TokenStream) -> TokenStream {
     let mut description = String::new();
     let mut options = Vec::new();
     let mut default_permission = true;
-    let mut only_in = quote! {::serenity::framework::standard::OnlyIn::None};
+    let mut available_in_dms = true;
 
     for attr in command_fun
         .attributes
@@ -74,26 +71,17 @@ fn command_inner(item: TokenStream) -> TokenStream {
                     )
                     .get_boolean())
                 },
+                "available_in_dms" => {
+                    available_in_dms = propagate_err!(propagate_err!(
+                        attr.parse_args::<CommandAttributeContent>()
+                    )
+                    .get_boolean())
+                },
                 "options" => {
                     options = propagate_err!(propagate_err!(
                         attr.parse_args::<CommandAttributeContent>()
                     )
                     .get_options())
-                },
-                "only_in" => {
-                    let tmp = propagate_err!(propagate_err!(
-                        attr.parse_args::<CommandAttributeContent>()
-                    )
-                    .get_string());
-                    match tmp.as_str() {
-                        "Dm" => only_in = quote! {::serenity::framework::standard::OnlyIn::Dm},
-                        "Guild" => {
-                            only_in = quote! {::serenity::framework::standard::OnlyIn::Guild}
-                        },
-                        _ => {
-                            return quote! {compile_error!("The value of only_in can only be `Dm` or `Guild`");};
-                        },
-                    }
                 },
                 _ => (),
             }
@@ -135,6 +123,7 @@ fn command_inner(item: TokenStream) -> TokenStream {
         pub static #details_struct_name: #details_struct_path = #details_struct_path {
             name: #command_name,
             description: #description,
+            available_in_dms: #available_in_dms,
             default_permission: #default_permission,
             options: &[#(#options),*]
         };
@@ -142,7 +131,6 @@ fn command_inner(item: TokenStream) -> TokenStream {
         #(#details_cooked)*
         pub static #info_struct_name: #info_struct_path = #info_struct_path {
             file: file!(),
-            only_in: #only_in,
         };
 
         #(#command_cooked)*

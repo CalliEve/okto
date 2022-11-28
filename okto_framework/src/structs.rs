@@ -5,13 +5,10 @@ use serde::Serialize;
 use serde_repr::Serialize_repr;
 use serenity::{
     client::Context,
-    framework::standard::{
-        CommandResult,
-        OnlyIn,
-    },
+    framework::standard::CommandResult,
     model::{
         application::interaction::application_command::ApplicationCommandInteraction,
-        channel::ChannelType,
+        channel::ChannelType, Permissions,
     },
 };
 
@@ -27,12 +24,23 @@ pub type CommandFunc = for<'fut> fn(
     &'fut ApplicationCommandInteraction,
 ) -> BoxFuture<'fut, CommandResult>;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone)]
 pub struct CommandDetails {
     pub name: &'static str,
     pub description: &'static str,
     pub options: &'static [CommandOption],
     pub default_permission: bool,
+    pub available_in_dms: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub(crate) struct DiscordCommandDetails {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub options: &'static [CommandOption],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_member_permissions: Option<Permissions>,
+    pub dm_permission: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -57,7 +65,6 @@ pub struct CommandOptionChoice {
 #[derive(Debug, Clone)]
 pub struct CommandInfo {
     pub file: &'static str,
-    pub only_in: OnlyIn,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -91,18 +98,27 @@ pub enum CommandOptionType {
     Number = 10,
 }
 
-impl Command {
-    pub fn only_in(&self) -> OnlyIn {
-        self.info
-            .only_in
-    }
-}
-
 impl fmt::Debug for Command {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("Command")
             .field("options", self.options)
             .field("info", self.info)
             .finish()
+    }
+}
+
+impl From<CommandDetails> for DiscordCommandDetails {
+    fn from(c: CommandDetails) -> Self {
+        DiscordCommandDetails {
+            name: c.name,
+            description: c.description,
+            options: c.options,
+            default_member_permissions: if c.default_permission {
+                None
+            } else {
+                Some(Permissions::MANAGE_GUILD)
+            },
+            dm_permission: c.available_in_dms,
+        }
     }
 }

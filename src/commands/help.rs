@@ -5,7 +5,7 @@ use mongodb::bson::{doc, document::Document, from_bson};
 use okto_framework::{macros::command, structs::Command};
 use serenity::{
     builder::{CreateEmbed, CreateEmbedAuthor, EditInteractionResponse},
-    framework::standard::{macros::hook, CommandError, CommandResult, OnlyIn},
+    framework::standard::{macros::hook, CommandError, CommandResult},
     model::{
         application::{
             component::ButtonStyle, interaction::application_command::ApplicationCommandInteraction,
@@ -370,28 +370,6 @@ async fn allowed(
         .channel_id
         .to_channel(&ctx)
         .await?;
-
-    if cmds
-        .iter()
-        .all(|c| c.only_in() == OnlyIn::Dm)
-        && channel
-            .clone()
-            .private()
-            .is_none()
-    {
-        return Ok(false);
-    }
-
-    if cmds
-        .iter()
-        .all(|c| c.only_in() == OnlyIn::Guild)
-        && channel
-            .clone()
-            .private()
-            .is_some()
-    {
-        return Ok(false);
-    }
 
     if cmds
         .iter()

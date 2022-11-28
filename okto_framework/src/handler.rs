@@ -13,7 +13,7 @@ use serenity::{
 use crate::{
     structs::{
         Command,
-        CommandDetails,
+        DiscordCommandDetails,
     }
 };
 
@@ -97,8 +97,9 @@ impl Handler {
             &self
                 .cmds
                 .values()
-                .map(|c| c.options)
-                .collect::<Vec<&CommandDetails>>(),
+                .map(|c| c.options.clone())
+                .map(DiscordCommandDetails::from)
+                .collect::<Vec<_>>(),
         )?;
 
         http
