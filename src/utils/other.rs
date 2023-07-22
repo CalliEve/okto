@@ -22,6 +22,7 @@ use super::constants::{
     DEFAULT_COLOR,
     DEFAULT_ICON,
     EXIT_EMOJI,
+    CHECK_EMOJI,
     FINAL_PAGE_EMOJI,
     FIRST_PAGE_EMOJI,
     LAST_PAGE_EMOJI,
@@ -162,6 +163,7 @@ pub enum StandardButton {
     Forward,
     Back,
     Exit,
+    Submit,
     Prograde,
     Retrograde,
 }
@@ -202,6 +204,13 @@ impl StandardButton {
                     label: "Exit".to_owned(),
                     style: ButtonStyle::Danger,
                     emoji: Some(ReactionType::from(EXIT_EMOJI)),
+                }
+            },
+            Self::Submit => {
+                ButtonType {
+                    label: "Submit".to_owned(),
+                    style: ButtonStyle::Success,
+                    emoji: Some(ReactionType::from(CHECK_EMOJI)),
                 }
             },
             Self::Prograde => {

@@ -85,7 +85,7 @@ impl EventHandler for Handler {
             .send_message(&ctx.http, |m| m.content(content))
             .await;
 
-        ctx.set_activity(Activity::listening("slash-commands"))
+        ctx.set_activity(Activity::listening("rockets launching"))
             .await;
 
         tokio::spawn(async move {

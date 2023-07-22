@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    time::Duration as StdDuration,
+};
 
 use chrono::{
     Duration,
@@ -148,7 +151,7 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         })
         .await?;
 
-    let now = Utc::today() - Duration::hours(6);
+    let now = Utc::now() - Duration::hours(6);
 
     let date = if interaction
         .data
@@ -164,7 +167,10 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
     {
         now
     } else {
-        let start = Utc.ymd(2000, 1, 1);
+        let start = Utc
+            .with_ymd_and_hms(2000, 1, 1, 0, 0, 0)
+            .single()
+            .expect("no 00:00:00 at jan 1st 2000");
         let days = (now - start).num_days();
         let day = RNG
             .lock()
@@ -184,10 +190,11 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
 
     let apod_image_req = DEFAULT_CLIENT
         .get("https://api.nasa.gov/planetary/apod")
+        .timeout(StdDuration::from_secs(5))
         .query(&params)
         .send()
-        .await?
-        .error_for_status();
+        .await
+        .and_then(|r| r.error_for_status());
 
     if let Err(err) = apod_image_req {
         interaction
@@ -282,17 +289,13 @@ async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> C
                             .icon_url(DEFAULT_ICON)
                     })
                     .color(DEFAULT_COLOR)
-                    .field(
-                        "info:",
-                        format!(
-                            "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                            sol,
-                            pic.earth_date,
-                            pic.camera
-                                .full_name
-                        ),
-                        false,
-                    )
+                    .description(format!(
+                        "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
+                        sol,
+                        pic.earth_date,
+                        pic.camera
+                            .full_name
+                    ))
                     .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
                     .image(pic.img_src)
                     .timestamp(Utc::now())
@@ -326,17 +329,13 @@ async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction)
                             .icon_url(DEFAULT_ICON)
                     })
                     .color(DEFAULT_COLOR)
-                    .field(
-                        "info:",
-                        format!(
-                            "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                            sol,
-                            pic.earth_date,
-                            pic.camera
-                                .full_name
-                        ),
-                        false,
-                    )
+                    .description(format!(
+                        "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
+                        sol,
+                        pic.earth_date,
+                        pic.camera
+                            .full_name
+                    ))
                     .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
                     .image(pic.img_src)
                     .timestamp(Utc::now())
@@ -372,17 +371,13 @@ async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -
                             .icon_url(DEFAULT_ICON)
                     })
                     .color(DEFAULT_COLOR)
-                    .field(
-                        "info:",
-                        format!(
-                            "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                            sol,
-                            pic.earth_date,
-                            pic.camera
-                                .full_name
-                        ),
-                        false,
-                    )
+                    .description(format!(
+                        "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
+                        sol,
+                        pic.earth_date,
+                        pic.camera
+                            .full_name
+                    ))
                     .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
                     .image(pic.img_src)
                     .timestamp(Utc::now())
@@ -418,17 +413,13 @@ async fn perseverance(ctx: &Context, interaction: &ApplicationCommandInteraction
                             .icon_url(DEFAULT_ICON)
                     })
                     .color(DEFAULT_COLOR)
-                    .field(
-                        "info:",
-                        format!(
-                            "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
-                            sol,
-                            pic.earth_date,
-                            pic.camera
-                                .full_name
-                        ),
-                        false,
-                    )
+                    .description(format!(
+                        "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
+                        sol,
+                        pic.earth_date,
+                        pic.camera
+                            .full_name
+                    ))
                     .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
                     .image(pic.img_src)
                     .timestamp(Utc::now())

@@ -36,6 +36,7 @@ pub const NEXT_PAGE_EMOJI: char = '▶';
 pub const LAST_PAGE_EMOJI: char = '◀';
 pub const FIRST_PAGE_EMOJI: char = '⏮';
 pub const EXIT_EMOJI: char = '\u{2716}';
+pub const CHECK_EMOJI: char = '✔';
 pub const BACK_EMOJI: char = '◀';
 pub const CERTAIN_EMOJI: u64 = 447805610482728964;
 pub const UNCERTAIN_EMOJI: u64 = 447805624923717642;
@@ -80,6 +81,9 @@ lazy_static! {
     };
     pub static ref MENTION_REGEX: Regex = Regex::new("<[@#][!&]?([0-9]{17,20})>").unwrap();
     pub static ref ID_REGEX: Regex = Regex::new("^[0-9]{17,20}$").unwrap();
+    pub static ref WORD_REGEX: Regex = Regex::new(r"^[a-zA-Z\-_0-9]+$").unwrap();
+    pub static ref WORD_FILTER_REGEX: Regex =
+        Regex::new(r"^\(\?i\)\\b[a-zA-Z\-_0-9]+\\b$").unwrap();
     pub static ref NUMBER_EMOJIS: Vec<ReactionType> = [
         "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"
     ]

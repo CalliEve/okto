@@ -4,28 +4,50 @@ use chrono::Utc;
 use itertools::Itertools;
 use okto_framework::macros::command;
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateInteractionResponse},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateEmbedFooter,
+        CreateInteractionResponse,
+    },
     framework::standard::CommandResult,
     model::{
         application::{
             component::ButtonStyle,
-            interaction::{application_command::ApplicationCommandInteraction, MessageFlags},
+            interaction::{
+                application_command::ApplicationCommandInteraction,
+                MessageFlags,
+            },
         },
         channel::ReactionType,
         id::EmojiId,
         Timestamp,
     },
-    prelude::{Context, RwLock},
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
-    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
+    events::statefulembed::{
+        ButtonType,
+        EmbedSession,
+        StatefulEmbed,
+    },
     models::{
         caches::LaunchesCacheKey,
-        launches::{LaunchData, LaunchStatus},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
     },
     utils::{
-        constants::*, cutoff_on_last_dot, default_embed, format_duration, launches::*,
+        constants::*,
+        cutoff_on_last_dot,
+        default_embed,
+        format_duration,
+        launches::*,
         StandardButton,
     },
 };

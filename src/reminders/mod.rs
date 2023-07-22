@@ -1,4 +1,5 @@
 mod change_notifications;
+mod filtering;
 mod launch_tracking;
 mod reminder_tracking;
 
