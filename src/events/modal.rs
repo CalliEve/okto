@@ -8,12 +8,11 @@ use serenity::{
     builder::CreateInputText,
     http::Http,
     model::{
-        application::
-            interaction::{
-                Interaction,
-                InteractionType,
-                InteractionResponseType,
-            },
+        application::interaction::{
+            Interaction,
+            InteractionResponseType,
+            InteractionType,
+        },
         id::UserId,
         prelude::component::{
             ActionRowComponent,

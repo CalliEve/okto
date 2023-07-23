@@ -27,13 +27,13 @@ use serenity::{
     prelude::RwLock,
 };
 
-use super::utils::{
-    get_db,
-    ID,
-};
 use crate::{
     events::statefulembed::EmbedSession,
-    models::reminders::Reminder
+    models::reminders::Reminder,
+    utils::reminders::{
+        get_db,
+        ID,
+    },
 };
 
 pub async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<Vec<Reminder>> {

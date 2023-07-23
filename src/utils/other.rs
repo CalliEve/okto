@@ -1,5 +1,7 @@
-use std::fmt::Write;
+use std::{fmt::Write, ops::Add};
 
+use lazy_static::lazy_static;
+use regex::Regex;
 use chrono::{
     Duration,
     Utc,
@@ -19,10 +21,10 @@ use serenity::{
 };
 
 use super::constants::{
+    CHECK_EMOJI,
     DEFAULT_COLOR,
     DEFAULT_ICON,
     EXIT_EMOJI,
-    CHECK_EMOJI,
     FINAL_PAGE_EMOJI,
     FIRST_PAGE_EMOJI,
     LAST_PAGE_EMOJI,
@@ -129,6 +131,51 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
     }
 
     res
+}
+
+lazy_static! {
+    pub static ref DAYS_REGEX: Regex = Regex::new("([0-9]+) days?").unwrap();
+    pub static ref HOURS_REGEX: Regex = Regex::new("([0-9]+) hours?").unwrap();
+    pub static ref MINUTES_REGEX: Regex = Regex::new("([0-9]+) minutes?").unwrap();
+    pub static ref SECONDS_REGEX: Regex = Regex::new("([0-9]+) seconds?").unwrap();
+}
+
+pub fn parse_duration(input: &str) -> Duration {
+    let mut dur = Duration::zero();
+
+    if let Some(captures) = DAYS_REGEX.captures(&input) {
+        if let Some(days_str) = captures.get(1) {
+            if let Ok(days) = days_str.as_str().parse::<i64>() {
+                dur = dur.add(Duration::days(days));
+            }
+        }
+    }
+
+    if let Some(captures) = HOURS_REGEX.captures(&input) {
+        if let Some(hour_str) = captures.get(1) {
+            if let Ok(hours) = hour_str.as_str().parse::<i64>() {
+                dur = dur.add(Duration::hours(hours));
+            }
+        }
+    }
+
+    if let Some(captures) = MINUTES_REGEX.captures(&input) {
+        if let Some(minutes_str) = captures.get(1) {
+            if let Ok(minutes) = minutes_str.as_str().parse::<i64>() {
+                dur = dur.add(Duration::minutes(minutes));
+            }
+        }
+    }
+
+    if let Some(captures) = SECONDS_REGEX.captures(&input) {
+        if let Some(seconds_str) = captures.get(1) {
+            if let Ok(seconds) = seconds_str.as_str().parse::<i64>() {
+                dur = dur.add(Duration::seconds(seconds));
+            }
+        }
+    }
+
+    dur
 }
 
 #[allow(dead_code)]
@@ -240,5 +287,24 @@ pub fn capitalize(s: &str) -> String {
                 .collect::<String>()
                 + c.as_str()
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn duration_to_str() {
+        let dur = Duration::days(2).add(Duration::hours(8)).add(Duration::minutes(23)).add(Duration::seconds(1));
+
+        assert_eq!(format_duration(dur, true), "2 days, 8 hours, 23 minutes and 1 second");
+    }
+
+    #[test]
+    fn str_to_duration() {
+        let dur = Duration::days(2).add(Duration::hours(8)).add(Duration::minutes(23)).add(Duration::seconds(1));
+
+        assert_eq!(parse_duration("2 days, 8 hours, 23 minutes and 1 second"), dur);
     }
 }

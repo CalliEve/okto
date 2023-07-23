@@ -1,6 +1,5 @@
 mod pages;
 mod settings;
-mod utils;
 
 use std::sync::Arc;
 
@@ -34,7 +33,6 @@ use serenity::{
         RwLock,
     },
 };
-use utils::ID;
 
 use crate::{
     events::statefulembed::{
@@ -45,6 +43,7 @@ use crate::{
     utils::{
         constants::*,
         default_embed,
+        reminders::ID,
         StandardButton,
     },
 };

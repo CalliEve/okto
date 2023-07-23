@@ -33,13 +33,6 @@ use super::{
         set_notification_channel,
         toggle_setting,
     },
-    utils::{
-        filter_from_string_input,
-        get_db,
-        regex_filter_to_string,
-        State,
-        ID,
-    },
 };
 use crate::{
     events::{
@@ -63,9 +56,14 @@ use crate::{
         },
         format_duration,
         reminders::{
+            filter_from_string_input,
+            get_db,
             get_guild_settings,
             get_user_settings,
-        },
+            regex_filter_to_string,
+            State,
+            ID,
+        }, parse_duration,
     },
 };
 
@@ -75,7 +73,7 @@ pub fn reminders_page(
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
         let reminders_res = get_reminders(&ses, id).await;
-        let description = match reminders_res {
+        let (description, durations) = match reminders_res {
             Ok(ref reminders) if !reminders.is_empty() => {
                 let mut text = "The following reminders have been set:".to_owned();
                 for reminder in reminders {
@@ -86,9 +84,9 @@ pub fn reminders_page(
                     )
                     .expect("write to String: can't fail");
                 }
-                text
+                (text, reminders.iter().map(|r| r.get_duration()).collect::<Vec<_>>())
             },
-            _ => "No reminders have been set yet".to_owned(),
+            _ => ("No reminders have been set yet".to_owned(), Vec::new()),
         };
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
@@ -139,23 +137,48 @@ pub fn reminders_page(
                     style: ButtonStyle::Primary,
                     emoji: Some(RETROGRADE.clone()),
                 },
-                move |_| {
-                    // TODO: use a dropdown for removal
+                move |button_click| {
                     let remove_ses = remove_ses.clone();
+                    let durations = durations.clone();
                     Box::pin(async move {
                         let inner_ses = remove_ses.clone();
                         let wait_ses = remove_ses.clone();
 
-                        TimeEmbed::new(inner_ses, move |dur| {
+                        let (user_id, http, data) = {
+                            let s = inner_ses
+                                .read()
+                                .await;
+                            (
+                                s.author,
+                                s.http
+                                    .clone(),
+                                s.data
+                                    .clone(),
+                            )
+                        };
+    
+                        SelectMenu::builder(move |(choice, _)| {
                             let wait_ses = wait_ses.clone();
                             Box::pin(async move {
-                                if !dur.is_zero() {
-                                    remove_reminder(&wait_ses.clone(), id, dur).await;
-                                }
+                                remove_reminder(&wait_ses.clone(), id, parse_duration(&choice)).await;
                                 reminders_page(wait_ses.clone(), id).await;
                             })
                         })
-                        .listen()
+                        .set_description(
+                            "Select the reminder you want to remove",
+                        )
+                        .set_custom_id(&format!("{}-remove-reminder", user_id))
+                        .set_user(user_id)
+                        .set_options(
+                            durations.iter().map(|dur| format_duration(*dur, true)).map(|s| (s.clone(), s)).collect(),
+                        )
+                        .build()
+                        .unwrap()
+                        .listen(
+                            http,
+                            &Interaction::MessageComponent(button_click),
+                            data,
+                        )
                         .await;
                     })
                 },
