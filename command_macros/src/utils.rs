@@ -41,9 +41,10 @@ impl<T: Parse> Parse for ParenthesisedItems<T> {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let content;
         parenthesized!(content in input);
-        Ok(Self(
-            content.parse_terminated(T::parse)?,
-        ))
+        Ok(Self(content.parse_terminated(
+            T::parse,
+            Token![,],
+        )?))
     }
 }
 
@@ -111,7 +112,7 @@ impl Parse for CommandAttributeContent {
         } else if lookahead.peek(Brace) {
             return Ok(Self::Options(
                 input
-                    .parse_terminated::<_, Token![,]>(CommandOption::parse)?
+                    .parse_terminated(CommandOption::parse, Token![,])?
                     .into_iter()
                     .collect(),
             ));
@@ -168,7 +169,7 @@ impl Parse for CommandOption {
         let content;
         braced!(content in input);
         let fields: HashMap<String, StructFieldValue> = content
-            .parse_terminated::<_, Token![,]>(StructField::parse)?
+            .parse_terminated(StructField::parse, Token![,])?
             .into_iter()
             .map(|f| (f.name, f.value))
             .collect();
@@ -272,13 +273,13 @@ impl Parse for StructFieldValue {
             let content;
             bracketed!(content in input);
             Ok(StructFieldValue::List(
-                content.parse_terminated::<_, Token![,]>(StructFieldValue::parse)?,
+                content.parse_terminated(StructFieldValue::parse, Token![,])?,
             ))
         } else if lookahead.peek(Brace) {
             let content;
             braced!(content in input);
             Ok(StructFieldValue::Map(
-                content.parse_terminated::<_, Token![,]>(StructField::parse)?,
+                content.parse_terminated(StructField::parse, Token![,])?,
             ))
         } else {
             Ok(StructFieldValue::Expr(input.parse()?))
@@ -372,7 +373,7 @@ impl Parse for CommandOptionChoice {
         let content;
         braced!(content in input);
         let fields: HashMap<String, StructFieldValue> = content
-            .parse_terminated::<_, Token![,]>(StructField::parse)?
+            .parse_terminated(StructField::parse, Token![,])?
             .into_iter()
             .map(|f| (f.name, f.value))
             .collect();
@@ -462,7 +463,7 @@ impl<T: Parse> Parse for List<T> {
         let content;
         bracketed!(content in input);
         Ok(List {
-            inner: content.parse_terminated::<_, Token![,]>(T::parse)?,
+            inner: content.parse_terminated(T::parse, Token![,])?,
         })
     }
 }

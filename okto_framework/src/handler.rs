@@ -4,17 +4,13 @@ use serenity::{
     client::Context,
     framework::standard::CommandResult,
     http::Http,
-    model::{
-        application::interaction::Interaction,
-    },
+    model::application::interaction::Interaction,
     Result,
 };
 
-use crate::{
-    structs::{
-        Command,
-        DiscordCommandDetails,
-    }
+use crate::structs::{
+    Command,
+    DiscordCommandDetails,
 };
 
 #[derive(Clone)]
@@ -94,16 +90,18 @@ impl Handler {
 
     pub async fn upload_commands(&self, http: impl AsRef<Http>) -> Result<()> {
         let body = serde_json::to_value(
-            &self
+            self
                 .cmds
                 .values()
-                .map(|c| c.options.clone())
+                .map(|c| {
+                    c.options
+                        .clone()
+                })
                 .map(DiscordCommandDetails::from)
                 .collect::<Vec<_>>(),
         )?;
 
-        http
-            .as_ref()
+        http.as_ref()
             .create_global_application_commands(&body)
             .await?;
 
