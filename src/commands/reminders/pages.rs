@@ -48,6 +48,7 @@ use crate::{
         },
         time_embed::TimeEmbed,
     },
+    models::reminders::Reminder,
     utils::{
         constants::*,
         default_select_menus::{
@@ -55,6 +56,7 @@ use crate::{
             role_select_menu,
         },
         format_duration,
+        parse_duration,
         reminders::{
             filter_from_string_input,
             get_db,
@@ -63,7 +65,7 @@ use crate::{
             regex_filter_to_string,
             State,
             ID,
-        }, parse_duration,
+        },
     },
 };
 
@@ -84,9 +86,20 @@ pub fn reminders_page(
                     )
                     .expect("write to String: can't fail");
                 }
-                (text, reminders.iter().map(|r| r.get_duration()).collect::<Vec<_>>())
+                (
+                    text,
+                    reminders
+                        .iter()
+                        .map(Reminder::get_duration)
+                        .collect::<Vec<_>>(),
+                )
             },
-            _ => ("No reminders have been set yet".to_owned(), Vec::new()),
+            _ => {
+                (
+                    "No reminders have been set yet".to_owned(),
+                    Vec::new(),
+                )
+            },
         };
 
         let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
@@ -156,21 +169,28 @@ pub fn reminders_page(
                                     .clone(),
                             )
                         };
-    
+
                         SelectMenu::builder(move |(choice, _)| {
                             let wait_ses = wait_ses.clone();
                             Box::pin(async move {
-                                remove_reminder(&wait_ses.clone(), id, parse_duration(&choice)).await;
+                                remove_reminder(
+                                    &wait_ses.clone(),
+                                    id,
+                                    parse_duration(&choice),
+                                )
+                                .await;
                                 reminders_page(wait_ses.clone(), id).await;
                             })
                         })
-                        .set_description(
-                            "Select the reminder you want to remove",
-                        )
-                        .set_custom_id(&format!("{}-remove-reminder", user_id))
+                        .set_description("Select the reminder you want to remove")
+                        .set_custom_id(&format!("{user_id}-remove-reminder"))
                         .set_user(user_id)
                         .set_options(
-                            durations.iter().map(|dur| format_duration(*dur, true)).map(|s| (s.clone(), s)).collect(),
+                            durations
+                                .iter()
+                                .map(|dur| format_duration(*dur, true))
+                                .map(|s| (s.clone(), s))
+                                .collect(),
                         )
                         .build()
                         .unwrap()
@@ -286,9 +306,7 @@ fn disallow_filters_page(
     id: ID,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let db = if let Some(db_res) = get_db(&ses).await {
-            db_res
-        } else {
+        let Some(db) = get_db(&ses).await else {
             return;
         };
 
@@ -421,7 +439,7 @@ fn disallow_filters_page(
                     .set_description(
                         "Select the name of the agency you do not want to receive reminders for",
                     )
-                    .set_custom_id(&format!("{}-add-filter", user_id))
+                    .set_custom_id(&format!("{user_id}-add-filter"))
                     .set_user(user_id)
                     .set_options(
                         LAUNCH_AGENCIES
@@ -485,7 +503,7 @@ fn disallow_filters_page(
                         .set_description(
                             "Select the name of the agency you want to receive reminders for again",
                         )
-                        .set_custom_id(&format!("{}-remove-filter", user_id))
+                        .set_custom_id(&format!("{user_id}-remove-filter"))
                         .set_user(user_id)
                         .set_options(
                             LAUNCH_AGENCIES
@@ -533,9 +551,7 @@ fn allow_filters_page(
     id: ID,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let db = if let Some(db_res) = get_db(&ses).await {
-            db_res
-        } else {
+        let Some(db) = get_db(&ses).await else {
             return;
         };
 
@@ -676,7 +692,7 @@ fn allow_filters_page(
                     .set_description(
                         "Select the name of the agency you specifically want to get reminders for",
                     )
-                    .set_custom_id(&format!("{}-add-allow-filter", user_id))
+                    .set_custom_id(&format!("{user_id}-add-allow-filter"))
                     .set_user(user_id)
                     .make_ephemeral()
                     .set_options(
@@ -739,7 +755,7 @@ fn allow_filters_page(
                                 })
                         })
                             .set_description("Select the name of the agency you do not want to receive reminders for again")
-                            .set_custom_id(&format!("{}-remove-allow-filter", user_id))
+                            .set_custom_id(&format!("{user_id}-remove-allow-filter"))
                         .set_user(user_id)
                             .make_ephemeral()
                             .set_options(
@@ -783,9 +799,7 @@ fn payload_filters_page(
     id: ID,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let db = if let Some(db_res) = get_db(&ses).await {
-            db_res
-        } else {
+        let Some(db) = get_db(&ses).await else {
             return;
         };
 
@@ -920,10 +934,7 @@ fn payload_filters_page(
                         })
                     })
                     .set_title("Payload filter modal")
-                    .set_custom_id(&format!(
-                        "{}-add-payload-filter",
-                        user_id
-                    ))
+                    .set_custom_id(&format!("{user_id}-add-payload-filter",))
                     .set_user(user_id)
                     .add_field(
                         Field::new(
@@ -992,8 +1003,7 @@ fn payload_filters_page(
                         })
                         .set_description("Select payload filter you want to remove")
                         .set_custom_id(&format!(
-                            "{}-remove-payload-filter",
-                            user_id
+                            "{user_id}-remove-payload-filter",
                         ))
                         .set_user(user_id)
                         .make_ephemeral()
@@ -1048,9 +1058,7 @@ pub fn mentions_page(
     id: ID,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let db = if let Some(db_res) = get_db(&ses).await {
-            db_res
-        } else {
+        let Some(db) = get_db(&ses).await else {
             return;
         };
 
@@ -1225,9 +1233,7 @@ pub fn other_page(
     id: ID,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let db = if let Some(db_res) = get_db(&ses).await {
-            db_res
-        } else {
+        let Some(db) = get_db(&ses).await else {
             return;
         };
 
@@ -1254,8 +1260,7 @@ pub fn other_page(
 
                     if let Some(chan) = settings.notifications_channel {
                         description = format!(
-                            "\nScrub and outcome notifications will be posted in: <#{}>",
-                            chan
+                            "\nScrub and outcome notifications will be posted in: <#{chan}>",
                         );
                     } else {
                         description =
@@ -1290,7 +1295,7 @@ pub fn other_page(
         let scrub_ses = ses.clone();
         em.add_field(
             "Toggle Scrub Notifications",
-            &format!("Toggle scrub notifications on and off\nThese notifications notify you when a launch gets delayed.\nThis is currently **{}**", scrub_notifications),
+            &format!("Toggle scrub notifications on and off\nThese notifications notify you when a launch gets delayed.\nThis is currently **{scrub_notifications}**"),
             false,
             &ButtonType {
                 emoji: Some('🛑'.into()),
@@ -1311,7 +1316,7 @@ pub fn other_page(
         let outcome_ses = ses.clone();
         em.add_field(
             "Toggle Outcome Notifications",
-            &format!("Toggle outcome notifications on and off\nThese notifications notify you about the outcome of a launch.\nThis is currently **{}**", outcome_notifications),
+            &format!("Toggle outcome notifications on and off\nThese notifications notify you about the outcome of a launch.\nThis is currently **{outcome_notifications}**"),
             false,
             &ButtonType {
                 emoji: Some('🌍'.into()),
@@ -1333,8 +1338,7 @@ pub fn other_page(
         em.add_field(
             "Toggle Mentions",
             &format!(
-                "Toggle mentions for scrub and outcome notifications.\nThis is currently **{}**",
-                mentions
+                "Toggle mentions for scrub and outcome notifications.\nThis is currently **{mentions}**",
             ),
             false,
             &ButtonType {

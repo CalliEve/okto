@@ -52,24 +52,20 @@ async fn get_toggled<T>(db: &Database, collection: &str, toggled: &str) -> Vec<T
 where
     T: DeserializeOwned,
 {
-    let cursor = if let Ok(cursor) = db
+    let Ok(cursor) = db
         .collection(collection)
         .find(doc! {toggled: true}, None)
         .await
-    {
-        cursor
-    } else {
+    else {
         return Vec::new();
     };
 
-    let documents = if let Ok(docs) = cursor
+    let Ok(documents) = cursor
         .collect::<Vec<MongoResult<Document>>>()
         .await
         .into_iter()
         .collect::<MongoResult<Vec<Document>>>()
-    {
-        docs
-    } else {
+    else {
         return Vec::new();
     };
 

@@ -37,9 +37,7 @@ use crate::{
 };
 
 pub async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<Vec<Reminder>> {
-    let db = if let Some(db) = get_db(ses).await {
-        db
-    } else {
+    let Some(db) = get_db(ses).await else {
         return Err(MongoError::from(MongoErrorKind::Io(
             Arc::new(IoErrorKind::NotFound.into()),
         )));
@@ -71,9 +69,7 @@ pub async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResu
 }
 
 pub async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duration) {
-    let db = if let Some(db) = get_db(ses).await {
-        db
-    } else {
+    let Some(db) = get_db(ses).await else {
         return;
     };
 
@@ -119,9 +115,7 @@ pub async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dur
 }
 
 pub async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Duration) {
-    let db = if let Some(db) = get_db(ses).await {
-        db
-    } else {
+    let Some(db) = get_db(ses).await else {
         return;
     };
 
@@ -164,9 +158,7 @@ pub async fn add_filter(
     filter: String,
     filter_type: &str,
 ) {
-    let db = if let Some(db) = get_db(ses).await {
-        db
-    } else {
+    let Some(db) = get_db(ses).await else {
         return;
     };
 
@@ -222,9 +214,7 @@ pub async fn remove_filter(
     filter: String,
     filter_type: &str,
 ) {
-    let db = if let Some(db) = get_db(ses).await {
-        db
-    } else {
+    let Some(db) = get_db(ses).await else {
         return;
     };
 
@@ -267,9 +257,7 @@ pub async fn remove_filter(
 }
 
 pub async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &str, val: bool) {
-    let db = if let Some(db) = get_db(ses).await {
-        db
-    } else {
+    let Some(db) = get_db(ses).await else {
         return;
     };
 
@@ -320,9 +308,7 @@ pub async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &s
 }
 
 pub async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, channel: ChannelId) {
-    let db = if let Some(db) = get_db(ses).await {
-        db
-    } else {
+    let Some(db) = get_db(ses).await else {
         return;
     };
 
@@ -355,15 +341,11 @@ pub async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, c
 }
 
 pub async fn add_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
-    let guild_id = if let ID::Channel((_, guild_id)) = id {
-        guild_id
-    } else {
+    let ID::Channel((_, guild_id)) = id else {
         return;
     };
 
-    let db = if let Some(db) = get_db(ses).await {
-        db
-    } else {
+    let Some(db) = get_db(ses).await else {
         return;
     };
 
@@ -391,15 +373,11 @@ pub async fn add_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) 
 }
 
 pub async fn remove_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) {
-    let guild_id = if let ID::Channel((_, guild_id)) = id {
-        guild_id
-    } else {
+    let ID::Channel((_, guild_id)) = id else {
         return;
     };
 
-    let db = if let Some(db) = get_db(ses).await {
-        db
-    } else {
+    let Some(db) = get_db(ses).await else {
         return;
     };
 

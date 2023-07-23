@@ -133,7 +133,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
     if let Err(p) = notif_res.await {
         error_log(
             http,
-            format!("Panic in sending notifications: {}", p),
+            format!("Panic in sending notifications: {p}"),
         )
         .await;
     }

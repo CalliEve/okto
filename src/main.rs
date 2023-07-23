@@ -2,7 +2,6 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)] // because of discord IDs being long numbers
 #![allow(clippy::module_name_repetitions)] // makes some struct names clearer
-#![allow(clippy::let_underscore_drop)] // looks better when not caring if it errored imo
 #![allow(clippy::semicolon_if_nothing_returned)] // looks better imo
 #![allow(clippy::cast_possible_wrap)] // for mongo bson some u64 ids need to be cast to i64
 #![allow(clippy::wildcard_imports)] // the commands/events structure of serenity requires these
@@ -84,10 +83,7 @@ async fn main() {
                     .await;
                 error_log(
                     &ctx.http,
-                    format!(
-                        "An error happened in {}:\n```{:?}```",
-                        cmd_name, why
-                    ),
+                    format!("An error happened in {cmd_name}:\n```{why}```",),
                 )
                 .await
             }
@@ -181,9 +177,6 @@ async fn main() {
         .start()
         .await
     {
-        eprintln!(
-            "An error occurred while running the client: {:?}",
-            why
-        );
+        eprintln!("An error occurred while running the client: {why}",);
     }
 }

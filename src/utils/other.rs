@@ -1,11 +1,14 @@
-use std::{fmt::Write, ops::Add};
+use std::{
+    fmt::Write,
+    ops::Add,
+};
 
-use lazy_static::lazy_static;
-use regex::Regex;
 use chrono::{
     Duration,
     Utc,
 };
+use lazy_static::lazy_static;
+use regex::Regex;
 use serenity::{
     builder::{
         CreateEmbed,
@@ -82,8 +85,8 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
     let mut res = String::new();
 
     match days {
-        1 => write!(res, "{} day", days).expect("write to String: can't fail"),
-        x if x > 1 => write!(res, "{} days", days).expect("write to String: can't fail"),
+        1 => write!(res, "{days} day").expect("write to String: can't fail"),
+        x if x > 1 => write!(res, "{days} days").expect("write to String: can't fail"),
         _ => {},
     }
 
@@ -95,9 +98,9 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
 
         if hours == 1 {
-            write!(res, "{} hour", hours).expect("write to String: can't fail");
+            write!(res, "{hours} hour").expect("write to String: can't fail");
         } else {
-            write!(res, "{} hours", hours).expect("write to String: can't fail");
+            write!(res, "{hours} hours").expect("write to String: can't fail");
         }
     }
 
@@ -109,9 +112,9 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
 
         if minutes == 1 {
-            write!(res, "{} minute", minutes).expect("write to String: can't fail");
+            write!(res, "{minutes} minute").expect("write to String: can't fail");
         } else {
-            write!(res, "{} minutes", minutes).expect("write to String: can't fail");
+            write!(res, "{minutes} minutes").expect("write to String: can't fail");
         }
     }
 
@@ -121,9 +124,9 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
 
         if seconds == 1 {
-            write!(res, "{} second", seconds).expect("write to String: can't fail");
+            write!(res, "{seconds} second").expect("write to String: can't fail");
         } else {
-            write!(res, "{} seconds", seconds).expect("write to String: can't fail");
+            write!(res, "{seconds} seconds").expect("write to String: can't fail");
         }
     }
     if res.is_empty() {
@@ -143,33 +146,45 @@ lazy_static! {
 pub fn parse_duration(input: &str) -> Duration {
     let mut dur = Duration::zero();
 
-    if let Some(captures) = DAYS_REGEX.captures(&input) {
+    if let Some(captures) = DAYS_REGEX.captures(input) {
         if let Some(days_str) = captures.get(1) {
-            if let Ok(days) = days_str.as_str().parse::<i64>() {
+            if let Ok(days) = days_str
+                .as_str()
+                .parse::<i64>()
+            {
                 dur = dur.add(Duration::days(days));
             }
         }
     }
 
-    if let Some(captures) = HOURS_REGEX.captures(&input) {
+    if let Some(captures) = HOURS_REGEX.captures(input) {
         if let Some(hour_str) = captures.get(1) {
-            if let Ok(hours) = hour_str.as_str().parse::<i64>() {
+            if let Ok(hours) = hour_str
+                .as_str()
+                .parse::<i64>()
+            {
                 dur = dur.add(Duration::hours(hours));
             }
         }
     }
 
-    if let Some(captures) = MINUTES_REGEX.captures(&input) {
+    if let Some(captures) = MINUTES_REGEX.captures(input) {
         if let Some(minutes_str) = captures.get(1) {
-            if let Ok(minutes) = minutes_str.as_str().parse::<i64>() {
+            if let Ok(minutes) = minutes_str
+                .as_str()
+                .parse::<i64>()
+            {
                 dur = dur.add(Duration::minutes(minutes));
             }
         }
     }
 
-    if let Some(captures) = SECONDS_REGEX.captures(&input) {
+    if let Some(captures) = SECONDS_REGEX.captures(input) {
         if let Some(seconds_str) = captures.get(1) {
-            if let Ok(seconds) = seconds_str.as_str().parse::<i64>() {
+            if let Ok(seconds) = seconds_str
+                .as_str()
+                .parse::<i64>()
+            {
                 dur = dur.add(Duration::seconds(seconds));
             }
         }
@@ -296,15 +311,27 @@ mod tests {
 
     #[test]
     fn duration_to_str() {
-        let dur = Duration::days(2).add(Duration::hours(8)).add(Duration::minutes(23)).add(Duration::seconds(1));
+        let dur = Duration::days(2)
+            .add(Duration::hours(8))
+            .add(Duration::minutes(23))
+            .add(Duration::seconds(1));
 
-        assert_eq!(format_duration(dur, true), "2 days, 8 hours, 23 minutes and 1 second");
+        assert_eq!(
+            format_duration(dur, true),
+            "2 days, 8 hours, 23 minutes and 1 second"
+        );
     }
 
     #[test]
     fn str_to_duration() {
-        let dur = Duration::days(2).add(Duration::hours(8)).add(Duration::minutes(23)).add(Duration::seconds(1));
+        let dur = Duration::days(2)
+            .add(Duration::hours(8))
+            .add(Duration::minutes(23))
+            .add(Duration::seconds(1));
 
-        assert_eq!(parse_duration("2 days, 8 hours, 23 minutes and 1 second"), dur);
+        assert_eq!(
+            parse_duration("2 days, 8 hours, 23 minutes and 1 second"),
+            dur
+        );
     }
 }

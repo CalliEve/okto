@@ -439,21 +439,21 @@ impl StarInfo {
 
     fn get_age(&self) -> String {
         match &self.st_age {
-            Some(age) => format!("{}Gyr (billion years)", age),
+            Some(age) => format!("{age}Gyr (billion years)"),
             None => "Unknown".to_owned(),
         }
     }
 
     fn get_mass(&self) -> String {
         match &self.st_mass {
-            Some(mass) => format!("{} times the mass of the sun", mass),
+            Some(mass) => format!("{mass} times the mass of the sun"),
             None => "Unknown".to_owned(),
         }
     }
 
     fn get_rad(&self) -> String {
         match &self.st_rad {
-            Some(rad) => format!("{}R\u{2609}", rad),
+            Some(rad) => format!("{rad}R\u{2609}"),
             None => "Unknown".to_owned(),
         }
     }
@@ -630,37 +630,37 @@ async fn get_planet(
                                 .pl_radj
                                 .map_or_else(
                                     || "unknown".to_owned(),
-                                    |n| format!("{} times", n)
+                                    |n| format!("{n} times")
                                 ),
                             planet
                                 .pl_rade
                                 .map_or_else(
                                     || "unknown".to_owned(),
-                                    |n| format!("{} times", n)
+                                    |n| format!("{n} times")
                                 ),
                             planet
                                 .pl_dens
                                 .map_or_else(
                                     || "unknown".to_owned(),
-                                    |n| format!("{}g/cm\u{b3}", n)
+                                    |n| format!("{n}g/cm\u{b3}")
                                 ),
                             planet
                                 .pl_massj
                                 .map_or_else(
                                     || "unknown".to_owned(),
-                                    |n| format!("{} times", n)
+                                    |n| format!("{n} times")
                                 ),
                             planet
                                 .pl_masse
                                 .map_or_else(
                                     || "unknown".to_owned(),
-                                    |n| format!("{} times", n)
+                                    |n| format!("{n} times")
                                 ),
                             planet
                                 .pl_eqt
                                 .map_or_else(
                                     || "unknown".to_owned(),
-                                    |n| format!("{}K", n)
+                                    |n| format!("{n}K")
                                 ),
                         ),
                         false,
@@ -683,19 +683,19 @@ async fn get_planet(
                                 .pl_orbincl
                                 .map_or_else(
                                     || "unknown".to_owned(),
-                                    |n| format!("{} degrees", n)
+                                    |n| format!("{n} degrees")
                                 ),
                             planet
                                 .pl_orbper
                                 .map_or_else(
                                     || "unknown".to_owned(),
-                                    |n| format!("{}K", n)
+                                    |n| format!("{n}K")
                                 ),
                             planet
                                 .pl_orbsmax
                                 .map_or_else(
                                     || "unknown".to_owned(),
-                                    |n| format!("{}AU", n)
+                                    |n| format!("{n}AU")
                                 ),
                             planet
                                 .hostname

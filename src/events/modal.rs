@@ -71,10 +71,10 @@ impl Modal {
                 .components
                 .clone()
                 .into_iter()
-                .map(|row| {
+                .flat_map(|row| {
                     row.components
                         .into_iter()
-                        .flat_map(|comp| {
+                        .filter_map(|comp| {
                             match comp {
                                 ActionRowComponent::InputText(input) => {
                                     Some((input.custom_id, input.value))
@@ -83,7 +83,6 @@ impl Modal {
                             }
                         })
                 })
-                .flatten()
                 .collect::<Vec<_>>();
 
             let http_clone = http_clone.clone();

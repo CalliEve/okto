@@ -10,6 +10,7 @@ use chrono::{
 };
 use okto_framework::macros::command;
 use rand::Rng;
+use reqwest::Response;
 use serenity::{
     builder::{
         CreateEmbed,
@@ -83,13 +84,7 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
     };
 
     let epic_image_data: EPICImage = DEFAULT_CLIENT
-        .get(
-            format!(
-                "https://epic.gsfc.nasa.gov/api/{}",
-                image_type
-            )
-            .as_str(),
-        )
+        .get(format!("https://epic.gsfc.nasa.gov/api/{image_type}",).as_str())
         .send()
         .await?
         .error_for_status()?
@@ -110,8 +105,7 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
                     })
                     .color(DEFAULT_COLOR)
                     .description(format!(
-                    "Most recent {} image from the EPIC camera onboard the NOAA DSCOVR spacecraft",
-                    image_type
+                    "Most recent {image_type} image from the EPIC camera onboard the NOAA DSCOVR spacecraft"
                 ))
                     .footer(|f: &mut CreateEmbedFooter| {
                         f.text(format!(
@@ -194,7 +188,7 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         .query(&params)
         .send()
         .await
-        .and_then(|r| r.error_for_status());
+        .and_then(Response::error_for_status);
 
     if let Err(err) = apod_image_req {
         interaction
@@ -209,7 +203,7 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
 
         error_log(
             &ctx.http,
-            format!("APOD API returned an error: {:?}", err),
+            format!("APOD API returned an error: {err}"),
         )
         .await;
 

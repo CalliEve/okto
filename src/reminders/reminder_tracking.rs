@@ -71,7 +71,7 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
     let mut reminded: HashMap<String, i64> = HashMap::new();
 
     loop {
-        println!("running loop {}", loop_count);
+        println!("running loop {loop_count}");
 
         if loop_count % 5 == 0 {
             tokio::spawn(launch_tracking(
@@ -126,10 +126,7 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
                     if let Err(e) = handle.await {
                         error_log(
                             http.clone(),
-                            &format!(
-                                "A panic happened in reminders: ```{:?}```",
-                                e
-                            ),
+                            &format!("A panic happened in reminders: ```{e}```",),
                         )
                         .await
                     }
@@ -284,7 +281,7 @@ fn format_url(rawlink: &str) -> String {
     if let Ok(link) = url::Url::from_str(rawlink) {
         if let Some(mut domain) = link.domain() {
             domain = domain.trim_start_matches("www.");
-            return format!("[{}]({})\n", domain, rawlink);
+            return format!("[{domain}]({rawlink})\n");
         }
     };
     rawlink.to_owned()

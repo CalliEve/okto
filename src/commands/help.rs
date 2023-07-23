@@ -304,7 +304,7 @@ fn help_menu(
             .show()
             .await;
         if let Err(e) = show_res {
-            eprintln!("Error in help: {}", e);
+            eprintln!("Error in help: {e}");
         }
     })
 }
@@ -389,7 +389,7 @@ fn command_details(
             .show()
             .await;
         if let Err(e) = show_res {
-            eprintln!("Error in help: {}", e);
+            eprintln!("Error in help: {e}");
         }
     })
 }
@@ -420,13 +420,11 @@ async fn allowed(
         })
     {
         if let Channel::Guild(channel) = &channel {
-            let guild = if let Some(guild) = interaction
+            let Some(guild) = interaction
                 .guild_id
                 .unwrap()
                 .to_guild_cached(ctx)
-            {
-                guild
-            } else {
+            else {
                 return Ok(false);
             };
 
@@ -438,9 +436,7 @@ async fn allowed(
                 return Ok(true);
             }
 
-            let member = if let Some(member) = &interaction.member {
-                member
-            } else {
+            let Some(member) = &interaction.member else {
                 return Ok(false);
             };
 

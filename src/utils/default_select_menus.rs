@@ -53,7 +53,7 @@ pub async fn role_select_menu<F>(
         callback(id)
     })
     .set_description("Select a role")
-    .set_custom_id(&format!("{}-role-select", user_id))
+    .set_custom_id(&format!("{user_id}-role-select"))
     .set_user(user_id)
     .make_ephemeral()
     .set_options(
@@ -92,7 +92,7 @@ pub async fn channel_select_menu<F>(
         callback(id)
     })
     .set_description("Select a channel")
-    .set_custom_id(&format!("{}-channel-select", user_id))
+    .set_custom_id(&format!("{user_id}-channel-select"))
     .set_user(user_id)
     .make_ephemeral()
     .set_options(

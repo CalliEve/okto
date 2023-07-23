@@ -77,7 +77,7 @@ pub async fn fetch_rover_camera_picture(
                 .lock()
                 .await,
         )
-        .unwrap_or_else(|| panic!("No {} picture found", rover)),
+        .unwrap_or_else(|| panic!("No {rover} picture found")),
         sol,
     )
 }

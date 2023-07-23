@@ -101,7 +101,7 @@ impl StatefulEmbed {
         F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         let full_name = if let Some(e) = &button.emoji {
-            format!("{} {}", e, name)
+            format!("{e} {name}")
         } else {
             name.to_owned()
         };
@@ -366,10 +366,7 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
             if let Err(e) = r {
                 error_log(
                     &ctx.http,
-                    format!(
-                        "Got error when responding to interaction: {:?}",
-                        e
-                    ),
+                    format!("Got error when responding to interaction: {e}",),
                 )
                 .await;
             } else {
