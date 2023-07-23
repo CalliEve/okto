@@ -267,7 +267,7 @@ pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
         .cloned()
         .collect::<Vec<InteractionHandler>>();
 
-    if let Some(mut waiting) = ctx
+    if let Some(waiting) = ctx
         .data
         .write()
         .await
@@ -297,14 +297,6 @@ pub async fn respond_to_interaction(
                 })
                 .await
             },
-            Interaction::ModalSubmit(modal) => {
-                modal
-                    .edit_original_interaction_response(http, |i| {
-                        *i = resp.into();
-                        i
-                    })
-                    .await
-            },
             Interaction::ApplicationCommand(cmd) => {
                 cmd.edit_original_interaction_response(http, |i| {
                     *i = resp.into();
@@ -312,7 +304,7 @@ pub async fn respond_to_interaction(
                 })
                 .await
             },
-            _ => panic!("Unsupported interaction for sending a response to"),
+            _ => panic!("Unsupported interaction for sending an update response to"),
         }
         .map(|_| ())
     } else {
@@ -341,7 +333,6 @@ pub async fn respond_to_interaction(
             },
             _ => panic!("Unsupported interaction for sending a response to"),
         }
-        .map(|_| ())
     }
     .expect("Interaction response failed");
 }

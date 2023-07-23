@@ -1,32 +1,65 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{
+    collections::HashMap,
+    str::FromStr,
+    sync::Arc,
+};
 
-use chrono::{Duration, NaiveDateTime, Utc};
+use chrono::{
+    Duration,
+    NaiveDateTime,
+    Utc,
+};
 use futures::{
     future,
-    stream::{self, FuturesUnordered, StreamExt},
+    stream::{
+        self,
+        FuturesUnordered,
+        StreamExt,
+    },
 };
 use mongodb::{
-    bson::{self, doc, Document},
+    bson::{
+        self,
+        doc,
+        Document,
+    },
     error::Result as MongoResult,
     Database,
 };
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateMessage,
+    },
     http::client::Http,
     model::Timestamp,
     prelude::RwLock,
 };
 
-use super::launch_tracking;
+use super::{
+    filtering::passes_filters,
+    launch_tracking,
+};
 use crate::{
     models::{
-        launches::{LaunchData, LaunchStatus},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
         reminders::Reminder,
     },
     utils::{
-        constants::{DEFAULT_COLOR, DEFAULT_ICON, LAUNCH_AGENCIES},
-        error_log, format_duration,
-        reminders::{get_guild_settings, get_user_settings},
+        constants::{
+            DEFAULT_COLOR,
+            DEFAULT_ICON,
+        },
+        error_log,
+        format_duration,
+        reminders::{
+            get_guild_settings,
+            get_user_settings,
+        },
     },
 };
 
@@ -38,7 +71,7 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
     let mut reminded: HashMap<String, i64> = HashMap::new();
 
     loop {
-        println!("running loop {}", loop_count);
+        println!("running loop {loop_count}");
 
         if loop_count % 5 == 0 {
             tokio::spawn(launch_tracking(
@@ -65,7 +98,9 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
         let now = Utc::now().timestamp();
 
         for l in launches {
-            let difference = l.net - NaiveDateTime::from_timestamp(now, 0);
+            let difference = l.net
+                - NaiveDateTime::from_timestamp_opt(now, 0)
+                    .expect("invalid timestamp for launch difference");
 
             if let Some(dur) = reminded.get(&l.ll_id) {
                 if *dur == difference.num_minutes() {
@@ -91,10 +126,7 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
                     if let Err(e) = handle.await {
                         error_log(
                             http.clone(),
-                            &format!(
-                                "A panic happened in reminders: ```{:?}```",
-                                e
-                            ),
+                            &format!("A panic happened in reminders: ```{e}```",),
                         )
                         .await
                     }
@@ -139,23 +171,7 @@ async fn execute_reminder(
                 .map(|s| (c, s))
             }
         })
-        .filter(|(_, settings)| {
-            future::ready(
-                !settings
-                    .filters
-                    .iter()
-                    .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
-                    .any(|agency| *agency == l.lsp)
-                    && (settings
-                        .allow_filters
-                        .is_empty()
-                        || settings
-                            .allow_filters
-                            .iter()
-                            .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
-                            .any(|agency| *agency == l.lsp)),
-            )
-        })
+        .filter(|(_, settings)| future::ready(passes_filters(settings, &l)))
         .map(|(c, settings)| {
             let mentions = settings
                 .mentions
@@ -193,23 +209,7 @@ async fn execute_reminder(
                     .map(|s| (u, s))
             }
         })
-        .filter(|(_, settings)| {
-            future::ready(
-                !settings
-                    .filters
-                    .iter()
-                    .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
-                    .any(|agency| *agency == l.lsp)
-                    && (settings
-                        .allow_filters
-                        .is_empty()
-                        || settings
-                            .allow_filters
-                            .iter()
-                            .filter_map(|filter| LAUNCH_AGENCIES.get(filter.as_str()))
-                            .any(|agency| *agency == l.lsp)),
-            )
-        })
+        .filter(|(_, settings)| future::ready(passes_filters(settings, &l)))
         .filter_map(|(u, _)| {
             let http = http.clone();
             async move {
@@ -281,7 +281,7 @@ fn format_url(rawlink: &str) -> String {
     if let Ok(link) = url::Url::from_str(rawlink) {
         if let Some(mut domain) = link.domain() {
             domain = domain.trim_start_matches("www.");
-            return format!("[{}]({})\n", domain, rawlink);
+            return format!("[{domain}]({rawlink})\n");
         }
     };
     rawlink.to_owned()

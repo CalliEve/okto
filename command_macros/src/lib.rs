@@ -7,7 +7,10 @@ extern crate proc_macro;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::parse2;
-use utils::{add_suffix, CommandAttributeContent};
+use utils::{
+    add_suffix,
+    CommandAttributeContent,
+};
 
 use crate::structs::CommandFunc;
 
@@ -37,14 +40,14 @@ fn command_inner(item: TokenStream) -> TokenStream {
     let mut description = String::new();
     let mut options = Vec::new();
     let mut default_permission = true;
-    let mut available_in_dms = true;
+    let mut available_in_dms: bool = true;
 
     for attr in command_fun
         .attributes
         .clone()
     {
         if let Some(p) = attr
-            .path
+            .path()
             .get_ident()
         {
             match p

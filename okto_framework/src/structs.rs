@@ -8,7 +8,8 @@ use serenity::{
     framework::standard::CommandResult,
     model::{
         application::interaction::application_command::ApplicationCommandInteraction,
-        channel::ChannelType, Permissions,
+        channel::ChannelType,
+        Permissions,
     },
 };
 

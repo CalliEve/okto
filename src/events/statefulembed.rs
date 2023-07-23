@@ -55,6 +55,7 @@ pub struct ButtonType {
 pub struct StatefulOption {
     pub button: ButtonType,
     pub handler: Arc<Handler>,
+    pub is_update: bool,
 }
 
 #[derive(Clone)]
@@ -100,7 +101,7 @@ impl StatefulEmbed {
         F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         let full_name = if let Some(e) = &button.emoji {
-            format!("{} {}", e, name)
+            format!("{e} {name}")
         } else {
             name.to_owned()
         };
@@ -110,6 +111,7 @@ impl StatefulEmbed {
             .push(StatefulOption {
                 button: button.clone(),
                 handler: Arc::new(Box::new(handler)),
+                is_update: true,
             });
 
         self
@@ -123,6 +125,21 @@ impl StatefulEmbed {
             .push(StatefulOption {
                 button: button.clone(),
                 handler: Arc::new(Box::new(handler)),
+                is_update: true,
+            });
+
+        self
+    }
+
+    pub fn add_non_update_option<F>(&mut self, button: &ButtonType, handler: F) -> &mut Self
+    where
+        F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+    {
+        self.options
+            .push(StatefulOption {
+                button: button.clone(),
+                handler: Arc::new(Box::new(handler)),
+                is_update: false,
             });
 
         self
@@ -310,7 +327,7 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
                         .current_state
                         .as_ref()
                         .and_then(|embed| {
-                            let mut handler: Option<Arc<Handler>> = None;
+                            let mut handler: Option<(Arc<Handler>, bool)> = None;
 
                             for opt in &embed.options {
                                 if opt
@@ -320,10 +337,11 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
                                         .data
                                         .custom_id
                                 {
-                                    handler = Some(
+                                    handler = Some((
                                         opt.handler
                                             .clone(),
-                                    );
+                                        opt.is_update,
+                                    ));
                                     break;
                                 }
                             }
@@ -338,7 +356,7 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
             }
         };
 
-        if let Some(handler) = handler {
+        if let Some((handler, true)) = handler {
             let r = interaction
                 .create_interaction_response(&ctx.http, |c| {
                     c.kind(InteractionResponseType::DeferredUpdateMessage)
@@ -348,15 +366,14 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
             if let Err(e) = r {
                 error_log(
                     &ctx.http,
-                    format!(
-                        "Got error when responding to interaction: {:?}",
-                        e
-                    ),
+                    format!("Got error when responding to interaction: {e}",),
                 )
                 .await;
             } else {
                 handler(interaction.clone()).await;
             }
+        } else if let Some((handler, false)) = handler {
+            handler(interaction.clone()).await;
         }
     }
 }

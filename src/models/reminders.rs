@@ -1,8 +1,10 @@
 use chrono::Duration;
+use regex::Regex;
 use serde::{
     Deserialize,
     Serialize,
 };
+use serde_regex;
 use serenity::model::id::{
     ChannelId,
     GuildId,
@@ -33,6 +35,9 @@ pub struct GuildSettings {
     #[serde(default)]
     pub allow_filters: Vec<String>,
     #[serde(default)]
+    #[serde(with = "serde_regex")]
+    pub payload_filters: Vec<Regex>,
+    #[serde(default)]
     pub mentions: Vec<RoleId>,
     #[serde(default)]
     pub scrub_notifications: bool,
@@ -52,6 +57,9 @@ pub struct UserSettings {
     #[serde(default)]
     pub allow_filters: Vec<String>,
     #[serde(default)]
+    #[serde(with = "serde_regex")]
+    pub payload_filters: Vec<Regex>,
+    #[serde(default)]
     pub scrub_notifications: bool,
     #[serde(default)]
     pub outcome_notifications: bool,
@@ -68,6 +76,8 @@ pub trait ReminderSettings {
 
     fn get_allow_filters(&self) -> &Vec<String>;
 
+    fn get_payload_filters(&self) -> &Vec<Regex>;
+
     fn notify_scrub(&self) -> bool;
 
     fn notify_outcome(&self) -> bool;
@@ -80,6 +90,10 @@ impl ReminderSettings for GuildSettings {
 
     fn get_allow_filters(&self) -> &Vec<String> {
         &self.allow_filters
+    }
+
+    fn get_payload_filters(&self) -> &Vec<Regex> {
+        &self.payload_filters
     }
 
     fn notify_scrub(&self) -> bool {
@@ -98,6 +112,10 @@ impl ReminderSettings for UserSettings {
 
     fn get_allow_filters(&self) -> &Vec<String> {
         &self.allow_filters
+    }
+
+    fn get_payload_filters(&self) -> &Vec<Regex> {
+        &self.payload_filters
     }
 
     fn notify_scrub(&self) -> bool {

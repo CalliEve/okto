@@ -99,7 +99,7 @@ impl TimeEmbed {
                         .show_embed()
                 })
                 .add_option(
-                    &StandardButton::Exit.to_button(),
+                    &StandardButton::Submit.to_button(),
                     move |_| (self_close.handler)(self_close.duration),
                 );
 

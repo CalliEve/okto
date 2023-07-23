@@ -1,30 +1,71 @@
-use std::{fmt::Write, sync::Arc};
+use std::{
+    fmt::Write,
+    sync::Arc,
+};
 
 use itertools::Itertools;
-use mongodb::bson::{doc, document::Document, from_bson};
-use okto_framework::{macros::command, structs::Command};
+use mongodb::bson::{
+    doc,
+    document::Document,
+    from_bson,
+};
+use okto_framework::{
+    macros::command,
+    structs::Command,
+};
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, EditInteractionResponse},
-    framework::standard::{macros::hook, CommandError, CommandResult},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        EditInteractionResponse,
+    },
+    framework::standard::{
+        macros::hook,
+        CommandError,
+        CommandResult,
+    },
     model::{
         application::{
-            component::ButtonStyle, interaction::application_command::ApplicationCommandInteraction,
+            component::ButtonStyle,
+            interaction::application_command::ApplicationCommandInteraction,
         },
-        prelude::{Channel, Message, MessageType, ReactionType},
+        prelude::{
+            Channel,
+            Message,
+            MessageType,
+            ReactionType,
+        },
         Permissions,
     },
-    prelude::{Context, RwLock},
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
-    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
+    events::statefulembed::{
+        ButtonType,
+        EmbedSession,
+        StatefulEmbed,
+    },
     models::{
-        caches::{CommandListKey, DatabaseKey},
+        caches::{
+            CommandListKey,
+            DatabaseKey,
+        },
         settings::GuildSettings,
     },
     utils::{
         capitalize,
-        constants::{BACK_EMOJI, DEFAULT_COLOR, DEFAULT_ICON, EXIT_EMOJI, NUMBER_EMOJIS, OWNERS},
+        constants::{
+            BACK_EMOJI,
+            DEFAULT_COLOR,
+            DEFAULT_ICON,
+            EXIT_EMOJI,
+            NUMBER_EMOJIS,
+            OWNERS,
+        },
     },
 };
 
@@ -263,7 +304,7 @@ fn help_menu(
             .show()
             .await;
         if let Err(e) = show_res {
-            eprintln!("Error in help: {}", e);
+            eprintln!("Error in help: {e}");
         }
     })
 }
@@ -348,7 +389,7 @@ fn command_details(
             .show()
             .await;
         if let Err(e) = show_res {
-            eprintln!("Error in help: {}", e);
+            eprintln!("Error in help: {e}");
         }
     })
 }
@@ -379,13 +420,11 @@ async fn allowed(
         })
     {
         if let Channel::Guild(channel) = &channel {
-            let guild = if let Some(guild) = interaction
+            let Some(guild) = interaction
                 .guild_id
                 .unwrap()
                 .to_guild_cached(ctx)
-            {
-                guild
-            } else {
+            else {
                 return Ok(false);
             };
 
@@ -397,9 +436,7 @@ async fn allowed(
                 return Ok(true);
             }
 
-            let member = if let Some(member) = &interaction.member {
-                member
-            } else {
+            let Some(member) = &interaction.member else {
                 return Ok(false);
             };
 

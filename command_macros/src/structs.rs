@@ -15,11 +15,15 @@ use syn::{
         ParseStream,
         Result,
     },
+    token::Paren,
     Attribute,
     Block,
     FnArg,
     Ident,
     Lifetime,
+    MacroDelimiter,
+    Meta,
+    MetaList,
     Path,
     PathSegment,
     ReturnType,
@@ -51,26 +55,31 @@ impl Parse for CommandFunc {
         let (cooked, attributes): (Vec<_>, Vec<_>) = attributes
             .into_iter()
             .map(|mut a| {
-                if a.path
+                if a.path()
                     .is_ident("doc")
                 {
-                    a.path = Path::from(PathSegment::from(Ident::new(
-                        "description",
-                        Span::call_site(),
-                    )));
-                    let ts: TokenStream2 = a
-                        .tokens
-                        .into_iter()
-                        .skip(1)
-                        .collect();
-                    a.tokens = quote! {(#ts)};
+                    let meta_value = a
+                        .meta
+                        .require_name_value()
+                        .expect("doc attribute does not have a name value")
+                        .clone();
+                    let val = meta_value.value;
+                    let meta_list = MetaList {
+                        path: Path::from(PathSegment::from(Ident::new(
+                            "description",
+                            Span::call_site(),
+                        ))),
+                        delimiter: MacroDelimiter::Paren(Paren::default()),
+                        tokens: quote! {#val},
+                    };
+                    a.meta = Meta::List(meta_list);
                     a
                 } else {
                     a
                 }
             })
             .partition(|a| {
-                a.path
+                a.path()
                     .is_ident("cfg")
             });
 

@@ -4,28 +4,50 @@ use chrono::Utc;
 use itertools::Itertools;
 use okto_framework::macros::command;
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateInteractionResponse},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateEmbedFooter,
+        CreateInteractionResponse,
+    },
     framework::standard::CommandResult,
     model::{
         application::{
             component::ButtonStyle,
-            interaction::{application_command::ApplicationCommandInteraction, MessageFlags},
+            interaction::{
+                application_command::ApplicationCommandInteraction,
+                MessageFlags,
+            },
         },
         channel::ReactionType,
         id::EmojiId,
         Timestamp,
     },
-    prelude::{Context, RwLock},
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
-    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
+    events::statefulembed::{
+        ButtonType,
+        EmbedSession,
+        StatefulEmbed,
+    },
     models::{
         caches::LaunchesCacheKey,
-        launches::{LaunchData, LaunchStatus},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
     },
     utils::{
-        constants::*, cutoff_on_last_dot, default_embed, format_duration, launches::*,
+        constants::*,
+        cutoff_on_last_dot,
+        default_embed,
+        format_duration,
+        launches::*,
         StandardButton,
     },
 };
@@ -101,7 +123,7 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
                                     &if let FilterErrorType::Invalid = err {
                                         "This is not a valid filter, please take a look at those listed in `/filtersinfo`".to_owned()
                                     } else {
-                                        format!("This {} does not have any upcoming launches listed as certain :(", err)
+                                        format!("This {err} does not have any upcoming launches listed as certain :(")
                                     },
                                     false
                                 ))
@@ -222,10 +244,7 @@ fn list_page(
                     })
                     .timestamp(Utc::now())
                     .footer(|f: &mut CreateEmbedFooter| {
-                        f.text(format!(
-                            "Source: {}",
-                            LAUNCH_LIBRARY_URL
-                        ))
+                        f.text(format!("Source: {LAUNCH_LIBRARY_URL}",))
                     });
 
                 if all {
@@ -485,7 +504,7 @@ async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction
                                 &if let FilterErrorType::Invalid = err {
                                     "This is not a valid filter, please take a look at those listed in `/filtersinfo`".to_owned()
                                 } else {
-                                    format!("This {} does not have any upcoming launches :(", err)
+                                    format!("This {err} does not have any upcoming launches :(")
                                 },
                                 false
                             ))
@@ -553,12 +572,10 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
         })
         .ok_or("No launch id provided while it was a required argument")?;
 
-    let launch = if let Some(l) = launches
+    let Some(launch) = launches
         .into_iter()
         .find(|l| l.id == launch_id)
-    {
-        l
-    } else {
+    else {
         interaction
             .create_interaction_response(
                 &ctx.http,
@@ -690,7 +707,7 @@ async fn filtersinfo(ctx: &Context, interaction: &ApplicationCommandInteraction)
                                 sorted_agencies
                                     .iter()
                                     .take(half_agency_count)
-                                    .map(|(k, v)| format!("**{}**: {}", k, v))
+                                    .map(|(k, v)| format!("**{k}**: {v}"))
                                     .collect::<Vec<String>>()
                                     .join("\n"),
                                 false,
@@ -699,7 +716,7 @@ async fn filtersinfo(ctx: &Context, interaction: &ApplicationCommandInteraction)
                                 sorted_agencies
                                     .iter()
                                     .skip(half_agency_count)
-                                    .map(|(k, v)| format!("**{}**: {}", k, v))
+                                    .map(|(k, v)| format!("**{k}**: {v}"))
                                     .collect::<Vec<String>>()
                                     .join("\n"),
                                 false,

@@ -218,6 +218,14 @@ impl SelectMenuBuilder {
             ));
         }
 
+        if self
+            .inner
+            .custom_id
+            .is_none()
+        {
+            return Err(Error::Other("a custom_id is required"));
+        }
+
         Ok(self.inner)
     }
 
