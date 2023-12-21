@@ -4,11 +4,6 @@ on:
   push:
     branches:
       - stable
-    paths:
-      - 'src/**'
-      - '.github/workflows/kubernetes.yaml'
-      - 'Cargo.toml'
-      - 'Dockerfile'
 
 jobs:
   build:
