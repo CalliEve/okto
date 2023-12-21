@@ -10,6 +10,9 @@ description = "A Discord bot for getting information about upcoming rocket launc
 path = "./okto_framework"
 version = "0.1.0"
 
+[build]
+rustflags = ["--cfg", "tokio_unstable"]
+
 [dependencies]
 serenity = {version="0.11.5", features=["unstable_discord_api"]}
 lazy_static = "1.4"
@@ -23,9 +26,10 @@ url = "2.3.1"
 regex = "1.8"
 num_cpus = "1.15"
 threadpool = "1.8"
-tokio = { version = "1.27", features = ["full"] }
+tokio = { version = "1.27", features = ["full", "tracing"] }
 mongodb = "2.5"
 futures = "0.3"
-itertools = "0.11.0"
-http = "0.2.9"
+itertools = "0.12.0"
+http = "1.0.0"
 serde_regex = "1.1.0"
+console-subscriber = "0.2.0"

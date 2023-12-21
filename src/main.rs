@@ -53,6 +53,8 @@ use utils::{
 
 #[tokio::main]
 async fn main() {
+    console_subscriber::init();
+    
     // Login with a bot token from the environment
     let token = env::var("DISCORD_TOKEN").expect("no bot token");
     let application_id: u64 = env::var("DISCORD_ID")
@@ -146,7 +148,9 @@ async fn main() {
         .await
         .expect("Error creating client");
 
-    if let Some(launches_cache) = client
+    let (http_clone,
+        launches_cache_clone,
+        db_clone,) = if let Some(launches_cache) = client
         .data
         .read()
         .await
@@ -164,13 +168,20 @@ async fn main() {
                 .http
                 .clone();
             let db_clone = db.clone();
-            tokio::spawn(reminders::reminder_tracking(
-                http_clone,
+            (http_clone,
                 launches_cache_clone,
-                db_clone,
-            ));
+                db_clone)
+        } else {
+            panic!("No database key or connection")
         }
-    }
+    } else {
+        panic!("No launches cache key")
+    };
+    tokio::spawn(reminders::reminder_tracking(
+        http_clone,
+        launches_cache_clone,
+        db_clone,
+    ));
 
     println!("Starting the bot");
     if let Err(why) = client

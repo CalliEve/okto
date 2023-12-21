@@ -240,7 +240,7 @@ impl InteractionHandlerBuilder {
 }
 
 pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
-    let all = if let Some(waiting) = ctx
+    let all = {if let Some(waiting) = ctx
         .data
         .read()
         .await
@@ -252,7 +252,7 @@ pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
     } else {
         eprintln!("No waiting interaction cache");
         return;
-    };
+    }};
 
     let handled = stream::iter(all.iter())
         .filter(|h| {

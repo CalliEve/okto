@@ -181,8 +181,9 @@ fn help_menu(
             .read()
             .await
             .get::<CommandListKey>()
+            .cloned()
             .unwrap()
-            .iter()
+            .into_iter()
             .sorted_by_key(|c| {
                 c.info
                     .file
@@ -197,9 +198,7 @@ fn help_menu(
                 |mut acc, (k, g)| {
                     acc.push((
                         k,
-                        g.into_iter()
-                            .copied()
-                            .collect(),
+                        g.into_iter().collect(),
                     ));
                     acc
                 },

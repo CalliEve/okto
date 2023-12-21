@@ -313,6 +313,9 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
     );
     res.insert("long-march8", vec!["Long March 8"]);
     res.insert("long-march11", vec!["Long March 11"]);
+    res.insert("firefly", vec!["Firefly Alpha"]);
+    res.insert("starship", vec!["Starship"]);
+    res.insert("vulcan", vec!["Vulcan","Vulcan VC6L","Vulcan VC4L", "Vulcan VC2S"]);
 
     res
 }
