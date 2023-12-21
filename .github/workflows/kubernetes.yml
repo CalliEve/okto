@@ -34,8 +34,8 @@ jobs:
         uses: digitalocean/action-doctl@master
         env:
           DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-        with:
-          args: kubernetes cluster kubeconfig show k8s-okto > $GITHUB_WORKSPACE/.kubeconfig
 
       - name: Deploy to DigitalOcean Kubernetes
-        run: kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig -n discord-bots set image statefulset/stateful-okto okto-bot=ghcr.io/callieve/okto/okto-bot:${{ github.sha }}
+        run: |
+          doctl kubernetes cluster kubeconfig save k8s-okto
+          kubectl --kubeconfig=$GITHUB_WORKSPACE/.kubeconfig -n discord-bots set image statefulset/stateful-okto okto-bot=ghcr.io/callieve/okto/okto-bot:${{ github.sha }}
