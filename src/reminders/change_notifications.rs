@@ -161,8 +161,8 @@ pub async fn notify_scrub(http: Arc<Http>, db: Database, old: LaunchData, new: L
     send_guild_notification(&http, guild_settings, &new, &embed).await;
 }
 
-async fn send_message<'r>(
-    http: &'r Arc<Http>,
+async fn send_message(
+    http: &Arc<Http>,
     channel: ChannelId,
     mentions_opt: Option<String>,
     embed: CreateEmbed,

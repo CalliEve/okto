@@ -230,7 +230,7 @@ fn list_page(
             "} else {"
             This list shows upcoming launches that are certain.\n\
             Use the arrow reactions to get to other pages and the red reaction to get all the launches.
-            "}).fields((&launches[min..top]).iter().map(|launch| (format!(
+            "}).fields(launches[min..top].iter().map(|launch| (format!(
                 "{}: {} - {}",
                 launch.id,
                 &launch.vehicle,
@@ -632,7 +632,7 @@ async fn launchinfo(ctx: &Context, interaction: &CommandInteraction) -> CommandR
 
     em = em.field(
                     "links",
-                    &format!(
+                    format!(
                         "**My Source:** [The Space Devs]({0})\n\
                         **Rocket Watch:** [rocket.watch](https://rocket.watch/#id={1})\n\
                         **Go4Liftoff:** [go4liftoff.com](https://go4liftoff.com/#page=singleLaunch?filters=launchID={1})",
