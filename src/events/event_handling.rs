@@ -7,8 +7,10 @@ use okto_framework::Handler as InteractionHandler;
 use reqwest::header::AUTHORIZATION;
 use serenity::{
     async_trait,
+    builder::CreateMessage,
+    gateway::ActivityData,
     model::{
-        application::interaction::Interaction,
+        application::Interaction,
         channel::Message,
         gateway::Ready,
         guild::{
@@ -20,7 +22,6 @@ use serenity::{
             GuildId,
             MessageId,
         },
-        prelude::Activity,
     },
     prelude::{
         Context,
@@ -81,12 +82,16 @@ impl EventHandler for Handler {
                 .guilds
                 .len(),
         );
-        let _ = ChannelId(448224720177856513)
-            .send_message(&ctx.http, |m| m.content(content))
+        let _ = ChannelId::new(448224720177856513)
+            .send_message(
+                &ctx.http,
+                CreateMessage::new().content(content),
+            )
             .await;
 
-        ctx.set_activity(Activity::listening("rockets launching"))
-            .await;
+        ctx.set_activity(Some(ActivityData::listening(
+            "rockets launching",
+        )));
 
         tokio::spawn(async move {
             loop {
@@ -134,18 +139,22 @@ impl EventHandler for Handler {
         slash_command_message(&ctx, &message).await;
     }
 
-    async fn guild_create(&self, ctx: Context, guild: Guild, is_new: bool) {
-        if is_new {
+    async fn guild_create(&self, ctx: Context, guild: Guild, is_new: Option<bool>) {
+        if is_new.unwrap_or(false) {
             if let Some(channel) = ctx
                 .cache
-                .guild_channel(755401788294955070)
+                .channel(755401788294955070)
+                .map(|c| c.id)
             {
                 let content = format!(
                     "Joined a new guild: {} ({})\nIt has {} members",
                     guild.name, guild.id, guild.member_count
                 );
                 let _ = channel
-                    .send_message(&ctx.http, |m| m.content(content))
+                    .send_message(
+                        &ctx.http,
+                        CreateMessage::new().content(content),
+                    )
                     .await;
             }
         }
@@ -155,14 +164,18 @@ impl EventHandler for Handler {
         if !incomplete.unavailable {
             if let Some(channel) = ctx
                 .cache
-                .guild_channel(755401788294955070)
+                .channel(755401788294955070)
+                .map(|c| c.id)
             {
                 let content = format!(
                     "Left the following guild: {}",
                     incomplete.id
                 );
                 let _ = channel
-                    .send_message(&ctx.http, |m| m.content(content))
+                    .send_message(
+                        &ctx.http,
+                        CreateMessage::new().content(content),
+                    )
                     .await;
             }
         }
@@ -179,7 +192,7 @@ impl EventHandler for Handler {
                 format!(
                     "An error happened in {}:\n```{:?}```",
                     interaction
-                        .application_command()
+                        .as_command()
                         .expect("not a command")
                         .data
                         .name,

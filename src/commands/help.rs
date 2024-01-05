@@ -26,8 +26,8 @@ use serenity::{
     },
     model::{
         application::{
-            component::ButtonStyle,
-            interaction::application_command::ApplicationCommandInteraction,
+            ButtonStyle,
+            CommandInteraction,
         },
         prelude::{
             Channel,
@@ -78,7 +78,7 @@ use crate::{
     }
 )]
 /// Get information about the commands within the bot
-async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn help(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     let ses = EmbedSession::new(ctx, interaction.clone(), false).await?;
 
     if let Some(command_name) = interaction
@@ -88,10 +88,7 @@ async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
         .find(|o| o.name == "command")
         .and_then(|o| {
             o.value
-                .clone()
-        })
-        .and_then(|v| {
-            v.as_str()
+                .as_str()
                 .map(ToOwned::to_owned)
         })
     {
@@ -112,33 +109,33 @@ async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
             return Ok(());
         };
 
-        interaction
-            .edit_original_interaction_response(
-                &ctx.http,
-                |i: &mut EditInteractionResponse| {
-                    let args = command
-                        .options
-                        .options
-                        .iter()
-                        .fold(String::new(), |acc, opt| {
-                            let name = if opt.required {
-                                format!("<{}> ", opt.name)
-                            } else {
-                                format!("[{}] ", opt.name)
-                            };
-                            acc + &name
-                        });
+        let args = command
+            .options
+            .options
+            .iter()
+            .fold(String::new(), |acc, opt| {
+                let name = if opt.required {
+                    format!("<{}> ", opt.name)
+                } else {
+                    format!("[{}] ", opt.name)
+                };
+                acc + &name
+            });
 
-                    i.embed(|e: &mut CreateEmbed| {
-                        e.author(|a: &mut CreateEmbedAuthor| {
-                            a.name(format!(
+        interaction
+            .edit_response(
+                &ctx.http,
+                EditInteractionResponse::new().embed(
+                    CreateEmbed::new()
+                        .author(
+                            CreateEmbedAuthor::new(format!(
                                 "Help /{}",
                                 command
                                     .options
                                     .name
                             ))
-                            .icon_url(DEFAULT_ICON)
-                        })
+                            .icon_url(DEFAULT_ICON),
+                        )
                         .color(DEFAULT_COLOR)
                         .description(format!(
                             "**Description:** {}{}",
@@ -150,9 +147,8 @@ async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
                             } else {
                                 format!("\n**Arguments:** {args}")
                             }
-                        ))
-                    })
-                },
+                        )),
+                ),
             )
             .await?;
         return Ok(());
@@ -166,15 +162,14 @@ async fn help(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
 fn help_menu(
     ses: Arc<RwLock<EmbedSession>>,
     ctx: Context,
-    interaction: ApplicationCommandInteraction,
+    interaction: CommandInteraction,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
+        let mut em = StatefulEmbed::new_with_embed(ses.clone(), CreateEmbed::new().color(DEFAULT_COLOR)
             .author(
-                |a: &mut CreateEmbedAuthor| a.name("Help Menu").icon_url(DEFAULT_ICON)
+                CreateEmbedAuthor::new("Help Menu").icon_url(DEFAULT_ICON)
             ).description("Use the buttons to get the descriptions for the commands in that group.\nCurrently available commands:")
-        });
+        );
 
         let grouped = ctx
             .data
@@ -198,7 +193,8 @@ fn help_menu(
                 |mut acc, (k, g)| {
                     acc.push((
                         k,
-                        g.into_iter().collect(),
+                        g.into_iter()
+                            .collect(),
                     ));
                     acc
                 },
@@ -249,7 +245,7 @@ fn help_menu(
                 let details_ses = ses.clone();
                 let details_ctx = ctx.clone();
                 let details_interaction = interaction.clone();
-                em.add_field(
+                em = em.add_field(
                     &group_name.clone(),
                     &cmds,
                     true,
@@ -293,7 +289,7 @@ fn help_menu(
                         .await;
                     let _ = lock
                         .interaction
-                        .delete_original_interaction_response(&lock.http)
+                        .delete_response(&lock.http)
                         .await;
                 })
             },
@@ -311,19 +307,21 @@ fn help_menu(
 fn command_details(
     ses: Arc<RwLock<EmbedSession>>,
     ctx: Context,
-    interaction: ApplicationCommandInteraction,
+    interaction: CommandInteraction,
     selected_group: Vec<&'static Command>,
     group_name: String,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name(format!("{} Commands", &group_name))
-                        .icon_url(DEFAULT_ICON)
-                })
-                .description("More Detailed information about the commands in this group")
-        });
+        let mut em = StatefulEmbed::new_with_embed(
+            ses.clone(),
+            CreateEmbed::new()
+                .color(DEFAULT_COLOR)
+                .author(
+                    CreateEmbedAuthor::new(format!("{} Commands", &group_name))
+                        .icon_url(DEFAULT_ICON),
+                )
+                .description("More Detailed information about the commands in this group"),
+        );
 
         for command in &selected_group {
             if allowed(&ctx, &[command], &interaction)
@@ -343,7 +341,8 @@ fn command_details(
                         acc + &name
                     });
 
-                em.inner
+                em.inner = em
+                    .inner
                     .field(
                         format!(
                             "/{}",
@@ -367,7 +366,7 @@ fn command_details(
             }
         }
 
-        em.add_field(
+        em = em.add_field(
             "Back",
             "Back to help menu",
             false,
@@ -396,7 +395,7 @@ fn command_details(
 async fn allowed(
     ctx: &Context,
     cmds: &[&'static Command],
-    interaction: &ApplicationCommandInteraction,
+    interaction: &CommandInteraction,
 ) -> Result<bool, CommandError> {
     if OWNERS.contains(
         &interaction
@@ -439,13 +438,10 @@ async fn allowed(
                 return Ok(false);
             };
 
-            if let Ok(perms) = guild.user_permissions_in(channel, member) {
-                if !(perms.contains(Permissions::ADMINISTRATOR)
-                    || perms.contains(Permissions::MANAGE_GUILD))
-                {
-                    return Ok(false);
-                }
-            } else {
+            let perms = guild.user_permissions_in(channel, member);
+            if !(perms.contains(Permissions::ADMINISTRATOR)
+                || perms.contains(Permissions::MANAGE_GUILD))
+            {
                 return Ok(false);
             }
         } else {
@@ -480,7 +476,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
     let res = db
         .collection::<Document>("general_settings")
         .find_one(
-            doc! { "guild": msg.guild_id.unwrap().0 as i64 },
+            doc! { "guild": msg.guild_id.unwrap().get() as i64 },
             None,
         )
         .await;

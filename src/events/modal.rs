@@ -1,23 +1,21 @@
-use std::{
-    collections::HashMap,
-    sync::Arc,
-};
+use std::sync::Arc;
 
 use futures::future::BoxFuture;
 use serenity::{
-    builder::CreateInputText,
+    builder::{
+        CreateActionRow,
+        CreateInputText,
+        CreateInteractionResponse,
+    },
     http::Http,
     model::{
-        application::interaction::{
+        application::{
+            ActionRowComponent,
+            InputTextStyle,
             Interaction,
-            InteractionResponseType,
             InteractionType,
         },
         id::UserId,
-        prelude::component::{
-            ActionRowComponent,
-            InputTextStyle,
-        },
     },
     prelude::{
         RwLock,
@@ -32,7 +30,10 @@ use super::interaction_handler::{
 };
 use crate::{
     models::caches::InteractionKey,
-    utils::interaction_builder::InteractionResponseBuilder,
+    utils::interaction_builder::{
+        InteractionBuilderKind,
+        InteractionResponseBuilder,
+    },
 };
 
 type Handler = Arc<Box<dyn Fn(Vec<(String, String)>) -> BoxFuture<'static, ()> + Send + Sync>>;
@@ -77,7 +78,7 @@ impl Modal {
                         .filter_map(|comp| {
                             match comp {
                                 ActionRowComponent::InputText(input) => {
-                                    Some((input.custom_id, input.value))
+                                    Some((input.custom_id, input.value?))
                                 },
                                 _ => None,
                             }
@@ -89,15 +90,16 @@ impl Modal {
             let handler_clone = handler.clone();
             Box::pin(async move {
                 let _ = data
-                    .create_interaction_response(http_clone, |c| {
-                        c.kind(InteractionResponseType::DeferredUpdateMessage)
-                    })
+                    .create_response(
+                        http_clone,
+                        CreateInteractionResponse::Acknowledge,
+                    )
                     .await;
 
                 handler_clone(values).await
             })
         })
-        .set_interaction_type(InteractionType::ModalSubmit);
+        .set_interaction_type(InteractionType::Modal);
 
         if let Some(user_id) = self.user_id {
             interaction_handler = interaction_handler.set_user(user_id);
@@ -124,25 +126,24 @@ impl Modal {
 
     async fn send(&self, http: impl AsRef<Http>, interaction: &Interaction) {
         let mut resp = InteractionResponseBuilder::default()
-            .kind(InteractionResponseType::Modal)
+            .kind(InteractionBuilderKind::Modal)
             .content(
                 self.title
                     .clone()
                     .unwrap_or_else(|| "Modal".to_owned()),
             )
-            .components(|comps| {
-                comps.create_action_row(|row| {
-                    for field in &self.fields {
-                        row.add_input_text(
+            .components(
+                self.fields
+                    .iter()
+                    .map(|field| {
+                        CreateActionRow::InputText(
                             field
                                 .inner
                                 .clone(),
-                        );
-                    }
-                    row
-                });
-                comps
-            });
+                        )
+                    })
+                    .collect(),
+            );
 
         if let Some(custom_id) = self
             .custom_id
@@ -227,43 +228,40 @@ pub struct Field {
 }
 
 impl Field {
-    pub fn new<T: ToString + ?Sized>(custom_id: &T, label: &T) -> Self {
-        let mut inner = CreateInputText(HashMap::new());
-        inner
-            .custom_id(custom_id.to_string())
-            .label(label.to_string());
-
+    pub fn new<T: ToString + ?Sized>(style: InputTextStyle, custom_id: &T, label: &T) -> Self {
         Self {
-            inner,
+            inner: CreateInputText::new(
+                style,
+                label.to_string(),
+                custom_id.to_string(),
+            ),
         }
     }
 
-    pub fn set_style(mut self, style: InputTextStyle) -> Self {
-        self.inner
-            .style(style);
-        self
-    }
-
     pub fn set_required(mut self) -> Self {
-        self.inner
+        self.inner = self
+            .inner
             .required(true);
         self
     }
 
-    pub fn set_min_length(mut self, min_length: u64) -> Self {
-        self.inner
+    pub fn set_min_length(mut self, min_length: u16) -> Self {
+        self.inner = self
+            .inner
             .min_length(min_length);
         self
     }
 
-    pub fn set_max_length(mut self, max_length: u64) -> Self {
-        self.inner
+    pub fn set_max_length(mut self, max_length: u16) -> Self {
+        self.inner = self
+            .inner
             .max_length(max_length);
         self
     }
 
     pub fn set_placeholder<T: ToString + ?Sized>(mut self, placeholder: &T) -> Self {
-        self.inner
+        self.inner = self
+            .inner
             .placeholder(placeholder.to_string());
         self
     }

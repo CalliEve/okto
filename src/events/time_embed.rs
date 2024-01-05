@@ -3,8 +3,9 @@ use std::sync::Arc;
 use chrono::Duration;
 use futures::future::BoxFuture;
 use serenity::{
+    builder::CreateEmbed,
     model::{
-        application::component::ButtonStyle,
+        application::ButtonStyle,
         channel::ReactionType,
     },
     prelude::RwLock,
@@ -48,21 +49,19 @@ impl TimeEmbed {
 
     fn show_embed(self) -> BoxFuture<'static, ()> {
         Box::pin(async move {
-            let mut embed = StatefulEmbed::new_with(
+            let mut embed = StatefulEmbed::new_with_embed(
                 self.session
                     .clone(),
-                |em| {
-                    em.description(
-                        if self.duration > Duration::zero() {
-                            format!(
-                                "Setting a reminder for {} before the moment of launch.",
-                                format_duration(self.duration, false)
-                            )
-                        } else {
-                            "Please start specifying a duration using the buttons below:".to_owned()
-                        },
-                    )
-                },
+                CreateEmbed::new().description(
+                    if self.duration > Duration::zero() {
+                        format!(
+                            "Setting a reminder for {} before the moment of launch.",
+                            format_duration(self.duration, false)
+                        )
+                    } else {
+                        "Please start specifying a duration using the buttons below:".to_owned()
+                    },
+                ),
             );
 
             let self_1_day = self.clone();

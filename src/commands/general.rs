@@ -14,15 +14,15 @@ use serenity::{
         CreateEmbedAuthor,
         CreateEmbedFooter,
         CreateInteractionResponse,
+        CreateInteractionResponseMessage,
         EditInteractionResponse,
     },
     framework::standard::CommandResult,
-    model::application::interaction::{
-        application_command::ApplicationCommandInteraction,
-        InteractionResponseType,
+    model::{
+        application::CommandInteraction,
+        Colour,
     },
     prelude::Context,
-    utils::Colour,
 };
 
 use crate::{
@@ -32,16 +32,15 @@ use crate::{
 
 #[command]
 /// Get the ping of the bot
-async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn ping(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     let start = Utc::now();
     interaction
-        .create_interaction_response(
+        .create_response(
             &ctx,
-            |c: &mut CreateInteractionResponse| {
-                c.interaction_response_data(|d| {
-                    d.embed(|e: &mut CreateEmbed| e.description("\u{1f3d3} pong..."))
-                })
-            },
+            CreateInteractionResponse::Message(
+                CreateInteractionResponseMessage::new()
+                    .embed(CreateEmbed::new().description("\u{1f3d3} pong...")),
+            ),
         )
         .await?;
     let end = Utc::now();
@@ -53,18 +52,17 @@ async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
             .created_at();
 
     interaction
-        .edit_original_interaction_response(
+        .edit_response(
             ctx,
-            |e: &mut EditInteractionResponse| {
-                e.embed(|e: &mut CreateEmbed| {
-                    e.title("Pong!")
-                        .description(format!(
-                            "\u{1f3d3}\nws delay: {}ms\napi ping: {}ms",
-                            ws_delay.num_milliseconds(),
-                            round_trip.num_milliseconds()
-                        ))
-                })
-            },
+            EditInteractionResponse::new().embed(
+                CreateEmbed::new()
+                    .title("Pong!")
+                    .description(format!(
+                        "\u{1f3d3}\nws delay: {}ms\napi ping: {}ms",
+                        ws_delay.num_milliseconds(),
+                        round_trip.num_milliseconds()
+                    )),
+            ),
         )
         .await?;
 
@@ -73,14 +71,13 @@ async fn ping(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
 
 #[command]
 /// Get some general information about the bot
-async fn info(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn info(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     let user_id = ctx
         .cache
         .current_user()
         .id;
-    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.embed(|e: &mut CreateEmbed| {
-            e.title("OKTO")
+    interaction.create_response(&ctx.http, CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().embed(CreateEmbed::new()
+            .title("OKTO")
             .description(
                 format!(
                     "This is a bot to show upcoming launches and provide additional information on everything to do with spaceflight\n\
@@ -100,27 +97,26 @@ async fn info(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Com
                     ctx.cache.guild_count(), user_id
                 )
             )
-            .author(|a: &mut CreateEmbedAuthor| {
-                a.name("Bot Information")
+            .author(CreateEmbedAuthor::new("Bot Information")
                 .icon_url(DEFAULT_ICON)
-            })
+            )
             .thumbnail(DEFAULT_ICON)
             .color(DEFAULT_COLOR)
-        })})
-    }).await?;
+    ))
+    ).await?;
     Ok(())
 }
 
 #[command]
 /// Have some helpful websites
-async fn websites(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn websites(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     interaction
-        .create_interaction_response(
+        .create_response(
             &ctx.http,
-            |m: &mut CreateInteractionResponse| {
-                m.interaction_response_data(|c| {
-                    c.embed(|e: &mut CreateEmbed| {
-                        e.field(
+            CreateInteractionResponse::Message(
+                CreateInteractionResponseMessage::new().embed(
+                    CreateEmbed::new()
+                        .field(
                             "General launch information:",
                             "**Spaceflight Insider:** http://www.spaceflightinsider.com/
                     **Rocket Watch:** https://rocket.watch/
@@ -139,14 +135,13 @@ async fn websites(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
                     **NASA:** https://www.nasa.gov/",
                             false,
                         )
-                        .author(|a: &mut CreateEmbedAuthor| {
-                            a.name("Some websites with more information")
-                                .icon_url(DEFAULT_ICON)
-                        })
-                        .color(DEFAULT_COLOR)
-                    })
-                })
-            },
+                        .author(
+                            CreateEmbedAuthor::new("Some websites with more information")
+                                .icon_url(DEFAULT_ICON),
+                        )
+                        .color(DEFAULT_COLOR),
+                ),
+            ),
         )
         .await?;
     Ok(())
@@ -166,10 +161,7 @@ struct PeopleInSpaceResp {
 
 #[command]
 /// Get a list of all humans currently in space
-async fn peopleinspace(
-    ctx: &Context,
-    interaction: &ApplicationCommandInteraction,
-) -> CommandResult {
+async fn peopleinspace(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     let pis: PeopleInSpaceResp = DEFAULT_CLIENT
         .get("http://api.open-notify.org/astros.json")
         .send()
@@ -190,12 +182,12 @@ async fn peopleinspace(
     }
 
     interaction
-        .create_interaction_response(
+        .create_response(
             &ctx.http,
-            |m: &mut CreateInteractionResponse| {
-                m.interaction_response_data(|c| {
-                    c.embed(|e: &mut CreateEmbed| {
-                        e.title(format!(
+            CreateInteractionResponse::Message(
+                CreateInteractionResponseMessage::new().embed(
+                    CreateEmbed::new()
+                        .title(format!(
                             "There are currently {} people in space",
                             pis.number
                         ))
@@ -205,15 +197,11 @@ async fn peopleinspace(
                                 .map(std::string::String::as_str)
                                 .collect::<String>(),
                         )
-                        .author(|a: &mut CreateEmbedAuthor| {
-                            a.name("People in space")
-                                .icon_url(DEFAULT_ICON)
-                        })
+                        .author(CreateEmbedAuthor::new("People in space").icon_url(DEFAULT_ICON))
                         .timestamp(Utc::now())
-                        .color(DEFAULT_COLOR)
-                    })
-                })
-            },
+                        .color(DEFAULT_COLOR),
+                ),
+            ),
         )
         .await?;
 
@@ -230,11 +218,12 @@ struct ISSLocation {
 
 #[command]
 /// Get the current location of the ISS
-async fn iss(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn iss(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     interaction
-        .create_interaction_response(&ctx.http, |c| {
-            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-        })
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Defer(CreateInteractionResponseMessage::new()),
+        )
         .await?;
 
     let iss_pos: ISSLocation = DEFAULT_CLIENT
@@ -271,20 +260,18 @@ async fn iss(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Comm
         GOOGLE_KEY.as_str()
     );
 
-    interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-        e.embed(|e: &mut CreateEmbed| {
-            e.description(format!(
+    interaction.edit_response(&ctx.http, EditInteractionResponse::new().embed(CreateEmbed::new().description(format!(
                 "**Latitude:** {0:.5}\n**Longitude:** {1:.5}\n**Altitude:** {2:.3}km\n**Velocity:** {3:.3}km/h",
                 iss_pos.latitude, iss_pos.longitude, iss_pos.altitude, iss_pos.velocity
             ))
-            .author(|a: &mut CreateEmbedAuthor| a.name("Position ISS").icon_url(DEFAULT_ICON))
+            .author(CreateEmbedAuthor::new("Position ISS").icon_url(DEFAULT_ICON))
             .image(detail_url)
             .thumbnail(global_url)
-            .footer(|f: &mut CreateEmbedFooter| f.text("source: wheretheiss.at"))
+            .footer(CreateEmbedFooter::new("source: wheretheiss.at"))
             .timestamp(Utc::now())
             .color(DEFAULT_COLOR)
-        })
-    })
+        )
+    )
     .await?;
 
     Ok(())
@@ -306,11 +293,12 @@ async fn iss(ctx: &Context, interaction: &ApplicationCommandInteraction) -> Comm
         }
 )]
 /// Get information about an exoplanet or star
-async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn exoplanet(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     interaction
-        .create_interaction_response(&ctx.http, |c| {
-            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-        })
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Defer(CreateInteractionResponseMessage::new()),
+        )
         .await?;
 
     let planet_name: Option<String> = interaction
@@ -320,10 +308,7 @@ async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -
         .find(|o| o.name == "exoplanet")
         .and_then(|o| {
             o.value
-                .clone()
-        })
-        .and_then(|v| {
-            v.as_str()
+                .as_str()
                 .map(ToOwned::to_owned)
         });
     let star_name = interaction
@@ -333,10 +318,7 @@ async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -
         .find(|o| o.name == "star")
         .and_then(|o| {
             o.value
-                .clone()
-        })
-        .and_then(|v| {
-            v.as_str()
+                .as_str()
                 .map(ToOwned::to_owned)
         });
 
@@ -384,9 +366,7 @@ async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -
             .await?
         },
         Some(_) if planet_name.is_some() || star_name.is_some() => {
-            interaction.edit_original_interaction_response(&ctx.http, |e: &mut EditInteractionResponse| {
-        e.embed(|e: &mut CreateEmbed| {
-                    e.description(
+            interaction.edit_response(&ctx.http, EditInteractionResponse::new().embed(CreateEmbed::new().description(
                         "The name you gave isn't in the NASA Exoplanet Archive <:kia:367734893796655113>
                         Please understand that NASA has a 'weird' way of naming the stars in their archive
                         Here is a link to the list of all the stars in the archive: \
@@ -394,8 +374,8 @@ async fn exoplanet(ctx: &Context, interaction: &ApplicationCommandInteraction) -
                     )
                     .title("planet/star not found!")
                     .color(Colour::RED)
-                })
-            }).await?;
+                )
+            ).await?;
             return Ok(());
         },
         Some(p) => {
@@ -461,7 +441,7 @@ impl StarInfo {
 
 async fn get_star(
     ctx: &Context,
-    interaction: &ApplicationCommandInteraction,
+    interaction: &CommandInteraction,
     star_name: &str,
 ) -> CommandResult {
     let mut params = HashMap::new();
@@ -495,14 +475,11 @@ async fn get_star(
     let star = &res[0];
 
     interaction
-        .edit_original_interaction_response(
+        .edit_response(
             &ctx.http,
-            |e: &mut EditInteractionResponse| {
-                e.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Star Information")
-                            .icon_url(DEFAULT_ICON)
-                    })
+            EditInteractionResponse::new().embed(
+                CreateEmbed::new()
+                    .author(CreateEmbedAuthor::new("Star Information").icon_url(DEFAULT_ICON))
                     .color(DEFAULT_COLOR)
                     .title(star_name)
                     .timestamp(Utc::now())
@@ -551,9 +528,8 @@ async fn get_star(
                                 ),
                         ),
                         false,
-                    )
-                })
-            },
+                    ),
+            ),
         )
         .await?;
 
@@ -582,7 +558,7 @@ struct PlanetInfo {
 
 async fn get_planet(
     ctx: &Context,
-    interaction: &ApplicationCommandInteraction,
+    interaction: &CommandInteraction,
     planet_name: &str,
 ) -> CommandResult {
     let mut params = HashMap::new();
@@ -606,14 +582,11 @@ async fn get_planet(
         .ok_or("No planet like this found")?;
 
     interaction
-        .edit_original_interaction_response(
+        .edit_response(
             &ctx.http,
-            |e: &mut EditInteractionResponse| {
-                e.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Planet Information")
-                            .icon_url(DEFAULT_ICON)
-                    })
+            EditInteractionResponse::new().embed(
+                CreateEmbed::new()
+                    .author(CreateEmbedAuthor::new("Planet Information").icon_url(DEFAULT_ICON))
                     .color(DEFAULT_COLOR)
                     .title(planet_name)
                     .timestamp(Utc::now())
@@ -735,9 +708,8 @@ async fn get_planet(
                                 .unwrap_or_else(|| "unknown".to_owned()),
                         ),
                         false,
-                    )
-                })
-            },
+                    ),
+            ),
         )
         .await?;
 

@@ -4,20 +4,19 @@ use chrono::Utc;
 use itertools::Itertools;
 use okto_framework::macros::command;
 use serenity::{
+    all::InteractionResponseFlags,
     builder::{
         CreateEmbed,
         CreateEmbedAuthor,
         CreateEmbedFooter,
         CreateInteractionResponse,
+        CreateInteractionResponseMessage,
     },
     framework::standard::CommandResult,
     model::{
         application::{
-            component::ButtonStyle,
-            interaction::{
-                application_command::ApplicationCommandInteraction,
-                MessageFlags,
-            },
+            ButtonStyle,
+            CommandInteraction,
         },
         channel::ReactionType,
         id::EmojiId,
@@ -68,7 +67,7 @@ use crate::{
         required: false
     }
 )]
-async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn nextlaunch(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx
             .data
@@ -90,20 +89,16 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
 
     if launches.is_empty() {
         interaction
-            .create_interaction_response(
+            .create_response(
                 &ctx.http,
-                |m: &mut CreateInteractionResponse| {
-                    m.interaction_response_data(|c| {
-                        c.flags(MessageFlags::EPHEMERAL)
-                            .embed(|e: &mut CreateEmbed| {
-                                default_embed(
-                                e,
-                                "I found no upcoming launches that have been marked as certain :(",
-                                false,
-                            )
-                            })
-                    })
-                },
+                CreateInteractionResponse::Message(
+                    CreateInteractionResponseMessage::new()
+                        .flags(InteractionResponseFlags::EPHEMERAL)
+                        .embed(default_embed(
+                            "I found no upcoming launches that have been marked as certain :(",
+                            false,
+                        )),
+                ),
             )
             .await?;
         return Ok(());
@@ -113,13 +108,10 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
         Ok(ls) => ls,
         Err(err) => {
             interaction
-                .create_interaction_response(
+                .create_response(
                     &ctx.http,
-                    |m: &mut CreateInteractionResponse| {
-                        m.interaction_response_data(|c| {
-                            c.flags(MessageFlags::EPHEMERAL)
-                                .embed(|e: &mut CreateEmbed| default_embed(
-                                    e,
+                    CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().flags(InteractionResponseFlags::EPHEMERAL)
+                                .embed(default_embed(
                                     &if let FilterErrorType::Invalid = err {
                                         "This is not a valid filter, please take a look at those listed in `/filtersinfo`".to_owned()
                                     } else {
@@ -127,8 +119,8 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
                                     },
                                     false
                                 ))
-                        })
-                    },
+                        )
+                    ,
                 )
                 .await?;
             return Ok(());
@@ -137,72 +129,64 @@ async fn nextlaunch(ctx: &Context, interaction: &ApplicationCommandInteraction) 
 
     let launch = &launches[0];
 
+    let mut window = format_duration(launch.launch_window, true);
+    if window.is_empty() {
+        window.push_str("instantaneous")
+    }
+
+    let mut em = CreateEmbed::new()
+        .color(DEFAULT_COLOR)
+        .author(CreateEmbedAuthor::new("Next Launch").icon_url(DEFAULT_ICON))
+        .timestamp(
+            Timestamp::from_unix_timestamp(
+                launch
+                    .net
+                    .timestamp(),
+            )
+            .expect("Invalid timestamp"),
+        )
+        .title(format!(
+            "{}\nStatus: {}",
+            &launch.vehicle,
+            launch
+                .status
+                .as_str()
+        ))
+        .description(format!(
+            "**Payload:** {}\n\
+**NET:** <t:{}>\n\
+**Provider:** {}\n\
+**Location:** {}\n\
+**Launch Window:** {}",
+            &launch.payload,
+            launch
+                .net
+                .timestamp(),
+            &launch.lsp,
+            &launch.location,
+            window
+        ))
+        .field(
+            "Time until launch:",
+            format_duration(
+                launch.net - Utc::now().naive_utc(),
+                true,
+            ),
+            false,
+        );
+
+    if let Some(img) = &launch.rocket_img {
+        em = em.thumbnail(img);
+    }
+
+    if let Some(links) = format_links(&launch.vid_urls) {
+        em = em.field("links", links, false);
+    }
+
     interaction
-        .create_interaction_response(
+        .create_response(
             &ctx.http,
-            |m: &mut CreateInteractionResponse| {
-                m.interaction_response_data(|c| {
-                    c.embed(|e: &mut CreateEmbed| {
-                        let mut window = format_duration(launch.launch_window, true);
-                        if window.is_empty() {
-                            window.push_str("instantaneous")
-                        }
-
-                        e.color(DEFAULT_COLOR)
-                            .author(|a: &mut CreateEmbedAuthor| {
-                                a.name("Next Launch")
-                                    .icon_url(DEFAULT_ICON)
-                            })
-                            .timestamp(
-                                Timestamp::from_unix_timestamp(
-                                    launch
-                                        .net
-                                        .timestamp(),
-                                )
-                                .expect("Invalid timestamp"),
-                            )
-                            .title(format!(
-                                "{}\nStatus: {}",
-                                &launch.vehicle,
-                                launch
-                                    .status
-                                    .as_str()
-                            ))
-                            .description(format!(
-                                "**Payload:** {}\n\
-                        **NET:** <t:{}>\n\
-                        **Provider:** {}\n\
-                        **Location:** {}\n\
-                        **Launch Window:** {}",
-                                &launch.payload,
-                                launch
-                                    .net
-                                    .timestamp(),
-                                &launch.lsp,
-                                &launch.location,
-                                window
-                            ))
-                            .field(
-                                "Time until launch:",
-                                format_duration(
-                                    launch.net - Utc::now().naive_utc(),
-                                    true,
-                                ),
-                                false,
-                            );
-
-                        if let Some(img) = &launch.rocket_img {
-                            e.thumbnail(img);
-                        }
-
-                        if let Some(links) = format_links(&launch.vid_urls) {
-                            e.field("links", links, false);
-                        }
-
-                        e
-                    })
-                })
-            },
+            CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().embed(em)),
         )
         .await?;
 
@@ -234,56 +218,36 @@ fn list_page(
             launches.len()
         };
 
-        let mut em = StatefulEmbed::new_with(
+        let mut em = StatefulEmbed::new_with_embed(
             session.clone(),
-            |e: &mut CreateEmbed| {
-                e.color(DEFAULT_COLOR)
-                    .author(|a: &mut CreateEmbedAuthor| {
-                        a.icon_url(DEFAULT_ICON)
-                            .name("List of upcoming launches")
-                    })
+            CreateEmbed::new().color(DEFAULT_COLOR)
+                    .author(CreateEmbedAuthor::new("List of upcoming launches").icon_url(DEFAULT_ICON))
                     .timestamp(Utc::now())
-                    .footer(|f: &mut CreateEmbedFooter| {
-                        f.text(format!("Source: {LAUNCH_LIBRARY_URL}",))
-                    });
-
-                if all {
-                    e.description("
+                    .footer(CreateEmbedFooter::new(format!("Source: {LAUNCH_LIBRARY_URL}",))
+                    ).description(if all {"
             This list shows the upcoming launches (max 100), both certain and uncertain.\n\
             Use the arrow reactions to get to other pages and the green reaction to filter on only the launches that are certain.
-            ");
-                } else {
-                    e.description("
+            "} else {"
             This list shows upcoming launches that are certain.\n\
             Use the arrow reactions to get to other pages and the red reaction to get all the launches.
-            ");
-                }
-
-                #[allow(clippy::needless_range_loop)]
-                for launch in &launches[min..top] {
-                    e.field(
-                        format!(
-                            "{}: {} - {}",
-                            launch.id,
-                            &launch.vehicle,
-                            launch
-                                .status
-                                .as_str()
-                        ),
-                        format!(
-                            "**Payload:** {}\n**NET:** <t:{}>\n**Provider:** {}\n**Location:** {}",
-                            &launch.payload,
-                            launch
-                                .net
-                                .timestamp(),
-                            &launch.lsp,
-                            &launch.location
-                        ),
-                        false,
-                    );
-                }
-                e
-            },
+            "}).fields((&launches[min..top]).iter().map(|launch| (format!(
+                "{}: {} - {}",
+                launch.id,
+                &launch.vehicle,
+                launch
+                    .status
+                    .as_str()
+            ),
+            format!(
+                "**Payload:** {}\n**NET:** <t:{}>\n**Provider:** {}\n**Location:** {}",
+                &launch.payload,
+                launch
+                    .net
+                    .timestamp(),
+                &launch.lsp,
+                &launch.location
+            ),
+            false,)))
         );
 
         if page_num > 0 {
@@ -440,7 +404,7 @@ fn list_page(
                         .await;
                     let _ = lock
                         .interaction
-                        .delete_original_interaction_response(&lock.http)
+                        .delete_response(&lock.http)
                         .await;
                 })
             },
@@ -469,7 +433,7 @@ fn list_page(
         description: "Rocket name to filter the launches on"
     }
 )]
-async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn listlaunches(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     let mut launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx
             .data
@@ -494,13 +458,10 @@ async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction
         Ok(ls) => ls,
         Err(err) => {
             interaction
-                .create_interaction_response(
+                .create_response(
                     &ctx.http,
-                    |m: &mut CreateInteractionResponse| {
-                        m.interaction_response_data(|c| {
-                            c.flags(MessageFlags::EPHEMERAL)
-                            .embed(|e: &mut CreateEmbed| default_embed(
-                                e,
+                    CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().flags(InteractionResponseFlags::EPHEMERAL)
+                            .embed(default_embed(
                                 &if let FilterErrorType::Invalid = err {
                                     "This is not a valid filter, please take a look at those listed in `/filtersinfo`".to_owned()
                                 } else {
@@ -508,8 +469,8 @@ async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction
                                 },
                                 false
                             ))
-                        })
-                    },
+                        )
+                    ,
                 )
                 .await?;
             return Ok(());
@@ -531,7 +492,7 @@ async fn listlaunches(ctx: &Context, interaction: &ApplicationCommandInteraction
     description: "The number of the launch to get more information about",
     required: true,
 })]
-async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn launchinfo(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     let launches: Vec<LaunchData> = {
         if let Some(launch_cache) = ctx
             .data
@@ -559,10 +520,7 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
         .find(|o| o.name == "launch")
         .and_then(|o| {
             o.value
-                .clone()
-        })
-        .and_then(|v| {
-            v.as_i64()
+                .as_i64()
                 .map(|i| {
                     let o: i32 = i
                         .try_into()
@@ -577,85 +535,102 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
         .find(|l| l.id == launch_id)
     else {
         interaction
-            .create_interaction_response(
+            .create_response(
                 &ctx.http,
-                |m: &mut CreateInteractionResponse| {
-                    m.interaction_response_data(|c| {
-                        c.flags(MessageFlags::EPHEMERAL)
-                            .embed(|e: &mut CreateEmbed| {
-                                default_embed(
-                                    e,
-                                    "No launch was found with that ID :(",
-                                    false,
-                                )
-                            })
-                    })
-                },
+                CreateInteractionResponse::Message(
+                    CreateInteractionResponseMessage::new()
+                        .flags(InteractionResponseFlags::EPHEMERAL)
+                        .embed(default_embed(
+                            "No launch was found with that ID :(",
+                            false,
+                        )),
+                ),
             )
             .await?;
         return Ok(());
     };
+    let mut window = format_duration(launch.launch_window, true);
+    if window.is_empty() {
+        window.push_str("instantaneous")
+    }
 
-    interaction.create_interaction_response(&ctx.http, |m: &mut CreateInteractionResponse| {
-            m.interaction_response_data(|c| {c.embed(|e: &mut CreateEmbed| {
-                let mut window = format_duration(launch.launch_window, true);
-                if window.is_empty() {
-                    window.push_str("instantaneous")
-                }
-
-                e.color(DEFAULT_COLOR)
-                    .author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Detailed info").icon_url(DEFAULT_ICON)
-                    })
-                    .timestamp(Timestamp::from_unix_timestamp(launch
-                        .net.timestamp()
-                    ).expect("Invalid timestamp"))
-                    .title(format!(
-                        "{}\nStatus: {}",
-                        &launch.vehicle,
-                        launch.status.as_str()
-                    ))
-                    .field("NET:", format!("<t:{}>", launch.net.timestamp()), false)
-                    .field(
-                        "General information",
-                        format!(
-                            "**Payload:** {}\n\
+    let mut em = CreateEmbed::new()
+        .color(DEFAULT_COLOR)
+        .author(CreateEmbedAuthor::new("Detailed info").icon_url(DEFAULT_ICON))
+        .timestamp(
+            Timestamp::from_unix_timestamp(
+                launch
+                    .net
+                    .timestamp(),
+            )
+            .expect("Invalid timestamp"),
+        )
+        .title(format!(
+            "{}\nStatus: {}",
+            &launch.vehicle,
+            launch
+                .status
+                .as_str()
+        ))
+        .field(
+            "NET:",
+            format!(
+                "<t:{}>",
+                launch
+                    .net
+                    .timestamp()
+            ),
+            false,
+        )
+        .field(
+            "General information",
+            format!(
+                "**Payload:** {}\n\
                             **Provider:** {}\n\
                             **Location:** {}\n\
                             **Launch Window:** {}",
-                            &launch.payload,
-                            &launch.lsp,
-                            &launch.location,
-                            window
-                        ),
-                        false,
-                    );
+                &launch.payload, &launch.lsp, &launch.location, window
+            ),
+            false,
+        );
 
-                if launch.net > Utc::now().naive_utc() {
-                    e.field(
-                        "Time until launch:",
-                        format_duration(launch.net - Utc::now().naive_utc(), true),
-                        false,
-                    );
-                }
+    if launch.net > Utc::now().naive_utc() {
+        em = em.field(
+            "Time until launch:",
+            format_duration(
+                launch.net - Utc::now().naive_utc(),
+                true,
+            ),
+            false,
+        );
+    }
 
-                let description = if launch.mission_description.len() > 1024 {
-                    format!("{} ...\nlength is too long for discord", cutoff_on_last_dot(&launch.mission_description, 980))
-                } else {
-                    launch.mission_description.clone()
-                };
+    let description = if launch
+        .mission_description
+        .len()
+        > 1024
+    {
+        format!(
+            "{} ...\nlength is too long for discord",
+            cutoff_on_last_dot(&launch.mission_description, 980)
+        )
+    } else {
+        launch
+            .mission_description
+            .clone()
+    };
 
-                e.field("Desciption:", description, false);
+    em = em.field("Desciption:", description, false);
 
-                if let Some(img) = &launch.rocket_img {
-                    e.thumbnail(img);
-                }
+    if let Some(img) = &launch.rocket_img {
+        em = em.thumbnail(img);
+    }
 
-                if let Some(links) = format_links(&launch.vid_urls) {
-                    e.field("vids", links, false);
-                }
+    if let Some(links) = format_links(&launch.vid_urls) {
+        em = em.field("vids", links, false);
+    }
 
-                e.field(
+    em = em.field(
                     "links",
                     &format!(
                         "**My Source:** [The Space Devs]({0})\n\
@@ -664,16 +639,21 @@ async fn launchinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) 
                         LAUNCH_LIBRARY_URL, launch.id,
                     ),
                     false,
-                )
-            })})
-        }).await?;
+                );
+
+    interaction
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().embed(em)),
+        )
+        .await?;
 
     Ok(())
 }
 
 #[command]
 /// Get a list of all things you can filter launches on
-async fn filtersinfo(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn filtersinfo(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     let sorted_agencies = LAUNCH_AGENCIES
         .iter()
         .sorted()
@@ -682,48 +662,45 @@ async fn filtersinfo(ctx: &Context, interaction: &ApplicationCommandInteraction)
     let half_agency_count = sorted_agencies.len() / 2;
 
     interaction
-        .create_interaction_response(
+        .create_response(
             &ctx.http,
-            |m: &mut CreateInteractionResponse| {
-                m.interaction_response_data(|c| {
-                    c.embed(|e: &mut CreateEmbed| {
-                        e.color(DEFAULT_COLOR)
-                            .author(|a: &mut CreateEmbedAuthor| {
-                                a.name("Filters Info")
-                                    .icon_url(DEFAULT_ICON)
-                            })
-                            .timestamp(Utc::now())
-                            .title("The following filters can be used to filter launches:")
-                            .field(
-                                "Vehicles:",
-                                LAUNCH_VEHICLES
-                                    .keys()
-                                    .sorted()
-                                    .join(", "),
-                                false,
-                            )
-                            .field(
-                                "Launch Service Provider abbreviations with their full names (part 1):",
-                                sorted_agencies
-                                    .iter()
-                                    .take(half_agency_count)
-                                    .map(|(k, v)| format!("**{k}**: {v}"))
-                                    .collect::<Vec<String>>()
-                                    .join("\n"),
-                                false,
-                            ).field(
-                                "Launch Service Provider abbreviations with their full names (part 2):",
-                                sorted_agencies
-                                    .iter()
-                                    .skip(half_agency_count)
-                                    .map(|(k, v)| format!("**{k}**: {v}"))
-                                    .collect::<Vec<String>>()
-                                    .join("\n"),
-                                false,
-                            )
-                    })
-                })
-            },
+            CreateInteractionResponse::Message(
+                CreateInteractionResponseMessage::new().embed(
+                    CreateEmbed::new()
+                        .color(DEFAULT_COLOR)
+                        .author(CreateEmbedAuthor::new("Filters Info").icon_url(DEFAULT_ICON))
+                        .timestamp(Utc::now())
+                        .title("The following filters can be used to filter launches:")
+                        .field(
+                            "Vehicles:",
+                            LAUNCH_VEHICLES
+                                .keys()
+                                .sorted()
+                                .join(", "),
+                            false,
+                        )
+                        .field(
+                            "Launch Service Provider abbreviations with their full names (part 1):",
+                            sorted_agencies
+                                .iter()
+                                .take(half_agency_count)
+                                .map(|(k, v)| format!("**{k}**: {v}"))
+                                .collect::<Vec<String>>()
+                                .join("\n"),
+                            false,
+                        )
+                        .field(
+                            "Launch Service Provider abbreviations with their full names (part 2):",
+                            sorted_agencies
+                                .iter()
+                                .skip(half_agency_count)
+                                .map(|(k, v)| format!("**{k}**: {v}"))
+                                .collect::<Vec<String>>()
+                                .join("\n"),
+                            false,
+                        ),
+                ),
+            ),
         )
         .await?;
 

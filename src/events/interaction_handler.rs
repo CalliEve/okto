@@ -8,15 +8,14 @@ use futures::{
     },
 };
 use serenity::{
+    all::ComponentInteractionDataKind,
     client::Context,
     http::Http,
     model::{
         application::{
-            component::ComponentType,
-            interaction::{
-                Interaction,
-                InteractionType,
-            },
+            ComponentType,
+            Interaction,
+            InteractionType,
         },
         id::{
             ChannelId,
@@ -68,7 +67,7 @@ impl InteractionHandler {
         }
 
         match interaction {
-            Interaction::MessageComponent(component) => {
+            Interaction::Component(component) => {
                 if let Some(user) = self.user {
                     if component
                         .user
@@ -86,11 +85,12 @@ impl InteractionHandler {
                 }
 
                 if let Some(component_type) = self.component_type {
-                    if component_type
-                        != component
+                    if !component_type_equals_kind(
+                        component_type,
+                        &component
                             .data
-                            .component_type
-                    {
+                            .kind,
+                    ) {
                         return false;
                     }
                 }
@@ -105,7 +105,7 @@ impl InteractionHandler {
                     }
                 }
             },
-            Interaction::ModalSubmit(modal) => {
+            Interaction::Modal(modal) => {
                 if let Some(user) = self.user {
                     if modal
                         .user
@@ -206,7 +206,7 @@ impl InteractionHandlerBuilder {
             .is_none()
         {
             self.inner
-                .interaction_type = Some(InteractionType::MessageComponent)
+                .interaction_type = Some(InteractionType::Component)
         }
 
         self
@@ -229,7 +229,7 @@ impl InteractionHandlerBuilder {
                 .inner
                 .interaction_type
             {
-                if interaction_type != InteractionType::MessageComponent {
+                if interaction_type != InteractionType::Component {
                     return Err(Error::Other("If the component type has been set, the interaction type must be MessageComponent"));
                 }
             }
@@ -240,19 +240,21 @@ impl InteractionHandlerBuilder {
 }
 
 pub async fn handle_interaction(ctx: &Context, interaction: &Interaction) {
-    let all = {if let Some(waiting) = ctx
-        .data
-        .read()
-        .await
-        .get::<InteractionKey>()
-    {
-        waiting
-            .0
-            .clone()
-    } else {
-        eprintln!("No waiting interaction cache");
-        return;
-    }};
+    let all = {
+        if let Some(waiting) = ctx
+            .data
+            .read()
+            .await
+            .get::<InteractionKey>()
+        {
+            waiting
+                .0
+                .clone()
+        } else {
+            eprintln!("No waiting interaction cache");
+            return;
+        }
+    };
 
     let handled = stream::iter(all.iter())
         .filter(|h| {
@@ -290,49 +292,71 @@ pub async fn respond_to_interaction(
 ) {
     if update {
         match interaction {
-            Interaction::MessageComponent(comp) => {
-                comp.edit_original_interaction_response(http, |i| {
-                    *i = resp.into();
-                    i
-                })
-                .await
+            Interaction::Component(comp) => {
+                comp.edit_response(http.as_ref(), resp.into())
+                    .await
             },
-            Interaction::ApplicationCommand(cmd) => {
-                cmd.edit_original_interaction_response(http, |i| {
-                    *i = resp.into();
-                    i
-                })
-                .await
+            Interaction::Command(cmd) => {
+                cmd.edit_response(http.as_ref(), resp.into())
+                    .await
             },
             _ => panic!("Unsupported interaction for sending an update response to"),
         }
         .map(|_| ())
     } else {
         match interaction {
-            Interaction::MessageComponent(comp) => {
-                comp.create_interaction_response(http, |i| {
-                    *i = resp.into();
-                    i
-                })
+            Interaction::Component(comp) => {
+                comp.create_response(
+                    http.as_ref(),
+                    resp.try_into()
+                        .expect("created invalid interaction response"),
+                )
                 .await
             },
-            Interaction::ModalSubmit(modal) => {
+            Interaction::Modal(modal) => {
                 modal
-                    .create_interaction_response(http, |i| {
-                        *i = resp.into();
-                        i
-                    })
+                    .create_response(
+                        http.as_ref(),
+                        resp.try_into()
+                            .expect("created invalid interaction response"),
+                    )
                     .await
             },
-            Interaction::ApplicationCommand(cmd) => {
-                cmd.create_interaction_response(http, |i| {
-                    *i = resp.into();
-                    i
-                })
+            Interaction::Command(cmd) => {
+                cmd.create_response(
+                    http.as_ref(),
+                    resp.try_into()
+                        .expect("created invalid interaction response"),
+                )
                 .await
             },
             _ => panic!("Unsupported interaction for sending a response to"),
         }
     }
     .expect("Interaction response failed");
+}
+
+fn component_type_equals_kind(
+    component_type: ComponentType,
+    component_kind: &ComponentInteractionDataKind,
+) -> bool {
+    match component_kind {
+        ComponentInteractionDataKind::Button => component_type == ComponentType::Button,
+        ComponentInteractionDataKind::StringSelect {
+            ..
+        } => component_type == ComponentType::StringSelect,
+        ComponentInteractionDataKind::UserSelect {
+            ..
+        } => component_type == ComponentType::UserSelect,
+        ComponentInteractionDataKind::ChannelSelect {
+            ..
+        } => component_type == ComponentType::ChannelSelect,
+        ComponentInteractionDataKind::RoleSelect {
+            ..
+        } => component_type == ComponentType::RoleSelect,
+        ComponentInteractionDataKind::MentionableSelect {
+            ..
+        } => component_type == ComponentType::MentionableSelect,
+        ComponentInteractionDataKind::Unknown(_) => false,
+    }
 }

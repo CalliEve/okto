@@ -27,9 +27,9 @@ use serenity::{
     model::{
         channel::Message,
         id::ChannelId,
+        Colour,
         Timestamp,
     },
-    utils::Colour,
     Error as SerenityError,
 };
 
@@ -85,7 +85,7 @@ fn get_mentions(settings: &GuildSettings) -> Option<String> {
         .mentions
         .iter()
         .fold(String::new(), |acc, mention| {
-            acc + &format!(" <@&{}>", mention.as_u64())
+            acc + &format!(" <@&{}>", mention.get())
         });
 
     (settings.mention_others && !mentions.is_empty()).then_some(mentions)
@@ -109,7 +109,7 @@ async fn send_user_notification<'r>(
                     .ok()
             }
         })
-        .map(|channel| send_message(http, channel.id, None, embed))
+        .map(|channel| send_message(http, channel.id, None, embed.clone()))
         .collect::<FuturesUnordered<_>>()
         .await
         .collect::<Vec<_>>()
@@ -132,7 +132,7 @@ async fn send_guild_notification<'r>(
             )
         })
         .map(|(c, settings)| (c, get_mentions(&settings)))
-        .map(|(channel, mentions)| send_message(http, channel, mentions, embed))
+        .map(|(channel, mentions)| send_message(http, channel, mentions, embed.clone()))
         .collect::<FuturesUnordered<_>>()
         .await
         .collect::<Vec<_>>()
@@ -165,29 +165,21 @@ async fn send_message<'r>(
     http: &'r Arc<Http>,
     channel: ChannelId,
     mentions_opt: Option<String>,
-    embed: &'r CreateEmbed,
+    embed: CreateEmbed,
 ) -> Result<Message, SerenityError> {
+    let mut message = CreateMessage::new().embed(embed);
+
+    if let Some(mentions) = mentions_opt {
+        message = message.content(mentions);
+    }
+
     channel
-        .send_message(http, |m: &mut CreateMessage| {
-            m.embed(|e: &mut CreateEmbed| {
-                *e = embed.clone();
-                e
-            });
-
-            if let Some(mentions) = mentions_opt {
-                m.content(mentions);
-            }
-
-            m
-        })
+        .send_message(http, message)
         .await
 }
 
 fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
-    let mut e = CreateEmbed::default();
-
     default_embed(
-        &mut e,
         &format!(
             "The launch of {} on a **{}** is now scheduled for <t:{}>{} instead of <t:{}>{}",
             new.payload,
@@ -208,17 +200,14 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
             },
         ),
         false,
-    );
-
-    e.timestamp(
+    )
+    .timestamp(
         Timestamp::from_unix_timestamp(
             new.net
                 .timestamp(),
         )
         .expect("Invalid timestamp"),
-    );
-
-    e
+    )
 }
 
 pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData) {
@@ -244,10 +233,7 @@ pub async fn notify_outcome(http: Arc<Http>, db: Database, finished: LaunchData)
 }
 
 fn outcome_embed(finished: &LaunchData) -> CreateEmbed {
-    let mut e = CreateEmbed::default();
-
     default_embed(
-        &mut e,
         &format!(
             "The launch of {} on a {} has completed with a status of **{}**!",
             &finished.payload,
@@ -257,9 +243,8 @@ fn outcome_embed(finished: &LaunchData) -> CreateEmbed {
                 .as_str()
         ),
         true,
-    );
-
-    e.color(
+    )
+    .color(
         if matches!(finished.status, LaunchStatus::Success) {
             Colour::FOOYOO
         } else if matches!(
@@ -270,7 +255,5 @@ fn outcome_embed(finished: &LaunchData) -> CreateEmbed {
         } else {
             Colour::RED
         },
-    );
-
-    e
+    )
 }

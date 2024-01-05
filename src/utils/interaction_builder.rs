@@ -1,19 +1,27 @@
 use serenity::{
     builder::{
-        CreateComponents,
+        CreateActionRow,
         CreateEmbed,
         CreateInteractionResponse,
+        CreateInteractionResponseMessage,
+        CreateModal,
         EditInteractionResponse,
     },
-    model::application::interaction::InteractionResponseType,
+    framework::standard::CommandError,
 };
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InteractionBuilderKind {
+    Message,
+    Modal,
+}
 
 pub struct InteractionResponseBuilder {
     custom_id: Option<String>,
     content: Option<String>,
     embed: Option<CreateEmbed>,
-    components: Option<CreateComponents>,
-    kind: InteractionResponseType,
+    components: Vec<CreateActionRow>,
+    kind: InteractionBuilderKind,
     ephemeral: bool,
 }
 
@@ -23,8 +31,8 @@ impl InteractionResponseBuilder {
             custom_id: None,
             content: None,
             embed: None,
-            components: None,
-            kind: InteractionResponseType::ChannelMessageWithSource,
+            components: Vec::new(),
+            kind: InteractionBuilderKind::Message,
             ephemeral: false,
         }
     }
@@ -40,7 +48,7 @@ impl InteractionResponseBuilder {
     }
 
     #[allow(dead_code)]
-    pub fn kind(mut self, t: InteractionResponseType) -> Self {
+    pub fn kind(mut self, t: InteractionBuilderKind) -> Self {
         self.kind = t;
         self
     }
@@ -53,13 +61,8 @@ impl InteractionResponseBuilder {
         self
     }
 
-    pub fn components(
-        mut self,
-        f: impl FnOnce(&mut CreateComponents) -> &mut CreateComponents,
-    ) -> Self {
-        let mut comps = CreateComponents::default();
-        f(&mut comps);
-        self.components = Some(comps);
+    pub fn components(mut self, rows: Vec<CreateActionRow>) -> Self {
+        self.components = rows;
         self
     }
 
@@ -68,60 +71,70 @@ impl InteractionResponseBuilder {
         self
     }
 
-    pub fn into_create_response(self) -> CreateInteractionResponse<'static> {
-        let mut resp = CreateInteractionResponse::default();
+    pub fn into_create_response(self) -> Result<CreateInteractionResponse, CommandError> {
+        if self.kind == InteractionBuilderKind::Modal {
+            let id = if let Some(id) = self.custom_id {
+                Ok(id)
+            } else {
+                Err(CommandError::from(
+                    "A custom id is required for a modal",
+                ))
+            }?;
+            let title = if let Some(content) = self.content {
+                Ok(content)
+            } else {
+                Err(CommandError::from(
+                    "content is required in a modal",
+                ))
+            }?;
+            return Ok(CreateInteractionResponse::Modal(
+                CreateModal::new(id, title).components(self.components),
+            ));
+        }
 
-        resp.kind(self.kind)
-            .interaction_response_data(|d| {
-                if let Some(embed) = self.embed {
-                    d.set_embed(embed);
-                }
+        let mut resp = CreateInteractionResponseMessage::new();
+        if let Some(embed) = self.embed {
+            resp = resp.embed(embed);
+        }
 
-                if self.kind == InteractionResponseType::Modal {
-                    if let Some(content) = self.content {
-                        d.title(content);
-                    }
-                } else if let Some(content) = self.content {
-                    d.content(content);
-                }
+        if let Some(content) = self.content {
+            resp = resp.content(content);
+        }
+        if !self
+            .components
+            .is_empty()
+        {
+            resp = resp.components(self.components);
+        }
+        resp = resp.ephemeral(self.ephemeral);
 
-                if let Some(components) = self.components {
-                    d.components(|c| {
-                        *c = components;
-                        c
-                    });
-                }
-                if let Some(id) = self.custom_id {
-                    d.custom_id(id);
-                }
-                d.ephemeral(self.ephemeral)
-            });
-
-        resp
+        Ok(CreateInteractionResponse::Message(resp))
     }
 
     pub fn into_edit_response(self) -> EditInteractionResponse {
-        let mut resp = EditInteractionResponse::default();
+        let mut resp = EditInteractionResponse::new();
 
         if let Some(embed) = self.embed {
-            resp.set_embed(embed);
+            resp = resp.embed(embed);
         }
         if let Some(content) = self.content {
-            resp.content(content);
+            resp = resp.content(content);
         }
-        if let Some(components) = self.components {
-            resp.components(|c| {
-                *c = components;
-                c
-            });
+        if !self
+            .components
+            .is_empty()
+        {
+            resp = resp.components(self.components);
         }
 
         resp
     }
 }
 
-impl From<InteractionResponseBuilder> for CreateInteractionResponse<'_> {
-    fn from(other: InteractionResponseBuilder) -> CreateInteractionResponse<'static> {
+impl TryFrom<InteractionResponseBuilder> for CreateInteractionResponse {
+    type Error = CommandError;
+
+    fn try_from(other: InteractionResponseBuilder) -> Result<Self, Self::Error> {
         other.into_create_response()
     }
 }
