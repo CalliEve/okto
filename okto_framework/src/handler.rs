@@ -4,7 +4,7 @@ use serenity::{
     client::Context,
     framework::standard::CommandResult,
     http::Http,
-    model::application::interaction::Interaction,
+    model::application::Interaction,
     Result,
 };
 
@@ -72,7 +72,7 @@ impl Handler {
         ctx: &Context,
         interaction: &Interaction,
     ) -> CommandResult {
-        if let Interaction::ApplicationCommand(cmd_interaction) = interaction {
+        if let Interaction::Command(cmd_interaction) = interaction {
             if let Some(cmd) = self
                 .cmds
                 .get(
@@ -102,7 +102,7 @@ impl Handler {
         )?;
 
         http.as_ref()
-            .create_global_application_commands(&body)
+            .create_global_commands(&body)
             .await?;
 
         Ok(())

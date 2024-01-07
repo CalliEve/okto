@@ -38,6 +38,8 @@ use models::caches::{
 };
 use mongodb::Client as MongoClient;
 use serenity::{
+    all::ApplicationId,
+    builder::CreateMessage,
     client::Client,
     framework::standard::StandardFramework,
     model::gateway::GatewayIntents,
@@ -54,10 +56,10 @@ use utils::{
 #[tokio::main]
 async fn main() {
     console_subscriber::init();
-    
+
     // Login with a bot token from the environment
     let token = env::var("DISCORD_TOKEN").expect("no bot token");
-    let application_id: u64 = env::var("DISCORD_ID")
+    let application_id: ApplicationId = env::var("DISCORD_ID")
         .expect("no application id")
         .parse()
         .expect("provided application id is not an integer");
@@ -79,9 +81,11 @@ async fn main() {
             if let Err(why) = error {
                 let _ = msg
                     .channel_id
-                    .send_message(&ctx.http, |m| {
-                        m.content("Oh no, an error happened.\nPlease try again at a later time")
-                    })
+                    .send_message(
+                        &ctx.http,
+                        CreateMessage::new()
+                            .content("Oh no, an error happened.\nPlease try again at a later time"),
+                    )
                     .await;
                 error_log(
                     &ctx.http,
@@ -148,9 +152,7 @@ async fn main() {
         .await
         .expect("Error creating client");
 
-    let (http_clone,
-        launches_cache_clone,
-        db_clone,) = if let Some(launches_cache) = client
+    let (http_clone, launches_cache_clone, db_clone) = if let Some(launches_cache) = client
         .data
         .read()
         .await
@@ -164,13 +166,14 @@ async fn main() {
         {
             let launches_cache_clone = launches_cache.clone();
             let http_clone = client
-                .cache_and_http
                 .http
                 .clone();
             let db_clone = db.clone();
-            (http_clone,
+            (
+                http_clone,
                 launches_cache_clone,
-                db_clone)
+                db_clone,
+            )
         } else {
             panic!("No database key or connection")
         }

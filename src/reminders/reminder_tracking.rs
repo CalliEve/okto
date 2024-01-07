@@ -17,6 +17,7 @@ use futures::{
         StreamExt,
     },
 };
+use itertools::Itertools;
 use mongodb::{
     bson::{
         self,
@@ -32,7 +33,7 @@ use serenity::{
         CreateEmbedAuthor,
         CreateMessage,
     },
-    http::client::Http,
+    http::Http,
     model::Timestamp,
     prelude::RwLock,
 };
@@ -177,22 +178,20 @@ async fn execute_reminder(
                 .mentions
                 .iter()
                 .fold(String::new(), |acc, mention| {
-                    acc + &format!(" <@&{}>", mention.as_u64())
+                    acc + &format!(" <@&{}>", mention.get())
                 });
 
             (c, mentions)
         })
         .map(|(c, mentions)| {
+            let mut m = CreateMessage::new().embed(reminder_embed(&l, difference));
+
+            if !mentions.is_empty() {
+                m = m.content(mentions);
+            }
+
             c.channel
-                .send_message(&http, |m: &mut CreateMessage| {
-                    m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference));
-
-                    if !mentions.is_empty() {
-                        m.content(mentions);
-                    }
-
-                    m
-                })
+                .send_message(&http, m)
         })
         .collect::<FuturesUnordered<_>>()
         .await
@@ -203,7 +202,7 @@ async fn execute_reminder(
         .filter_map(|u| {
             let db = db.clone();
             async move {
-                get_user_settings(&db, u.0)
+                get_user_settings(&db, u.get())
                     .await
                     .ok()
                     .map(|s| (u, s))
@@ -219,9 +218,10 @@ async fn execute_reminder(
             }
         })
         .map(|c| {
-            c.id.send_message(&http, |m: &mut CreateMessage| {
-                m.embed(|e: &mut CreateEmbed| reminder_embed(e, &l, difference))
-            })
+            c.id.send_message(
+                &http,
+                CreateMessage::new().embed(reminder_embed(&l, difference)),
+            )
         })
         .collect::<FuturesUnordered<_>>()
         .await
@@ -229,28 +229,24 @@ async fn execute_reminder(
         .await;
 }
 
-fn reminder_embed<'a>(
-    e: &'a mut CreateEmbed,
-    l: &LaunchData,
-    diff: Duration,
-) -> &'a mut CreateEmbed {
+fn reminder_embed(l: &LaunchData, diff: Duration) -> CreateEmbed {
     let live = if let Some(link) = l
-        .vid_urls
-        .first()
+        .vid_urls.iter().find_or_first(|v| v.url.contains("youtube.com"))
     {
         format!("**Live at:** {}", format_url(&link.url))
     } else {
         String::new()
     };
 
-    e.color(DEFAULT_COLOR)
-        .author(|a: &mut CreateEmbedAuthor| {
-            a.name(format!(
+    let mut e = CreateEmbed::new()
+        .color(DEFAULT_COLOR)
+        .author(
+            CreateEmbedAuthor::new(format!(
                 "{} till launch",
                 &format_duration(diff, false)
             ))
-            .icon_url(DEFAULT_ICON)
-        })
+            .icon_url(DEFAULT_ICON),
+        )
         .description(format!(
             "**Payload:** {}\n\
             **Vehicle:** {}\n\
@@ -271,7 +267,7 @@ fn reminder_embed<'a>(
         );
 
     if let Some(img) = &l.rocket_img {
-        e.thumbnail(img);
+        e = e.thumbnail(img);
     }
 
     e

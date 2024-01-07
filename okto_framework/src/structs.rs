@@ -7,7 +7,7 @@ use serenity::{
     client::Context,
     framework::standard::CommandResult,
     model::{
-        application::interaction::application_command::ApplicationCommandInteraction,
+        application::CommandInteraction,
         channel::ChannelType,
         Permissions,
     },
@@ -22,7 +22,7 @@ pub struct Command {
 
 pub type CommandFunc = for<'fut> fn(
     &'fut Context,
-    &'fut ApplicationCommandInteraction,
+    &'fut CommandInteraction,
 ) -> BoxFuture<'fut, CommandResult>;
 
 #[derive(Debug, Clone)]

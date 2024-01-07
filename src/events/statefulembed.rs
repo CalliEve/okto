@@ -6,22 +6,19 @@ use serenity::{
     builder::{
         CreateActionRow,
         CreateButton,
-        CreateComponents,
         CreateEmbed,
+        CreateInteractionResponse,
+        CreateInteractionResponseMessage,
         EditInteractionResponse,
     },
     cache::Cache,
     http::Http,
     model::{
         application::{
-            component::ButtonStyle,
-            interaction::{
-                application_command::ApplicationCommandInteraction,
-                message_component::MessageComponentInteraction,
-                Interaction,
-                InteractionResponseType,
-                MessageFlags,
-            },
+            ButtonStyle,
+            CommandInteraction,
+            ComponentInteraction,
+            Interaction,
         },
         channel::ReactionType,
         id::{
@@ -42,7 +39,7 @@ use crate::{
     utils::error_log,
 };
 
-type Handler = dyn Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync;
+type Handler = dyn Fn(ComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync;
 
 #[derive(Debug, Clone)]
 pub struct ButtonType {
@@ -75,13 +72,7 @@ impl StatefulEmbed {
         }
     }
 
-    pub fn new_with<F>(session: Arc<RwLock<EmbedSession>>, f: F) -> Self
-    where
-        F: FnOnce(&mut CreateEmbed) -> &mut CreateEmbed,
-    {
-        let mut em = CreateEmbed::default();
-        f(&mut em);
-
+    pub fn new_with_embed(session: Arc<RwLock<EmbedSession>>, em: CreateEmbed) -> Self {
         Self {
             inner: em,
             session,
@@ -90,22 +81,23 @@ impl StatefulEmbed {
     }
 
     pub fn add_field<F>(
-        &mut self,
+        mut self,
         name: &str,
         value: &str,
         inline: bool,
         button: &ButtonType,
         handler: F,
-    ) -> &mut Self
+    ) -> Self
     where
-        F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        F: Fn(ComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         let full_name = if let Some(e) = &button.emoji {
             format!("{e} {name}")
         } else {
             name.to_owned()
         };
-        self.inner
+        self.inner = self
+            .inner
             .field(full_name, value, inline);
         self.options
             .push(StatefulOption {
@@ -119,7 +111,7 @@ impl StatefulEmbed {
 
     pub fn add_option<F>(&mut self, button: &ButtonType, handler: F) -> &mut Self
     where
-        F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        F: Fn(ComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         self.options
             .push(StatefulOption {
@@ -133,7 +125,7 @@ impl StatefulEmbed {
 
     pub fn add_non_update_option<F>(&mut self, button: &ButtonType, handler: F) -> &mut Self
     where
-        F: Fn(MessageComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
+        F: Fn(ComponentInteraction) -> BoxFuture<'static, ()> + Send + Sync + 'static,
     {
         self.options
             .push(StatefulOption {
@@ -145,47 +137,44 @@ impl StatefulEmbed {
         self
     }
 
-    fn get_components(&self) -> CreateComponents {
-        let mut components = CreateComponents::default();
+    fn get_components(&self) -> Vec<CreateActionRow> {
+        let mut components = Vec::new();
 
         for option_batch in &self
             .options
             .iter()
             .chunks(5)
         {
-            components.create_action_row(|r: &mut CreateActionRow| {
-                for option in option_batch {
-                    r.create_button(|b: &mut CreateButton| {
-                        b.style(
-                            option
-                                .button
-                                .style,
-                        )
-                        .label(
-                            option
-                                .button
-                                .label
-                                .to_string(),
-                        )
-                        .custom_id(
-                            option
-                                .button
-                                .label
-                                .to_string(),
-                        );
+            let mut row = Vec::new();
+            for option in option_batch {
+                let mut button = CreateButton::new(
+                    option
+                        .button
+                        .label
+                        .to_string(),
+                )
+                .style(
+                    option
+                        .button
+                        .style,
+                )
+                .label(
+                    option
+                        .button
+                        .label
+                        .to_string(),
+                );
 
-                        if let Some(e) = &option
-                            .button
-                            .emoji
-                        {
-                            b.emoji(e.clone());
-                        }
-
-                        b
-                    });
+                if let Some(e) = &option
+                    .button
+                    .emoji
+                {
+                    button = button.emoji(e.clone());
                 }
-                r
-            });
+
+                row.push(button);
+            }
+            components.push(CreateActionRow::Buttons(row))
         }
 
         components
@@ -204,29 +193,21 @@ impl StatefulEmbed {
 
             session
                 .interaction
-                .edit_original_interaction_response(
+                .edit_response(
                     &http,
-                    |e: &mut EditInteractionResponse| {
-                        e.components(|c: &mut CreateComponents| {
-                            *c = self.get_components();
-
-                            c
-                        })
+                    EditInteractionResponse::new()
+                        .components(self.get_components())
                         .content("")
-                        .embed(|e: &mut CreateEmbed| {
-                            e.0 = self
-                                .inner
-                                .0
-                                .clone();
-                            e
-                        })
-                    },
+                        .embed(
+                            self.inner
+                                .clone(),
+                        ),
                 )
                 .await?;
 
             let msg = session
                 .interaction
-                .get_interaction_response(&http)
+                .get_response(&http)
                 .await?;
 
             if let Some(embeds) = session
@@ -250,7 +231,7 @@ impl StatefulEmbed {
 #[derive(Clone)]
 pub struct EmbedSession {
     pub current_state: Option<StatefulEmbed>,
-    pub interaction: ApplicationCommandInteraction,
+    pub interaction: CommandInteraction,
     pub http: Arc<Http>,
     pub data: Arc<RwLock<TypeMap>>,
     pub cache: Arc<Cache>,
@@ -260,19 +241,20 @@ pub struct EmbedSession {
 impl EmbedSession {
     pub async fn new(
         ctx: &Context,
-        interaction: ApplicationCommandInteraction,
+        interaction: CommandInteraction,
         ephemeral: bool,
     ) -> Result<Arc<RwLock<Self>>> {
         interaction
-            .create_interaction_response(&ctx.http, |c| {
-                c.kind(InteractionResponseType::DeferredChannelMessageWithSource);
-
+            .create_response(
+                &ctx.http,
                 if ephemeral {
-                    c.interaction_response_data(|d| d.flags(MessageFlags::EPHEMERAL));
-                }
-
-                c
-            })
+                    CreateInteractionResponse::Defer(
+                        CreateInteractionResponseMessage::new().ephemeral(true),
+                    )
+                } else {
+                    CreateInteractionResponse::Defer(CreateInteractionResponseMessage::new())
+                },
+            )
             .await?;
 
         Ok(Arc::new(RwLock::new(Self {
@@ -299,7 +281,7 @@ impl EmbedSession {
 }
 
 pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
-    if let Interaction::MessageComponent(interaction) = full_interaction {
+    if let Interaction::Component(interaction) = full_interaction {
         let handler = {
             let embed_session = ctx
                 .data
@@ -358,9 +340,10 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
 
         if let Some((handler, true)) = handler {
             let r = interaction
-                .create_interaction_response(&ctx.http, |c| {
-                    c.kind(InteractionResponseType::DeferredUpdateMessage)
-                })
+                .create_response(
+                    &ctx.http,
+                    CreateInteractionResponse::Acknowledge,
+                )
                 .await;
 
             if let Err(e) = r {

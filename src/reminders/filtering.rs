@@ -92,7 +92,7 @@ mod tests {
     fn no_filters() {
         let launches = create_fake_launches();
         let settings = GuildSettings {
-            guild: GuildId(429307670730637312),
+            guild: GuildId::new(429307670730637312),
             filters: vec![],
             allow_filters: vec![],
             payload_filters: vec![],
@@ -100,7 +100,7 @@ mod tests {
             scrub_notifications: true,
             outcome_notifications: true,
             mention_others: true,
-            notifications_channel: Some(ChannelId(429307774804033536)),
+            notifications_channel: Some(ChannelId::new(429307774804033536)),
         };
 
         assert!(passes_filters(&settings, &launches[0]));
@@ -111,7 +111,7 @@ mod tests {
     fn block_filters() {
         let launches = create_fake_launches();
         let settings = GuildSettings {
-            guild: GuildId(429307670730637312),
+            guild: GuildId::new(429307670730637312),
             filters: vec!["ula".into()],
             allow_filters: vec![],
             payload_filters: vec![],
@@ -119,7 +119,7 @@ mod tests {
             scrub_notifications: true,
             outcome_notifications: true,
             mention_others: true,
-            notifications_channel: Some(ChannelId(429307774804033536)),
+            notifications_channel: Some(ChannelId::new(429307774804033536)),
         };
 
         assert!(passes_filters(&settings, &launches[0]));
@@ -130,7 +130,7 @@ mod tests {
     fn allow_filters() {
         let launches = create_fake_launches();
         let settings = GuildSettings {
-            guild: GuildId(429307670730637312),
+            guild: GuildId::new(429307670730637312),
             filters: vec![],
             allow_filters: vec!["ula".into()],
             payload_filters: vec![],
@@ -138,7 +138,7 @@ mod tests {
             scrub_notifications: true,
             outcome_notifications: true,
             mention_others: true,
-            notifications_channel: Some(ChannelId(429307774804033536)),
+            notifications_channel: Some(ChannelId::new(429307774804033536)),
         };
 
         assert!(!passes_filters(&settings, &launches[0]));
@@ -149,7 +149,7 @@ mod tests {
     fn payload_filters() {
         let launches = create_fake_launches();
         let settings = GuildSettings {
-            guild: GuildId(429307670730637312),
+            guild: GuildId::new(429307670730637312),
             filters: vec![],
             allow_filters: vec![],
             payload_filters: vec![Regex::new(r"(?im)\bstarlink\b").unwrap()],
@@ -157,7 +157,7 @@ mod tests {
             scrub_notifications: true,
             outcome_notifications: true,
             mention_others: true,
-            notifications_channel: Some(ChannelId(429307774804033536)),
+            notifications_channel: Some(ChannelId::new(429307774804033536)),
         };
 
         assert!(!passes_filters(&settings, &launches[0]));

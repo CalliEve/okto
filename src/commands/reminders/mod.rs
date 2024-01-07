@@ -12,21 +12,17 @@ use pages::{
     reminders_page,
 };
 use serenity::{
+    all::InteractionResponseFlags,
     builder::{
         CreateEmbed,
         CreateEmbedAuthor,
         CreateInteractionResponse,
+        CreateInteractionResponseMessage,
     },
     framework::standard::CommandResult,
     model::application::{
-        component::ButtonStyle,
-        interaction::{
-            application_command::{
-                ApplicationCommandInteraction,
-                CommandDataOptionValue,
-            },
-            MessageFlags,
-        },
+        ButtonStyle,
+        CommandInteraction,
     },
     prelude::{
         Context,
@@ -58,29 +54,22 @@ use crate::{
     }
 )]
 /// Manage the reminders and notifications posted by the bot in this server
-async fn notifychannel(
-    ctx: &Context,
-    interaction: &ApplicationCommandInteraction,
-) -> CommandResult {
+async fn notifychannel(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     if interaction
         .guild_id
         .is_none()
     {
         interaction
-            .create_interaction_response(
+            .create_response(
                 &ctx.http,
-                |m: &mut CreateInteractionResponse| {
-                    m.interaction_response_data(|c| {
-                        c.flags(MessageFlags::EPHEMERAL)
-                            .embed(|e: &mut CreateEmbed| {
-                                default_embed(
-                                    e,
-                                    "This command can only be ran in a server.",
-                                    false,
-                                )
-                            })
-                    })
-                },
+                CreateInteractionResponse::Message(
+                    CreateInteractionResponseMessage::new()
+                        .flags(InteractionResponseFlags::EPHEMERAL)
+                        .embed(default_embed(
+                            "This command can only be ran in a server.",
+                            false,
+                        )),
+                ),
             )
             .await?;
 
@@ -94,19 +83,12 @@ async fn notifychannel(
         .find(|o| o.name == "target_channel")
     {
         channel_id
-            .resolved
-            .clone()
-            .and_then(|v| {
-                if let CommandDataOptionValue::Channel(c) = v {
-                    Some(c.id)
-                } else {
-                    None
-                }
-            })
+            .value
+            .as_channel_id()
             .ok_or("Invalid argument given")?
-            .to_channel_cached(ctx)
+            .to_channel_cached(&ctx.cache)
             .map_or(interaction.channel_id, |channel| {
-                channel.id()
+                channel.id
             })
     } else {
         interaction.channel_id
@@ -130,7 +112,7 @@ async fn notifychannel(
 
 #[command]
 /// Setup reminders and notifications from the bot in your DMs
-async fn notifyme(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn notifyme(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     let ses = EmbedSession::new(ctx, interaction.clone(), true).await?;
 
     main_menu(
@@ -151,14 +133,20 @@ async fn notifyme(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
 fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
         let name = if let ID::Channel((channel, _)) = id {
+            let lock = ses
+                .read()
+                .await;
             format!(
                 "Launch Reminder Settings for {}",
                 channel
-                    .name(
-                        &ses.read()
-                            .await
+                    .name((
+                        &lock
                             .cache
-                    )
+                            .clone(),
+                        lock.http
+                            .clone()
+                            .as_ref()
+                    ))
                     .await
                     .map_or("guild channel".to_string(), |n| {
                         "#".to_owned() + &n
@@ -168,17 +156,16 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
             "Launch Reminder Settings for your DMs".to_owned()
         };
 
-        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
+        let mut em = StatefulEmbed::new_with_embed(
+            ses.clone(),
+            CreateEmbed::new()
+                .color(DEFAULT_COLOR)
                 .timestamp(Utc::now())
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name(name)
-                        .icon_url(DEFAULT_ICON)
-                })
-        });
+                .author(CreateEmbedAuthor::new(name).icon_url(DEFAULT_ICON)),
+        );
 
         let reminder_ses = ses.clone();
-        em.add_field(
+        em = em.add_field(
             "Reminders",
             "Set at which times you want to get launch reminders",
             false,
@@ -194,7 +181,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
         );
 
         let filters_ses = ses.clone();
-        em.add_field(
+        em = em.add_field(
             "Filters",
             "Set filters for which launches you do and don't want to see",
             false,
@@ -211,7 +198,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
 
         if id.guild_specific() {
             let mention_ses = ses.clone();
-            em.add_field(
+            em = em.add_field(
                 "Mentions",
                 "Set which roles should be mentioned when posting reminders",
                 false,
@@ -228,7 +215,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
         }
 
         let other_ses = ses.clone();
-        em.add_field(
+        em = em.add_field(
             "Other",
             "Enable other notifications",
             false,
@@ -245,7 +232,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
 
         if id.guild_specific() {
             let close_ses = ses.clone();
-            em.add_field(
+            em = em.add_field(
                 "Close",
                 "Close this menu",
                 false,
@@ -258,7 +245,7 @@ fn main_menu(ses: Arc<RwLock<EmbedSession>>, id: ID) -> futures::future::BoxFutu
                             .await;
                         let r = lock
                             .interaction
-                            .delete_original_interaction_response(&lock.http)
+                            .delete_response(&lock.http)
                             .await;
                         if let Err(e) = r {
                             dbg!(e);

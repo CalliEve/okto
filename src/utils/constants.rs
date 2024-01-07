@@ -72,12 +72,12 @@ lazy_static! {
     pub static ref PROGRADE: ReactionType = ReactionType::Custom {
         animated: false,
         name: Some("Prograde".to_owned()),
-        id: EmojiId(433308892584476674),
+        id: EmojiId::new(433308892584476674),
     };
     pub static ref RETROGRADE: ReactionType = ReactionType::Custom {
         animated: false,
         name: Some("Retrograde".to_owned()),
-        id: EmojiId(433308874343448576),
+        id: EmojiId::new(433308874343448576),
     };
     pub static ref MENTION_REGEX: Regex = Regex::new("<[@#][!&]?([0-9]{17,20})>").unwrap();
     pub static ref ID_REGEX: Regex = Regex::new("^[0-9]{17,20}$").unwrap();
@@ -315,7 +315,15 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
     res.insert("long-march11", vec!["Long March 11"]);
     res.insert("firefly", vec!["Firefly Alpha"]);
     res.insert("starship", vec!["Starship"]);
-    res.insert("vulcan", vec!["Vulcan","Vulcan VC6L","Vulcan VC4L", "Vulcan VC2S"]);
+    res.insert(
+        "vulcan",
+        vec![
+            "Vulcan",
+            "Vulcan VC6L",
+            "Vulcan VC4L",
+            "Vulcan VC2S",
+        ],
+    );
 
     res
 }

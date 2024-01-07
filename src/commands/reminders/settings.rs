@@ -46,7 +46,7 @@ pub async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResu
     match id {
         ID::User(user_id) => Ok(bson::from_bson(
             db.collection::<Document>("reminders")
-                .find(doc! { "users": { "$in": [user_id.0 as i64] } }, None).await?
+                .find(doc! { "users": { "$in": [user_id.get() as i64] } }, None).await?
                 .collect::<Vec<Result<_, _>>>()
                 .await
                 .into_iter()
@@ -56,7 +56,7 @@ pub async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResu
         ID::Channel((channel_id, guild_id)) => Ok(bson::from_bson(
             db.collection::<Document>("reminders")
                 .find(
-                    doc! { "channels": { "$in": [{ "channel": channel_id.0 as i64, "guild": guild_id.0 as i64 }] } },
+                    doc! { "channels": { "$in": [{ "channel": channel_id.get() as i64, "guild": guild_id.get() as i64 }] } },
                     None,
                 ).await?
                 .collect::<Vec<Result<_, _>>>()
@@ -82,7 +82,7 @@ pub async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dur
                     doc! {"minutes": duration.num_minutes()},
                     doc! {
                         "$addToSet": {
-                            "users": user_id.0 as i64
+                            "users": user_id.get() as i64
                         }
                     },
                     Some(
@@ -96,7 +96,7 @@ pub async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dur
                 doc! {"minutes": duration.num_minutes()},
                 doc! {
                     "$addToSet": {
-                        "channels": { "channel": channel_id.0 as i64, "guild": guild_id.0 as i64 }
+                        "channels": { "channel": channel_id.get() as i64, "guild": guild_id.get() as i64 }
                     }
                 },
                 Some(
@@ -128,7 +128,7 @@ pub async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: 
                     doc! {"minutes": duration.num_minutes()},
                     doc! {
                         "$pull": {
-                            "users": user_id.0 as i64
+                            "users": user_id.get() as i64
                         }
                     },
                     None,
@@ -138,7 +138,7 @@ pub async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: 
                 doc! {"minutes": duration.num_minutes()},
                 doc! {
                     "$pull": {
-                        "channels": { "channel": channel_id.0 as i64, "guild": guild_id.0 as i64 }
+                        "channels": { "channel": channel_id.get() as i64, "guild": guild_id.get() as i64 }
                     }
                 },
                 None,
@@ -171,7 +171,7 @@ pub async fn add_filter(
     let result = match id {
         ID::User(user_id) => {
             collection.update_one(
-                doc! {"user": user_id.0 as i64},
+                doc! {"user": user_id.get() as i64},
                 doc! {
                     "$addToSet": {
                         filter_type: filter
@@ -186,7 +186,7 @@ pub async fn add_filter(
         },
         ID::Channel((_, guild_id)) => {
             collection.update_one(
-                doc! {"guild": guild_id.0 as i64},
+                doc! {"guild": guild_id.get() as i64},
                 doc! {
                     "$addToSet": {
                         filter_type: filter
@@ -227,7 +227,7 @@ pub async fn remove_filter(
     let result = match id {
         ID::User(user_id) => {
             collection.update_one(
-                doc! {"user": user_id.0 as i64},
+                doc! {"user": user_id.get() as i64},
                 doc! {
                     "$pull": {
                         filter_type: filter
@@ -238,7 +238,7 @@ pub async fn remove_filter(
         },
         ID::Channel((_, guild_id)) => {
             collection.update_one(
-                doc! {"guild": guild_id.0 as i64},
+                doc! {"guild": guild_id.get() as i64},
                 doc! {
                     "$pull": {
                         filter_type: filter
@@ -270,7 +270,7 @@ pub async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &s
     let result = match id {
         ID::User(user_id) => {
             collection.update_one(
-                doc! {"user": user_id.0 as i64},
+                doc! {"user": user_id.get() as i64},
                 doc! {
                     "$set": {
                         setting: val
@@ -285,7 +285,7 @@ pub async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &s
         },
         ID::Channel((_, guild_id)) => {
             collection.update_one(
-                doc! {"guild": guild_id.0 as i64},
+                doc! {"guild": guild_id.get() as i64},
                 doc! {
                     "$set": {
                         setting: val
@@ -317,10 +317,10 @@ pub async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, c
     let result = match id {
         ID::Channel((_, guild_id)) => {
             collection.update_one(
-                doc! {"guild": guild_id.0 as i64},
+                doc! {"guild": guild_id.get() as i64},
                 doc! {
                     "$set": {
-                        "notifications_channel": channel.0 as i64
+                        "notifications_channel": channel.get() as i64
                     }
                 },
                 Some(
@@ -352,10 +352,10 @@ pub async fn add_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) 
     let result = db
         .collection::<Document>("guild_settings")
         .update_one(
-            doc! {"guild": guild_id.0 as i64},
+            doc! {"guild": guild_id.get() as i64},
             doc! {
                 "$addToSet": {
-                    "mentions": role.0 as i64
+                    "mentions": role.get() as i64
                 }
             },
             Some(
@@ -384,10 +384,10 @@ pub async fn remove_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleI
     let result = db
         .collection::<Document>("guild_settings")
         .update_one(
-            doc! {"guild": guild_id.0 as i64},
+            doc! {"guild": guild_id.get() as i64},
             doc! {
                 "$pull": {
-                    "mentions": role.0 as i64
+                    "mentions": role.get() as i64
                 }
             },
             None,

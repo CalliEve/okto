@@ -16,13 +16,12 @@ use serenity::{
         CreateEmbed,
         CreateEmbedAuthor,
         CreateEmbedFooter,
+        CreateInteractionResponse,
+        CreateInteractionResponseMessage,
         EditInteractionResponse,
     },
     framework::standard::CommandResult,
-    model::application::interaction::{
-        application_command::ApplicationCommandInteraction,
-        InteractionResponseType,
-    },
+    model::application::CommandInteraction,
     prelude::Context,
 };
 
@@ -56,11 +55,12 @@ use crate::{
         ]
     }
 )]
-async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn earthpic(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     interaction
-        .create_interaction_response(&ctx.http, |c| {
-            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-        })
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Defer(CreateInteractionResponseMessage::new()),
+        )
         .await?;
     let image_type = interaction
         .data
@@ -69,10 +69,7 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         .find(|o| o.name == "image-version")
         .and_then(|o| {
             o.value
-                .clone()
-        })
-        .and_then(|v| {
-            v.as_str()
+                .as_str()
                 .map(ToOwned::to_owned)
         })
         .unwrap_or_else(|| "natural".to_owned());
@@ -95,24 +92,20 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         .ok_or("No image received from the EPIC image api")?;
 
     interaction
-        .edit_original_interaction_response(
+        .edit_response(
             &ctx.http,
-            |e: &mut EditInteractionResponse| {
-                e.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Earth Picture")
+            EditInteractionResponse::new().embed(CreateEmbed::new().author(CreateEmbedAuthor::new("Earth Picture")
                             .icon_url(DEFAULT_ICON)
-                    })
+                    )
                     .color(DEFAULT_COLOR)
                     .description(format!(
                     "Most recent {image_type} image from the EPIC camera onboard the NOAA DSCOVR spacecraft"
                 ))
-                    .footer(|f: &mut CreateEmbedFooter| {
-                        f.text(format!(
+                    .footer(CreateEmbedFooter::new(format!(
                             "Taken on: {}\nRun this command again with the {} argument!",
                             epic_image_data.date, opposite
                         ))
-                    })
+                    )
                     .image(format!(
                         "https://epic.gsfc.nasa.gov/archive/{}/{}/png/{}.png",
                         image_type,
@@ -120,8 +113,7 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
                         epic_image_data.image
                     ))
                     .timestamp(Utc::now())
-                })
-            },
+                )
         )
         .await?;
 
@@ -138,11 +130,12 @@ async fn earthpic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         required: false,
     }
 )]
-async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn spacepic(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     interaction
-        .create_interaction_response(&ctx.http, |c| {
-            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-        })
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Defer(CreateInteractionResponseMessage::new()),
+        )
         .await?;
 
     let now = Utc::now() - Duration::hours(6);
@@ -154,9 +147,8 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         .find(|o| o.name == "today")
         .and_then(|o| {
             o.value
-                .clone()
+                .as_bool()
         })
-        .and_then(|v| v.as_bool())
         .unwrap_or(false)
     {
         now
@@ -192,13 +184,11 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
 
     if let Err(err) = apod_image_req {
         interaction
-            .edit_original_interaction_response(
+            .edit_response(
                 &ctx.http,
-                |e: &mut EditInteractionResponse| {
-                    e.embed(|e: &mut CreateEmbed| {
-                        default_embed(e, "The APOD API returned an error so I couldn't get an image :c\nUnfortunately this happens quite often as that api is pretty unstable.", false)
-                    })
-                }
+                EditInteractionResponse::new().embed(
+                    default_embed("The APOD API returned an error so I couldn't get an image :c\nUnfortunately this happens quite often as that api is pretty unstable.", false)
+                )
             ).await?;
 
         error_log(
@@ -234,27 +224,23 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
         );
 
     interaction
-        .edit_original_interaction_response(
+        .edit_response(
             &ctx.http,
-            |e: &mut EditInteractionResponse| {
-                e.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Astronomy Picture of Today")
-                            .icon_url(DEFAULT_ICON)
-                    })
+            EditInteractionResponse::new().embed(
+                CreateEmbed::new()
+                    .author(
+                        CreateEmbedAuthor::new("Astronomy Picture of Today").icon_url(DEFAULT_ICON),
+                    )
                     .title(&apod_image.title)
                     .color(DEFAULT_COLOR)
                     .description(explanation)
-                    .footer(|f: &mut CreateEmbedFooter| {
-                        f.text(format!(
-                            "APOD of {}",
-                            date.format("%Y-%m-%d")
-                        ))
-                    })
+                    .footer(CreateEmbedFooter::new(format!(
+                        "APOD of {}",
+                        date.format("%Y-%m-%d")
+                    )))
                     .image(apod_image.url)
-                    .timestamp(Utc::now())
-                })
-            },
+                    .timestamp(Utc::now()),
+            ),
         )
         .await?;
 
@@ -264,24 +250,25 @@ async fn spacepic(ctx: &Context, interaction: &ApplicationCommandInteraction) ->
 #[command]
 /// Picks a random sol number and then grabs a random picture made by the Spirit
 /// rover on that sol
-async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn spirit(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     interaction
-        .create_interaction_response(&ctx.http, |c| {
-            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-        })
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Defer(CreateInteractionResponseMessage::new()),
+        )
         .await?;
 
     let (pic, sol) = fetch_rover_camera_picture("spirit", 1..2186).await;
 
     interaction
-        .edit_original_interaction_response(
+        .edit_response(
             &ctx.http,
-            |e: &mut EditInteractionResponse| {
-                e.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Random Picture made by the Spirit mars rover")
-                            .icon_url(DEFAULT_ICON)
-                    })
+            EditInteractionResponse::new().embed(
+                CreateEmbed::new()
+                    .author(
+                        CreateEmbedAuthor::new("Random Picture made by the Spirit mars rover")
+                            .icon_url(DEFAULT_ICON),
+                    )
                     .color(DEFAULT_COLOR)
                     .description(format!(
                         "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
@@ -290,11 +277,13 @@ async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> C
                         pic.camera
                             .full_name
                     ))
-                    .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
+                    .footer(CreateEmbedFooter::new(format!(
+                        "picture ID: {}",
+                        pic.id
+                    )))
                     .image(pic.img_src)
-                    .timestamp(Utc::now())
-                })
-            },
+                    .timestamp(Utc::now()),
+            ),
         )
         .await?;
 
@@ -304,24 +293,25 @@ async fn spirit(ctx: &Context, interaction: &ApplicationCommandInteraction) -> C
 #[command]
 /// Picks a random sol number and then grabs a random picture made by the
 /// Opportunity rover on that sol
-async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn opportunity(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     interaction
-        .create_interaction_response(&ctx.http, |c| {
-            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-        })
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Defer(CreateInteractionResponseMessage::new()),
+        )
         .await?;
 
     let (pic, sol) = fetch_rover_camera_picture("opportunity", 1..5112).await;
 
     interaction
-        .edit_original_interaction_response(
+        .edit_response(
             &ctx.http,
-            |e: &mut EditInteractionResponse| {
-                e.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Random Picture made by the Opportunity mars rover")
-                            .icon_url(DEFAULT_ICON)
-                    })
+            EditInteractionResponse::new().embed(
+                CreateEmbed::new()
+                    .author(
+                        CreateEmbedAuthor::new("Random Picture made by the Opportunity mars rover")
+                            .icon_url(DEFAULT_ICON),
+                    )
                     .color(DEFAULT_COLOR)
                     .description(format!(
                         "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
@@ -330,11 +320,13 @@ async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction)
                         pic.camera
                             .full_name
                     ))
-                    .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
+                    .footer(CreateEmbedFooter::new(format!(
+                        "picture ID: {}",
+                        pic.id
+                    )))
                     .image(pic.img_src)
-                    .timestamp(Utc::now())
-                })
-            },
+                    .timestamp(Utc::now()),
+            ),
         )
         .await?;
 
@@ -344,11 +336,12 @@ async fn opportunity(ctx: &Context, interaction: &ApplicationCommandInteraction)
 #[command]
 /// Picks a random sol number and grabs a random picture made by the Curiosity
 /// rover on that sol
-async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn curiosity(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     interaction
-        .create_interaction_response(&ctx.http, |c| {
-            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-        })
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Defer(CreateInteractionResponseMessage::new()),
+        )
         .await?;
 
     let max_sol = get_max_sol("curiosity").await?;
@@ -356,14 +349,14 @@ async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -
     let (pic, sol) = fetch_rover_camera_picture("curiosity", 1..max_sol).await;
 
     interaction
-        .edit_original_interaction_response(
+        .edit_response(
             &ctx.http,
-            |e: &mut EditInteractionResponse| {
-                e.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Random Picture made by the Curiosity mars rover")
-                            .icon_url(DEFAULT_ICON)
-                    })
+            EditInteractionResponse::new().embed(
+                CreateEmbed::new()
+                    .author(
+                        CreateEmbedAuthor::new("Random Picture made by the Curiosity mars rover")
+                            .icon_url(DEFAULT_ICON),
+                    )
                     .color(DEFAULT_COLOR)
                     .description(format!(
                         "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
@@ -372,11 +365,13 @@ async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -
                         pic.camera
                             .full_name
                     ))
-                    .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
+                    .footer(CreateEmbedFooter::new(format!(
+                        "picture ID: {}",
+                        pic.id
+                    )))
                     .image(pic.img_src)
-                    .timestamp(Utc::now())
-                })
-            },
+                    .timestamp(Utc::now()),
+            ),
         )
         .await?;
 
@@ -386,11 +381,12 @@ async fn curiosity(ctx: &Context, interaction: &ApplicationCommandInteraction) -
 #[command]
 /// Picks a random sol number and grabs a random picture made by the
 /// Perseverance rover on that sol.
-async fn perseverance(ctx: &Context, interaction: &ApplicationCommandInteraction) -> CommandResult {
+async fn perseverance(ctx: &Context, interaction: &CommandInteraction) -> CommandResult {
     interaction
-        .create_interaction_response(&ctx.http, |c| {
-            c.kind(InteractionResponseType::DeferredChannelMessageWithSource)
-        })
+        .create_response(
+            &ctx.http,
+            CreateInteractionResponse::Defer(CreateInteractionResponseMessage::new()),
+        )
         .await?;
 
     let max_sol = get_max_sol("perseverance").await?;
@@ -398,14 +394,16 @@ async fn perseverance(ctx: &Context, interaction: &ApplicationCommandInteraction
     let (pic, sol) = fetch_rover_camera_picture("perseverance", 1..max_sol).await;
 
     interaction
-        .edit_original_interaction_response(
+        .edit_response(
             &ctx.http,
-            |e: &mut EditInteractionResponse| {
-                e.embed(|e: &mut CreateEmbed| {
-                    e.author(|a: &mut CreateEmbedAuthor| {
-                        a.name("Random Picture made by the Perseverance mars rover")
-                            .icon_url(DEFAULT_ICON)
-                    })
+            EditInteractionResponse::new().embed(
+                CreateEmbed::new()
+                    .author(
+                        CreateEmbedAuthor::new(
+                            "Random Picture made by the Perseverance mars rover",
+                        )
+                        .icon_url(DEFAULT_ICON),
+                    )
                     .color(DEFAULT_COLOR)
                     .description(format!(
                         "**Taken on Sol:** {}\n**Earth Date:** {}\n**Taken by Camera:** {}",
@@ -414,11 +412,13 @@ async fn perseverance(ctx: &Context, interaction: &ApplicationCommandInteraction
                         pic.camera
                             .full_name
                     ))
-                    .footer(|f: &mut CreateEmbedFooter| f.text(format!("picture ID: {}", pic.id)))
+                    .footer(CreateEmbedFooter::new(format!(
+                        "picture ID: {}",
+                        pic.id
+                    )))
                     .image(pic.img_src)
-                    .timestamp(Utc::now())
-                })
-            },
+                    .timestamp(Utc::now()),
+            ),
         )
         .await?;
 

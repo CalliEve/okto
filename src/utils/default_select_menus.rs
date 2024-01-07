@@ -4,7 +4,7 @@ use futures::future::BoxFuture;
 use serenity::{
     http::Http,
     model::{
-        application::interaction::Interaction,
+        application::Interaction,
         id::{
             ChannelId,
             GuildId,
@@ -46,10 +46,9 @@ pub async fn role_select_menu<F>(
     }
 
     SelectMenu::builder(move |(id, _)| {
-        let id = RoleId(
-            id.parse()
-                .expect("Got invalid role id from role select"),
-        );
+        let id: RoleId = id
+            .parse()
+            .expect("Got invalid role id from role select");
         callback(id)
     })
     .set_description("Select a role")
@@ -60,7 +59,13 @@ pub async fn role_select_menu<F>(
         roles
             .into_iter()
             .take(125)
-            .map(|(k, v)| (k.0.to_string(), v.name))
+            .map(|(k, v)| {
+                (
+                    k.get()
+                        .to_string(),
+                    v.name,
+                )
+            })
             .collect(),
     )
     .build()
@@ -85,7 +90,7 @@ pub async fn channel_select_menu<F>(
         .expect("Can't get channels from guild");
 
     SelectMenu::builder(move |(id, _)| {
-        let id = ChannelId(
+        let id = ChannelId::new(
             id.parse()
                 .expect("Got invalid channel id from channel select"),
         );
@@ -99,7 +104,13 @@ pub async fn channel_select_menu<F>(
         channels
             .into_iter()
             .take(125)
-            .map(|(k, v)| (k.0.to_string(), v.name))
+            .map(|(k, v)| {
+                (
+                    k.get()
+                        .to_string(),
+                    v.name,
+                )
+            })
             .collect(),
     )
     .build()
@@ -110,16 +121,16 @@ pub async fn channel_select_menu<F>(
 
 fn get_guild(interaction: &Interaction) -> GuildId {
     match interaction {
-        Interaction::MessageComponent(comp) => {
+        Interaction::Component(comp) => {
             comp.guild_id
                 .expect("Trying to get channels in a non-guild menu")
         },
-        Interaction::ModalSubmit(modal) => {
+        Interaction::Modal(modal) => {
             modal
                 .guild_id
                 .expect("Trying to get channels in a non-guild modal")
         },
-        Interaction::ApplicationCommand(cmd) => {
+        Interaction::Command(cmd) => {
             cmd.guild_id
                 .expect("Trying to get channels in a non-guild command")
         },

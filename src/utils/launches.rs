@@ -7,7 +7,7 @@ use std::{
     str::FromStr,
 };
 
-use serenity::model::application::interaction::application_command::ApplicationCommandInteraction;
+use serenity::model::application::CommandInteraction;
 
 use crate::{
     models::launches::{
@@ -52,7 +52,7 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
 
 pub fn filter_launches(
     launches: Vec<LaunchData>,
-    interaction: &ApplicationCommandInteraction,
+    interaction: &CommandInteraction,
 ) -> Result<Vec<LaunchData>, FilterErrorType> {
     let agency_filter = interaction
         .data
@@ -61,12 +61,9 @@ pub fn filter_launches(
         .find(|o| o.name == "lsp")
         .and_then(|o| {
             o.value
-                .clone()
+                .as_str()
         })
-        .and_then(|v| {
-            v.as_str()
-                .map(str::to_lowercase)
-        });
+        .map(str::to_lowercase);
 
     if let Some(lsp) = agency_filter {
         if let Some(filter) = LAUNCH_AGENCIES.get(&lsp.as_str()) {
@@ -90,12 +87,9 @@ pub fn filter_launches(
         .find(|o| o.name == "rocket")
         .and_then(|o| {
             o.value
-                .clone()
+                .as_str()
         })
-        .and_then(|v| {
-            v.as_str()
-                .map(ToOwned::to_owned)
-        });
+        .map(ToOwned::to_owned);
 
     if let Some(rocket) = rocket_filter {
         if let Some(filter) = LAUNCH_VEHICLES.get(rocket.as_str()) {

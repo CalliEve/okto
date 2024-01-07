@@ -13,14 +13,15 @@ use serenity::{
     builder::{
         CreateEmbed,
         CreateEmbedAuthor,
+        CreateMessage,
     },
     http::Http,
     model::{
-        application::component::ButtonStyle,
+        application::ButtonStyle,
         channel::ReactionType,
         id::ChannelId,
+        Colour,
     },
-    utils::Colour,
 };
 
 use super::constants::{
@@ -55,16 +56,9 @@ pub fn cutoff_on_last_dot(text: &str, length: usize) -> &str {
     text
 }
 
-pub fn default_embed<'a>(
-    embed: &'a mut CreateEmbed,
-    content: &str,
-    success: bool,
-) -> &'a mut CreateEmbed {
-    embed
-        .author(|a: &mut CreateEmbedAuthor| {
-            a.name("OKTO")
-                .icon_url(DEFAULT_ICON)
-        })
+pub fn default_embed(content: &str, success: bool) -> CreateEmbed {
+    CreateEmbed::new()
+        .author(CreateEmbedAuthor::new("OKTO").icon_url(DEFAULT_ICON))
         .color(
             if success {
                 DEFAULT_COLOR.into()
@@ -194,26 +188,31 @@ pub fn parse_duration(input: &str) -> Duration {
 }
 
 #[allow(dead_code)]
-const DEBUG_CHANNEL: ChannelId = ChannelId(771669392399532063);
-const ERROR_CHANNEL: ChannelId = ChannelId(447876053109702668);
+const DEBUG_CHANNEL: ChannelId = ChannelId::new(771669392399532063);
+const ERROR_CHANNEL: ChannelId = ChannelId::new(447876053109702668);
 
 #[allow(dead_code)]
 pub async fn debug_log(http: impl AsRef<Http>, text: &str) {
     let _ = DEBUG_CHANNEL
-        .send_message(&http, |m| m.content(text))
+        .send_message(
+            http.as_ref(),
+            CreateMessage::new().content(text),
+        )
         .await;
 }
 
 pub async fn error_log(http: impl AsRef<Http>, text: impl AsRef<str>) {
     eprintln!("{}", text.as_ref());
     let _ = ERROR_CHANNEL
-        .send_message(&http, |m| {
-            m.embed(|em| {
-                em.description(text.as_ref())
+        .send_message(
+            http.as_ref(),
+            CreateMessage::new().embed(
+                CreateEmbed::new()
+                    .description(text.as_ref())
                     .color(Colour::RED)
-                    .timestamp(Utc::now())
-            })
-        })
+                    .timestamp(Utc::now()),
+            ),
+        )
         .await;
 }
 

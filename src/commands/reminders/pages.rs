@@ -11,11 +11,11 @@ use serenity::{
     },
     model::{
         application::{
-            component::ButtonStyle,
-            interaction::Interaction,
+            ButtonStyle,
+            InputTextStyle,
+            Interaction,
         },
         channel::ReactionType,
-        prelude::component::InputTextStyle,
     },
     prelude::RwLock,
 };
@@ -102,15 +102,14 @@ pub fn reminders_page(
             },
         };
 
-        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
+        let mut em = StatefulEmbed::new_with_embed(
+            ses.clone(),
+            CreateEmbed::new()
+                .color(DEFAULT_COLOR)
                 .timestamp(Utc::now())
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Launch Reminders")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .description(description)
-        });
+                .author(CreateEmbedAuthor::new("Launch Reminders").icon_url(DEFAULT_ICON))
+                .description(description),
+        );
 
         let add_ses = ses.clone();
         em.add_option(
@@ -196,7 +195,7 @@ pub fn reminders_page(
                         .unwrap()
                         .listen(
                             http,
-                            &Interaction::MessageComponent(button_click),
+                            &Interaction::Component(button_click),
                             data,
                         )
                         .await;
@@ -231,17 +230,16 @@ pub fn filters_page(
     id: ID,
 ) -> futures::future::BoxFuture<'static, ()> {
     Box::pin(async move {
-        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
+        let mut em = StatefulEmbed::new_with_embed(
+            ses.clone(),
+            CreateEmbed::new()
+                .color(DEFAULT_COLOR)
                 .timestamp(Utc::now())
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Filters")
-                        .icon_url(DEFAULT_ICON)
-                })
-        });
+                .author(CreateEmbedAuthor::new("Filters").icon_url(DEFAULT_ICON)),
+        );
 
         let filters_ses = ses.clone();
-        em.add_field(
+        em = em.add_field(
             "Filters",
             "Set which agencies to filter out of launch reminders, making you not get any reminders for these agencies again",
             false,
@@ -253,7 +251,7 @@ pub fn filters_page(
         );
 
         let allow_filters_ses = ses.clone();
-        em.add_field(
+        em = em.add_field(
             "Allow Filters",
             "Set which agencies to filter launch reminders for, making you get **only** reminders for these agencies",
             false,
@@ -265,7 +263,7 @@ pub fn filters_page(
         );
 
         let payload_filters_ses = ses.clone();
-        em.add_field(
+        em = em.add_field(
             "Payload Filters",
             "Add word or regex filters to filter out launches with specific payloads",
             false,
@@ -387,15 +385,16 @@ fn disallow_filters_page(
             },
         };
 
-        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
+        let mut em = StatefulEmbed::new_with_embed(
+            ses.clone(),
+            CreateEmbed::new()
+                .color(DEFAULT_COLOR)
                 .timestamp(Utc::now())
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Launch Agency Disallow Filters")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .description(description)
-        });
+                .author(
+                    CreateEmbedAuthor::new("Launch Agency Disallow Filters").icon_url(DEFAULT_ICON),
+                )
+                .description(description),
+        );
 
         let add_ses = ses.clone();
         let filters_clone = filters.clone();
@@ -452,7 +451,7 @@ fn disallow_filters_page(
                     .unwrap()
                     .listen(
                         http,
-                        &Interaction::MessageComponent(button_click),
+                        &Interaction::Component(button_click),
                         data,
                     )
                     .await;
@@ -516,7 +515,7 @@ fn disallow_filters_page(
                         .unwrap()
                         .listen(
                             http,
-                            &Interaction::MessageComponent(button_click),
+                            &Interaction::Component(button_click),
                             data,
                         )
                         .await;
@@ -634,15 +633,16 @@ fn allow_filters_page(
             },
         };
 
-        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
+        let mut em = StatefulEmbed::new_with_embed(
+            ses.clone(),
+            CreateEmbed::new()
+                .color(DEFAULT_COLOR)
                 .timestamp(Utc::now())
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Launch Agency Allow Filters")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .description(description)
-        });
+                .author(
+                    CreateEmbedAuthor::new("Launch Agency Allow Filters").icon_url(DEFAULT_ICON),
+                )
+                .description(description),
+        );
 
         let add_ses = ses.clone();
         let allow_filters_clone = allow_filters.clone();
@@ -706,7 +706,7 @@ fn allow_filters_page(
                     .unwrap()
                     .listen(
                         http,
-                        &Interaction::MessageComponent(button_click),
+                        &Interaction::Component(button_click),
                         data,
                     )
                     .await;
@@ -767,7 +767,7 @@ fn allow_filters_page(
                             )
                             .build()
                             .unwrap()
-                            .listen(http, &Interaction::MessageComponent(button_click), data).await;
+                            .listen(http, &Interaction::Component(button_click), data).await;
                     })
                 },
             );
@@ -876,15 +876,16 @@ fn payload_filters_page(
             },
         };
 
-        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
+        let mut em = StatefulEmbed::new_with_embed(
+            ses.clone(),
+            CreateEmbed::new()
+                .color(DEFAULT_COLOR)
                 .timestamp(Utc::now())
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Launch Agency Allow Filters")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .description(description)
-        });
+                .author(
+                    CreateEmbedAuthor::new("Launch Agency Allow Filters").icon_url(DEFAULT_ICON),
+                )
+                .description(description),
+        );
 
         let add_ses = ses.clone();
         em.add_non_update_option(
@@ -938,20 +939,20 @@ fn payload_filters_page(
                     .set_user(user_id)
                     .add_field(
                         Field::new(
+                            InputTextStyle::Short,
                             "added_payload_filter",
                             "New payload filter",
                         )
                         .set_max_length(20)
                         .set_min_length(3)
                         .set_placeholder("Put in a word or regex to filter out payloads")
-                        .set_style(InputTextStyle::Short)
                         .set_required(),
                     )
                     .build()
                     .unwrap()
                     .listen(
                         http,
-                        &Interaction::MessageComponent(button_click),
+                        &Interaction::Component(button_click),
                         data,
                     )
                     .await;
@@ -1023,7 +1024,7 @@ fn payload_filters_page(
                         .unwrap()
                         .listen(
                             http,
-                            &Interaction::MessageComponent(button_click),
+                            &Interaction::Component(button_click),
                             data,
                         )
                         .await;
@@ -1105,15 +1106,14 @@ pub fn mentions_page(
             ID::User(_) => return,
         };
 
-        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
+        let mut em = StatefulEmbed::new_with_embed(
+            ses.clone(),
+            CreateEmbed::new()
+                .color(DEFAULT_COLOR)
                 .timestamp(Utc::now())
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Role Mentions")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .description(description)
-        });
+                .author(CreateEmbedAuthor::new("Role Mentions").icon_url(DEFAULT_ICON))
+                .description(description),
+        );
 
         let add_ses = ses.clone();
         let mentions_clone = mentions.clone();
@@ -1143,7 +1143,7 @@ pub fn mentions_page(
                     role_select_menu(
                         http,
                         user_id,
-                        &Interaction::MessageComponent(button_click),
+                        &Interaction::Component(button_click),
                         data,
                         Some(mentions_clone),
                         None,
@@ -1189,7 +1189,7 @@ pub fn mentions_page(
                         role_select_menu(
                             http,
                             user_id,
-                            &Interaction::MessageComponent(button_click),
+                            &Interaction::Component(button_click),
                             data,
                             None,
                             Some(mentions_clone),
@@ -1282,18 +1282,17 @@ pub fn other_page(
             },
         };
 
-        let mut em = StatefulEmbed::new_with(ses.clone(), |e: &mut CreateEmbed| {
-            e.color(DEFAULT_COLOR)
+        let mut em = StatefulEmbed::new_with_embed(
+            ses.clone(),
+            CreateEmbed::new()
+                .color(DEFAULT_COLOR)
                 .timestamp(Utc::now())
-                .author(|a: &mut CreateEmbedAuthor| {
-                    a.name("Other Options")
-                        .icon_url(DEFAULT_ICON)
-                })
-                .description(description)
-        });
+                .author(CreateEmbedAuthor::new("Other Options").icon_url(DEFAULT_ICON))
+                .description(description),
+        );
 
         let scrub_ses = ses.clone();
-        em.add_field(
+        em = em.add_field(
             "Toggle Scrub Notifications",
             &format!("Toggle scrub notifications on and off\nThese notifications notify you when a launch gets delayed.\nThis is currently **{scrub_notifications}**"),
             false,
@@ -1314,7 +1313,7 @@ pub fn other_page(
         );
 
         let outcome_ses = ses.clone();
-        em.add_field(
+        em = em.add_field(
             "Toggle Outcome Notifications",
             &format!("Toggle outcome notifications on and off\nThese notifications notify you about the outcome of a launch.\nThis is currently **{outcome_notifications}**"),
             false,
@@ -1335,7 +1334,7 @@ pub fn other_page(
         );
 
         let mentions_ses = ses.clone();
-        em.add_field(
+        em = em.add_field(
             "Toggle Mentions",
             &format!(
                 "Toggle mentions for scrub and outcome notifications.\nThis is currently **{mentions}**",
@@ -1364,7 +1363,7 @@ pub fn other_page(
 
         if id.guild_specific() {
             let chan_ses = ses.clone();
-            em.add_field(
+            em = em.add_field(
                 "Set Notification Channel",
                 "Set the channel to receive scrub and outcome notifications in, this can only be one per server",
                 false,
@@ -1389,7 +1388,7 @@ pub fn other_page(
                         )
                     };
 
-                    channel_select_menu(http, user_id, &Interaction::MessageComponent(button_click), data, move |channel_id| {
+                    channel_select_menu(http, user_id, &Interaction::Component(button_click), data, move |channel_id| {
                         let wait_ses = chan_ses.clone();
                         Box::pin(async move {
                                     set_notification_channel(&wait_ses.clone(), id, channel_id).await;

@@ -6,14 +6,19 @@ use std::{
 use futures::future::BoxFuture;
 use itertools::Itertools;
 use serenity::{
+    all::ComponentInteractionDataKind,
+    builder::{
+        CreateActionRow,
+        CreateInteractionResponse,
+        CreateSelectMenu,
+        CreateSelectMenuKind,
+        CreateSelectMenuOption,
+    },
     http::Http,
     model::{
         application::{
-            component::ComponentType,
-            interaction::{
-                Interaction,
-                InteractionResponseType,
-            },
+            ComponentType,
+            Interaction,
         },
         id::UserId,
     },
@@ -67,12 +72,20 @@ impl SelectMenu {
                 .message_component()
                 .expect("Didn't get a message component in select menu");
 
-            let key = data
+            let key = if let ComponentInteractionDataKind::StringSelect {
+                values,
+            } = data
                 .data
-                .values
-                .first()
-                .cloned()
-                .expect("No values returned from select menu");
+                .kind
+                .clone()
+            {
+                values
+                    .first()
+                    .cloned()
+                    .expect("No values returned from select menu")
+            } else {
+                panic!("Got a non-string value from the select menu")
+            };
 
             let chosen = options
                 .get(&key)
@@ -83,15 +96,16 @@ impl SelectMenu {
             let handler_clone = handler.clone();
             Box::pin(async move {
                 let _ = data
-                    .create_interaction_response(http_clone, |c| {
-                        c.kind(InteractionResponseType::DeferredUpdateMessage)
-                    })
+                    .create_response(
+                        http_clone,
+                        CreateInteractionResponse::Acknowledge,
+                    )
                     .await;
 
                 handler_clone((key, chosen.clone())).await
             })
         })
-        .set_component_type(ComponentType::SelectMenu);
+        .set_component_type(ComponentType::StringSelect);
 
         if let Some(user_id) = self.user_id {
             interaction_handler = interaction_handler.set_user(user_id);
@@ -123,40 +137,32 @@ impl SelectMenu {
                     .clone()
                     .unwrap_or_else(|| "Select an option".to_owned()),
             )
-            .components(|comps| {
-                for (i, chunk) in self
-                    .options
+            .components(
+                self.options
                     .iter()
                     .sorted_by_key(|t| t.1)
                     .chunks(25)
                     .into_iter()
                     .take(5)
                     .enumerate()
-                {
-                    comps.create_action_row(|row| {
-                        row.create_select_menu(|menu| {
-                            menu.custom_id(format!(
+                    .map(|(i, chunk)| {
+                        CreateActionRow::SelectMenu(CreateSelectMenu::new(
+                            format!(
                                 "{}-{}",
                                 self.custom_id
                                     .as_ref()
                                     .map_or("select-row", |s| s.as_str()),
                                 i
-                            ))
-                            .max_values(1)
-                            .options(|options| {
-                                for (key, value) in chunk {
-                                    options.create_option(|opt| {
-                                        opt.value(key)
-                                            .label(value)
-                                    });
-                                }
-                                options
-                            })
-                        })
-                    });
-                }
-                comps
-            });
+                            ),
+                            CreateSelectMenuKind::String {
+                                options: chunk
+                                    .map(|(key, value)| CreateSelectMenuOption::new(value, key))
+                                    .collect(),
+                            },
+                        ))
+                    })
+                    .collect(),
+            );
 
         if self.ephemeral {
             resp = resp.make_ephemeral();
