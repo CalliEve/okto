@@ -20,16 +20,15 @@ reqwest = { version = "0.11", features = ["json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_repr = "0.1"
-chrono = "0.4.24"
+chrono = "0.4.34"
 rand = "0.8"
-url = "2.3.1"
-regex = "1.8"
-num_cpus = "1.15"
+url = "2.5"
+regex = "1.10"
+num_cpus = "1.16"
 threadpool = "1.8"
-tokio = { version = "1.27", features = ["full", "tracing"] }
-mongodb = "2.5"
+tokio = { version = "1.36.0", features = ["full", "tracing"] }
+mongodb = "2.8"
 futures = "0.3"
 itertools = "0.12.0"
 http = "1.0.0"
 serde_regex = "1.1.0"
-console-subscriber = "0.2.0"

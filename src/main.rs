@@ -55,8 +55,6 @@ use utils::{
 
 #[tokio::main]
 async fn main() {
-    console_subscriber::init();
-
     // Login with a bot token from the environment
     let token = env::var("DISCORD_TOKEN").expect("no bot token");
     let application_id: ApplicationId = env::var("DISCORD_ID")
