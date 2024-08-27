@@ -99,7 +99,7 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
         }
     }
     if res.is_empty() {
-        res = "unknown".to_owned();
+        "unknown".clone_into(&mut res);
     }
 
     res

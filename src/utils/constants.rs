@@ -8,7 +8,7 @@ use reqwest::{
     Client, ClientBuilder,
 };
 use serenity::{
-    all::{ChannelId, GuildId},
+    all::ChannelId,
     model::{
         channel::ReactionType,
         id::{EmojiId, UserId},

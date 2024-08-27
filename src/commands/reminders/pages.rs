@@ -1220,8 +1220,10 @@ pub fn other_page(
                             "\nScrub and outcome notifications will be posted in: <#{chan}>",
                         );
                     } else {
-                        description =
-                            "\n**warning:** no notifications channel has been set yet!".to_owned()
+                        description.clone_into(
+                            &mut "\n**warning:** no notifications channel has been set yet!"
+                                .to_owned(),
+                        )
                     }
                 }
             },

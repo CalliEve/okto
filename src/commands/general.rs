@@ -63,7 +63,7 @@ async fn info(ctx: &Context, interaction: &CommandInteraction) -> CommandResult 
         .current_user()
         .id;
 
-    let mut stats = "".to_owned();
+    let mut stats = String::new();
     if OWNER_ID
         == interaction
             .user
@@ -79,9 +79,8 @@ async fn info(ctx: &Context, interaction: &CommandInteraction) -> CommandResult 
                     .guild(id)
                     .map_or(0, |g| {
                         match g.approximate_member_count {
-                            Some(0..=1) => g.member_count,
+                            Some(0..=1) | None => g.member_count,
                             Some(n) => n,
-                            None => g.member_count,
                         }
                     }))
                 .sum::<u64>()
@@ -523,12 +522,10 @@ async fn get_star(
                         **Stellar Density:** {}",
                             star.get_age(),
                             star.st_spectype
-                                .as_ref()
-                                .cloned()
+                                .clone()
                                 .unwrap_or_else(|| "unknown".to_owned()),
                             star.hd_name
-                                .as_ref()
-                                .cloned()
+                                .clone()
                                 .unwrap_or_else(|| "unknown".to_owned()),
                             star.get_rad(),
                             star.get_mass(),
@@ -683,8 +680,7 @@ async fn get_planet(
                                 ),
                             planet
                                 .hostname
-                                .as_ref()
-                                .cloned()
+                                .clone()
                                 .unwrap_or_else(|| "unknown".to_owned()),
                         ),
                         false,
@@ -704,18 +700,15 @@ async fn get_planet(
                                 ),
                             planet
                                 .discoverymethod
-                                .as_ref()
-                                .cloned()
+                                .clone()
                                 .unwrap_or_else(|| "unknown".to_owned()),
                             planet
                                 .disc_locale
-                                .as_ref()
-                                .cloned()
+                                .clone()
                                 .unwrap_or_else(|| "unknown".to_owned()),
                             planet
                                 .disc_telescope
-                                .as_ref()
-                                .cloned()
+                                .clone()
                                 .unwrap_or_else(|| "unknown".to_owned()),
                         ),
                         false,

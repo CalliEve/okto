@@ -76,7 +76,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
 
     // Update launch cache and free the lock
     let old_launches = launch_cache.clone();
-    *launch_cache = launches.clone();
+    launch_cache.clone_from(&launches);
     std::mem::drop(launch_cache);
     let five_minutes = Duration::minutes(5);
 
