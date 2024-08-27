@@ -55,7 +55,7 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
             .read()
             .await
             .iter()
-            .filter(|l| l.status == LaunchStatus::Go)
+            .filter(|l| l.status == LaunchStatus::Go || l.status == LaunchStatus::ToBeConfirmed)
             .cloned()
             .collect();
         if launches.is_empty() {

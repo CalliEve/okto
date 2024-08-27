@@ -31,7 +31,7 @@ use crate::{
 };
 
 #[command]
-/// Get information about the next launch that has been marked as certain
+/// Get information about the next launch whose date is known with at least some certainty
 #[options(
     {
         option_type: String,
@@ -63,7 +63,7 @@ async fn nextlaunch(ctx: &Context, interaction: &CommandInteraction) -> CommandR
         }
     }?
     .into_iter()
-    .filter(|l| l.status == LaunchStatus::Go)
+    .filter(|l| l.status == LaunchStatus::Go || l.status == LaunchStatus::ToBeDetermined)
     .collect();
 
     if launches.is_empty() {
@@ -185,7 +185,9 @@ fn list_page(
             list.clone()
         } else {
             list.iter()
-                .filter(|l| l.status == LaunchStatus::Go)
+                .filter(|l| {
+                    l.status == LaunchStatus::Go || l.status == LaunchStatus::ToBeDetermined
+                })
                 .cloned()
                 .collect()
         };
@@ -209,7 +211,7 @@ fn list_page(
             This list shows the upcoming launches (max 100), both certain and uncertain.\n\
             Use the arrow reactions to get to other pages and the green reaction to filter on only the launches that are certain.
             "} else {"
-            This list shows upcoming launches that are certain.\n\
+            This list shows upcoming launches that are known with at least some certainty.\n\
             Use the arrow reactions to get to other pages and the red reaction to get all the launches.
             "}).fields(launches[min..top].iter().map(|launch| (format!(
                 "{}: {} - {}",
@@ -276,7 +278,7 @@ fn list_page(
         if all
             && launches
                 .iter()
-                .any(|l| l.status == LaunchStatus::Go)
+                .any(|l| l.status == LaunchStatus::Go || l.status == LaunchStatus::ToBeDetermined)
         {
             let certain_page_launches = list.clone();
             let certain_page_session = session.clone();

@@ -166,7 +166,7 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
             new.net
                 .and_utc()
                 .timestamp(),
-            if new.status == LaunchStatus::Tbd {
+            if new.status == LaunchStatus::ToBeDetermined {
                 " (TBD)"
             } else {
                 ""
@@ -174,7 +174,7 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
             old.net
                 .and_utc()
                 .timestamp(),
-            if old.status == LaunchStatus::Tbd {
+            if old.status == LaunchStatus::ToBeDetermined {
                 " (TBD)"
             } else {
                 ""
