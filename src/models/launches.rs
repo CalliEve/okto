@@ -173,14 +173,14 @@ pub enum LaunchStatus {
 impl LaunchStatus {
     pub fn as_str(&self) -> &str {
         match self {
-            LaunchStatus::Go => "Go",
+            LaunchStatus::Go => "Go!",
             LaunchStatus::ToBeDetermined => "To Be Determined",
             LaunchStatus::Failure => "Failure",
             LaunchStatus::Success => "Success",
             LaunchStatus::InFlight => "In Flight",
             LaunchStatus::Hold => "Hold",
             LaunchStatus::PartialFailure => "Partial Failure",
-            LaunchStatus::ToBeConfirmed => "To Be Confirmed",
+            LaunchStatus::ToBeConfirmed => "Mostly Certain",
         }
     }
 }
