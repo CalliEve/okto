@@ -1,8 +1,5 @@
 use crate::{
-    models::{
-        launches::LaunchData,
-        reminders::ReminderSettings,
-    },
+    models::{launches::LaunchData, reminders::ReminderSettings},
     utils::constants::LAUNCH_AGENCIES,
 };
 
@@ -35,21 +32,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use chrono::{
-        Duration,
-        NaiveDateTime,
-    };
+    use chrono::{DateTime, Duration};
     use regex::Regex;
-    use serenity::model::id::{
-        ChannelId,
-        GuildId,
-    };
+    use serenity::model::id::{ChannelId, GuildId};
 
     use super::*;
-    use crate::models::{
-        launches::LaunchStatus,
-        reminders::GuildSettings,
-    };
+    use crate::models::{launches::LaunchStatus, reminders::GuildSettings};
 
     fn create_fake_launches() -> Vec<LaunchData> {
         vec![
@@ -63,7 +51,9 @@ mod tests {
                 vehicle: "Falcon 9 Block 5".into(),
                 location: "Launch Complex 39A".into(),
                 rocket_img: None,
-                net: NaiveDateTime::from_timestamp_opt(1635409251, 0).unwrap(),
+                net: DateTime::from_timestamp(1635409251, 0)
+                    .unwrap()
+                    .naive_utc(),
                 launch_window: Duration::seconds(60),
                 mission_type: String::new(),
                 mission_description: String::new(),
@@ -79,7 +69,9 @@ mod tests {
                 vehicle: "Atlas V 551".into(),
                 location: "Space Launch Complex 41".into(),
                 rocket_img: None,
-                net: NaiveDateTime::from_timestamp_opt(1635409251, 0).unwrap(),
+                net: DateTime::from_timestamp(1635409251, 0)
+                    .unwrap()
+                    .naive_utc(),
                 launch_window: Duration::seconds(60),
                 mission_type: String::new(),
                 mission_description: String::new(),

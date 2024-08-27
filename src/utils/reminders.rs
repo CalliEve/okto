@@ -1,31 +1,17 @@
 use std::{
-    fmt::{
-        self,
-        Display,
-    },
+    fmt::{self, Display},
     io::ErrorKind as IoErrorKind,
     sync::Arc,
 };
 
 use mongodb::{
-    bson::{
-        self,
-        doc,
-    },
-    error::{
-        Error as MongoError,
-        ErrorKind as MongoErrorKind,
-        Result as MongoResult,
-    },
+    bson::{self, doc},
+    error::{Error as MongoError, ErrorKind as MongoErrorKind, Result as MongoResult},
     Database,
 };
 use regex::Regex;
 use serenity::{
-    model::id::{
-        ChannelId,
-        GuildId,
-        UserId,
-    },
+    model::id::{ChannelId, GuildId, UserId},
     prelude::RwLock,
 };
 
@@ -33,20 +19,14 @@ use crate::{
     events::statefulembed::EmbedSession,
     models::{
         caches::DatabaseKey,
-        reminders::{
-            GuildSettings,
-            UserSettings,
-        },
+        reminders::{GuildSettings, UserSettings},
     },
-    utils::constants::{
-        WORD_FILTER_REGEX,
-        WORD_REGEX,
-    },
+    utils::constants::{WORD_FILTER_REGEX, WORD_REGEX},
 };
 
 pub async fn get_user_settings(db: &Database, id: u64) -> MongoResult<UserSettings> {
     db.collection("user_settings")
-        .find_one(doc! { "user": id as i64 }, None)
+        .find_one(doc! { "user": id as i64 })
         .await?
         .ok_or_else(|| {
             MongoError::from(MongoErrorKind::Io(Arc::new(
@@ -58,7 +38,7 @@ pub async fn get_user_settings(db: &Database, id: u64) -> MongoResult<UserSettin
 
 pub async fn get_guild_settings(db: &Database, id: u64) -> MongoResult<GuildSettings> {
     db.collection("guild_settings")
-        .find_one(doc! { "guild": id as i64 }, None)
+        .find_one(doc! { "guild": id as i64 })
         .await?
         .ok_or_else(|| {
             MongoError::from(MongoErrorKind::Io(Arc::new(

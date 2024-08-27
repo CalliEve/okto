@@ -1,36 +1,29 @@
-use std::{
-    collections::HashMap,
-    env,
-};
+use std::{collections::HashMap, env};
 
 use lazy_static::lazy_static;
-use rand::{
-    rngs::StdRng,
-    thread_rng,
-    SeedableRng,
-};
+use rand::{rngs::StdRng, thread_rng, SeedableRng};
 use regex::Regex;
 use reqwest::{
-    header::{
-        HeaderMap,
-        ACCEPT,
-    },
-    Client,
-    ClientBuilder,
+    header::{HeaderMap, ACCEPT},
+    Client, ClientBuilder,
 };
 use serenity::{
+    all::ChannelId,
     model::{
         channel::ReactionType,
-        id::{
-            EmojiId,
-            UserId,
-        },
+        id::{EmojiId, UserId},
     },
     prelude::Mutex,
 };
 
-pub const DEFAULT_COLOR: u32 = 16750899;
-pub const DEFAULT_ICON: &str = "https://i.imgur.com/L2FoV6P.png";
+// Config IDs
+pub const OWNER_ID: UserId = UserId::new(247745860979392512);
+pub const ERROR_CHANNEL_ID: ChannelId = ChannelId::new(447876053109702668);
+pub const GUILD_LOG_CHANNEL_ID: ChannelId = ChannelId::new(755401788294955070);
+pub const STARUP_LOG_CHANNEL_ID: ChannelId = ChannelId::new(448224720177856513);
+pub const DEBUG_CHANNEL_ID: ChannelId = ChannelId::new(771669392399532063);
+
+// Emojis
 pub const FINAL_PAGE_EMOJI: char = '⏭';
 pub const NEXT_PAGE_EMOJI: char = '▶';
 pub const LAST_PAGE_EMOJI: char = '◀';
@@ -40,6 +33,10 @@ pub const CHECK_EMOJI: char = '✔';
 pub const BACK_EMOJI: char = '◀';
 pub const CERTAIN_EMOJI: u64 = 447805610482728964;
 pub const UNCERTAIN_EMOJI: u64 = 447805624923717642;
+
+// Misc
+pub const DEFAULT_COLOR: u32 = 16750899;
+pub const DEFAULT_ICON: &str = "https://i.imgur.com/L2FoV6P.png";
 pub const LAUNCH_LIBRARY_URL: &str = "https://thespacedevs.com";
 
 fn default_headers() -> HeaderMap {

@@ -1,17 +1,8 @@
 use std::collections::HashMap;
 
-use serenity::{
-    client::Context,
-    framework::standard::CommandResult,
-    http::Http,
-    model::application::Interaction,
-    Result,
-};
+use serenity::{client::Context, http::Http, model::application::Interaction, Result};
 
-use crate::structs::{
-    Command,
-    DiscordCommandDetails,
-};
+use crate::structs::{Command, CommandResult, DiscordCommandDetails};
 
 #[derive(Clone)]
 pub struct Handler {
@@ -90,8 +81,7 @@ impl Handler {
 
     pub async fn upload_commands(&self, http: impl AsRef<Http>) -> Result<()> {
         let body = serde_json::to_value(
-            self
-                .cmds
+            self.cmds
                 .values()
                 .map(|c| {
                     c.options

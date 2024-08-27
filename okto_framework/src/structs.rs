@@ -1,17 +1,15 @@
-use std::fmt;
+use std::{error::Error as StdError, fmt};
 
 use futures::future::BoxFuture;
 use serde::Serialize;
 use serde_repr::Serialize_repr;
 use serenity::{
     client::Context,
-    framework::standard::CommandResult,
-    model::{
-        application::CommandInteraction,
-        channel::ChannelType,
-        Permissions,
-    },
+    model::{application::CommandInteraction, channel::ChannelType, Permissions},
 };
+
+pub type CommandError = Box<dyn StdError + Send + Sync>;
+pub type CommandResult<T = ()> = std::result::Result<T, CommandError>;
 
 #[derive(Clone)]
 pub struct Command {
@@ -20,10 +18,8 @@ pub struct Command {
     pub info: &'static CommandInfo,
 }
 
-pub type CommandFunc = for<'fut> fn(
-    &'fut Context,
-    &'fut CommandInteraction,
-) -> BoxFuture<'fut, CommandResult>;
+pub type CommandFunc =
+    for<'fut> fn(&'fut Context, &'fut CommandInteraction) -> BoxFuture<'fut, CommandResult>;
 
 #[derive(Debug, Clone)]
 pub struct CommandDetails {

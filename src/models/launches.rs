@@ -1,21 +1,8 @@
-use chrono::{
-    Duration,
-    NaiveDateTime,
-};
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use serde_repr::{
-    Deserialize_repr,
-    Serialize_repr,
-};
+use chrono::{Duration, NaiveDateTime};
+use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use crate::utils::serde::{
-    datetime_formatting,
-    duration,
-    string_option,
-};
+use crate::utils::serde::{datetime_formatting, duration, string_option};
 
 #[derive(Deserialize)]
 pub struct LaunchContainer {
@@ -174,24 +161,26 @@ pub struct VidURL {
 #[repr(u8)]
 pub enum LaunchStatus {
     Go = 1,
-    Tbd = 2,
+    ToBeDetermined = 2,
     Success = 3,
     Failure = 4,
     Hold = 5,
     InFlight = 6,
     PartialFailure = 7,
+    ToBeConfirmed = 8,
 }
 
 impl LaunchStatus {
     pub fn as_str(&self) -> &str {
         match self {
-            LaunchStatus::Go => "Go",
-            LaunchStatus::Tbd => "TBD",
+            LaunchStatus::Go => "Go!",
+            LaunchStatus::ToBeDetermined => "To Be Determined",
             LaunchStatus::Failure => "Failure",
             LaunchStatus::Success => "Success",
             LaunchStatus::InFlight => "In Flight",
             LaunchStatus::Hold => "Hold",
             LaunchStatus::PartialFailure => "Partial Failure",
+            LaunchStatus::ToBeConfirmed => "Mostly Certain",
         }
     }
 }

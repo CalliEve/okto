@@ -1,39 +1,22 @@
-use std::{
-    io::ErrorKind as IoErrorKind,
-    sync::Arc,
-};
+use std::{io::ErrorKind as IoErrorKind, sync::Arc};
 
 use chrono::Duration;
 use futures::stream::StreamExt;
 use mongodb::{
-    bson::{
-        self,
-        doc,
-        document::Document,
-    },
-    error::{
-        Error as MongoError,
-        ErrorKind as MongoErrorKind,
-        Result as MongoResult,
-    },
+    bson::{self, doc, document::Document},
+    error::{Error as MongoError, ErrorKind as MongoErrorKind, Result as MongoResult},
     options::UpdateOptions,
     Collection,
 };
 use serenity::{
-    model::id::{
-        ChannelId,
-        RoleId,
-    },
+    model::id::{ChannelId, RoleId},
     prelude::RwLock,
 };
 
 use crate::{
     events::statefulembed::EmbedSession,
     models::reminders::Reminder,
-    utils::reminders::{
-        get_db,
-        ID,
-    },
+    utils::reminders::{get_db, ID},
 };
 
 pub async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResult<Vec<Reminder>> {
@@ -46,7 +29,7 @@ pub async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResu
     match id {
         ID::User(user_id) => Ok(bson::from_bson(
             db.collection::<Document>("reminders")
-                .find(doc! { "users": { "$in": [user_id.get() as i64] } }, None).await?
+                .find(doc! { "users": { "$in": [user_id.get() as i64] } }).await?
                 .collect::<Vec<Result<_, _>>>()
                 .await
                 .into_iter()
@@ -57,7 +40,6 @@ pub async fn get_reminders(ses: &Arc<RwLock<EmbedSession>>, id: ID) -> MongoResu
             db.collection::<Document>("reminders")
                 .find(
                     doc! { "channels": { "$in": [{ "channel": channel_id.get() as i64, "guild": guild_id.get() as i64 }] } },
-                    None,
                 ).await?
                 .collect::<Vec<Result<_, _>>>()
                 .await
@@ -85,11 +67,11 @@ pub async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dur
                             "users": user_id.get() as i64
                         }
                     },
-                    Some(
-                        UpdateOptions::builder()
-                            .upsert(true)
-                            .build(),
-                    ),
+                )
+                .with_options(
+                    UpdateOptions::builder()
+                        .upsert(true)
+                        .build(),
                 )
             },
             ID::Channel((channel_id, guild_id)) => collection.update_one(
@@ -99,11 +81,11 @@ pub async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dur
                         "channels": { "channel": channel_id.get() as i64, "guild": guild_id.get() as i64 }
                     }
                 },
-                Some(
-                    UpdateOptions::builder()
-                        .upsert(true)
-                        .build(),
-                ),
+            )
+            .with_options(
+                UpdateOptions::builder()
+                    .upsert(true)
+                    .build(),
             ),
         }
         .await;
@@ -131,7 +113,6 @@ pub async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: 
                             "users": user_id.get() as i64
                         }
                     },
-                    None,
                 )
             },
             ID::Channel((channel_id, guild_id)) => collection.update_one(
@@ -141,7 +122,6 @@ pub async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: 
                         "channels": { "channel": channel_id.get() as i64, "guild": guild_id.get() as i64 }
                     }
                 },
-                None,
             ),
         }
         .await;
@@ -169,36 +149,34 @@ pub async fn add_filter(
     };
 
     let result = match id {
-        ID::User(user_id) => {
-            collection.update_one(
+        ID::User(user_id) => collection
+            .update_one(
                 doc! {"user": user_id.get() as i64},
                 doc! {
                     "$addToSet": {
                         filter_type: filter
                     }
                 },
-                Some(
-                    UpdateOptions::builder()
-                        .upsert(true)
-                        .build(),
-                ),
             )
-        },
-        ID::Channel((_, guild_id)) => {
-            collection.update_one(
+            .with_options(
+                UpdateOptions::builder()
+                    .upsert(true)
+                    .build(),
+            ),
+        ID::Channel((_, guild_id)) => collection
+            .update_one(
                 doc! {"guild": guild_id.get() as i64},
                 doc! {
                     "$addToSet": {
                         filter_type: filter
                     }
                 },
-                Some(
-                    UpdateOptions::builder()
-                        .upsert(true)
-                        .build(),
-                ),
             )
-        },
+            .with_options(
+                UpdateOptions::builder()
+                    .upsert(true)
+                    .build(),
+            ),
     }
     .await;
 
@@ -225,28 +203,22 @@ pub async fn remove_filter(
     };
 
     let result = match id {
-        ID::User(user_id) => {
-            collection.update_one(
-                doc! {"user": user_id.get() as i64},
-                doc! {
-                    "$pull": {
-                        filter_type: filter
-                    }
-                },
-                None,
-            )
-        },
-        ID::Channel((_, guild_id)) => {
-            collection.update_one(
-                doc! {"guild": guild_id.get() as i64},
-                doc! {
-                    "$pull": {
-                        filter_type: filter
-                    }
-                },
-                None,
-            )
-        },
+        ID::User(user_id) => collection.update_one(
+            doc! {"user": user_id.get() as i64},
+            doc! {
+                "$pull": {
+                    filter_type: filter
+                }
+            },
+        ),
+        ID::Channel((_, guild_id)) => collection.update_one(
+            doc! {"guild": guild_id.get() as i64},
+            doc! {
+                "$pull": {
+                    filter_type: filter
+                }
+            },
+        ),
     }
     .await;
 
@@ -268,36 +240,34 @@ pub async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &s
     };
 
     let result = match id {
-        ID::User(user_id) => {
-            collection.update_one(
+        ID::User(user_id) => collection
+            .update_one(
                 doc! {"user": user_id.get() as i64},
                 doc! {
                     "$set": {
                         setting: val
                     }
                 },
-                Some(
-                    UpdateOptions::builder()
-                        .upsert(true)
-                        .build(),
-                ),
             )
-        },
-        ID::Channel((_, guild_id)) => {
-            collection.update_one(
+            .with_options(
+                UpdateOptions::builder()
+                    .upsert(true)
+                    .build(),
+            ),
+        ID::Channel((_, guild_id)) => collection
+            .update_one(
                 doc! {"guild": guild_id.get() as i64},
                 doc! {
                     "$set": {
                         setting: val
                     }
                 },
-                Some(
-                    UpdateOptions::builder()
-                        .upsert(true)
-                        .build(),
-                ),
             )
-        },
+            .with_options(
+                UpdateOptions::builder()
+                    .upsert(true)
+                    .build(),
+            ),
     }
     .await;
 
@@ -315,21 +285,20 @@ pub async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, c
     let collection = db.collection::<Document>("guild_settings");
 
     let result = match id {
-        ID::Channel((_, guild_id)) => {
-            collection.update_one(
+        ID::Channel((_, guild_id)) => collection
+            .update_one(
                 doc! {"guild": guild_id.get() as i64},
                 doc! {
                     "$set": {
                         "notifications_channel": channel.get() as i64
                     }
                 },
-                Some(
-                    UpdateOptions::builder()
-                        .upsert(true)
-                        .build(),
-                ),
             )
-        },
+            .with_options(
+                UpdateOptions::builder()
+                    .upsert(true)
+                    .build(),
+            ),
         ID::User(_) => return,
     }
     .await;
@@ -358,11 +327,11 @@ pub async fn add_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) 
                     "mentions": role.get() as i64
                 }
             },
-            Some(
-                UpdateOptions::builder()
-                    .upsert(true)
-                    .build(),
-            ),
+        )
+        .with_options(
+            UpdateOptions::builder()
+                .upsert(true)
+                .build(),
         )
         .await;
 
@@ -390,7 +359,6 @@ pub async fn remove_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleI
                     "mentions": role.get() as i64
                 }
             },
-            None,
         )
         .await;
 

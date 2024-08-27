@@ -1,13 +1,7 @@
-use serenity::{
-    builder::{
-        CreateActionRow,
-        CreateEmbed,
-        CreateInteractionResponse,
-        CreateInteractionResponseMessage,
-        CreateModal,
-        EditInteractionResponse,
-    },
-    framework::standard::CommandError,
+use okto_framework::structs::CommandError;
+use serenity::builder::{
+    CreateActionRow, CreateEmbed, CreateInteractionResponse, CreateInteractionResponseMessage,
+    CreateModal, EditInteractionResponse,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

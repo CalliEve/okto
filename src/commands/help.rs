@@ -1,71 +1,31 @@
-use std::{
-    fmt::Write,
-    sync::Arc,
-};
+use std::{fmt::Write, sync::Arc};
 
 use itertools::Itertools;
-use mongodb::bson::{
-    doc,
-    document::Document,
-    from_bson,
-};
+use mongodb::bson::{doc, document::Document, from_bson};
 use okto_framework::{
     macros::command,
-    structs::Command,
+    structs::{Command, CommandError, CommandResult},
 };
 use serenity::{
-    builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-        EditInteractionResponse,
-    },
-    framework::standard::{
-        macros::hook,
-        CommandError,
-        CommandResult,
-    },
+    builder::{CreateEmbed, CreateEmbedAuthor, EditInteractionResponse},
+    framework::standard::macros::hook,
     model::{
-        application::{
-            ButtonStyle,
-            CommandInteraction,
-        },
-        prelude::{
-            Channel,
-            Message,
-            MessageType,
-            ReactionType,
-        },
+        application::{ButtonStyle, CommandInteraction},
+        prelude::{Channel, Message, MessageType, ReactionType},
         Permissions,
     },
-    prelude::{
-        Context,
-        RwLock,
-    },
+    prelude::{Context, RwLock},
 };
 
 use crate::{
-    events::statefulembed::{
-        ButtonType,
-        EmbedSession,
-        StatefulEmbed,
-    },
+    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
     models::{
-        caches::{
-            CommandListKey,
-            DatabaseKey,
-        },
+        caches::{CommandListKey, DatabaseKey},
         settings::GuildSettings,
     },
     utils::{
         capitalize,
-        constants::{
-            BACK_EMOJI,
-            DEFAULT_COLOR,
-            DEFAULT_ICON,
-            EXIT_EMOJI,
-            NUMBER_EMOJIS,
-            OWNERS,
-        },
+        constants::{BACK_EMOJI, DEFAULT_COLOR, DEFAULT_ICON, EXIT_EMOJI, NUMBER_EMOJIS, OWNERS},
     },
 };
 
@@ -183,7 +143,7 @@ fn help_menu(
                 c.info
                     .file
             })
-            .group_by(|c| {
+            .chunk_by(|c| {
                 c.info
                     .file
             })
@@ -475,10 +435,7 @@ pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
 
     let res = db
         .collection::<Document>("general_settings")
-        .find_one(
-            doc! { "guild": msg.guild_id.unwrap().get() as i64 },
-            None,
-        )
+        .find_one(doc! { "guild": msg.guild_id.unwrap().get() as i64 })
         .await;
 
     if res.is_err() {

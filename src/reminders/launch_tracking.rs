@@ -1,39 +1,16 @@
-use std::{
-    collections::HashMap,
-    convert::TryFrom,
-    sync::Arc,
-};
+use std::{collections::HashMap, convert::TryFrom, sync::Arc};
 
 use chrono::Duration;
-use futures::stream::{
-    FuturesUnordered,
-    StreamExt,
-};
+use futures::stream::{FuturesUnordered, StreamExt};
 use mongodb::Database;
-use reqwest::{
-    header::AUTHORIZATION,
-    Result,
-};
-use serenity::{
-    http::Http,
-    prelude::RwLock,
-};
+use reqwest::{header::AUTHORIZATION, Result};
+use serenity::{http::Http, prelude::RwLock};
 
-use super::{
-    notify_outcome,
-    notify_scrub,
-};
+use super::{notify_outcome, notify_scrub};
 use crate::{
-    models::launches::{
-        LaunchContainer,
-        LaunchData,
-        LaunchStatus,
-    },
+    models::launches::{LaunchContainer, LaunchData, LaunchStatus},
     utils::{
-        constants::{
-            DEFAULT_CLIENT,
-            LL_KEY,
-        },
+        constants::{DEFAULT_CLIENT, LL_KEY},
         error_log,
     },
 };
@@ -43,12 +20,11 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
 
     // Get new set of launches
     let mut launches: Vec<LaunchData> = match get_new_launches().await {
-        Ok(ls) => {
-            ls.results
-                .into_iter()
-                .map(LaunchData::from)
-                .collect()
-        },
+        Ok(ls) => ls
+            .results
+            .into_iter()
+            .map(LaunchData::from)
+            .collect(),
         Err(e) => {
             dbg!(e);
             return;
@@ -76,7 +52,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
 
     // Update launch cache and free the lock
     let old_launches = launch_cache.clone();
-    *launch_cache = launches.clone();
+    launch_cache.clone_from(&launches);
     std::mem::drop(launch_cache);
     let five_minutes = Duration::minutes(5);
 
@@ -118,9 +94,10 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
                         matches!(
                             ol.status,
                             LaunchStatus::Go
-                                | LaunchStatus::Tbd
+                                | LaunchStatus::ToBeDetermined
                                 | LaunchStatus::InFlight
                                 | LaunchStatus::Hold
+                                | LaunchStatus::ToBeConfirmed
                         )
                     })
             })
@@ -145,7 +122,7 @@ async fn get_new_launches() -> Result<LaunchContainer> {
     params.insert("mode", "detailed");
 
     DEFAULT_CLIENT
-        .get("https://ll.thespacedevs.com/2.0.0/launch/upcoming/")
+        .get("https://ll.thespacedevs.com/2.2.0/launch/upcoming/")
         .header(AUTHORIZATION, LL_KEY.as_str())
         .query(&params)
         .send()

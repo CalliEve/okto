@@ -2,57 +2,36 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use itertools::Itertools;
-use okto_framework::macros::command;
+use okto_framework::{macros::command, structs::CommandResult};
 use serenity::{
     all::InteractionResponseFlags,
     builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-        CreateEmbedFooter,
-        CreateInteractionResponse,
+        CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateInteractionResponse,
         CreateInteractionResponseMessage,
     },
-    framework::standard::CommandResult,
     model::{
-        application::{
-            ButtonStyle,
-            CommandInteraction,
-        },
+        application::{ButtonStyle, CommandInteraction},
         channel::ReactionType,
         id::EmojiId,
         Timestamp,
     },
-    prelude::{
-        Context,
-        RwLock,
-    },
+    prelude::{Context, RwLock},
 };
 
 use crate::{
-    events::statefulembed::{
-        ButtonType,
-        EmbedSession,
-        StatefulEmbed,
-    },
+    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
     models::{
         caches::LaunchesCacheKey,
-        launches::{
-            LaunchData,
-            LaunchStatus,
-        },
+        launches::{LaunchData, LaunchStatus},
     },
     utils::{
-        constants::*,
-        cutoff_on_last_dot,
-        default_embed,
-        format_duration,
-        launches::*,
+        constants::*, cutoff_on_last_dot, default_embed, format_duration, launches::*,
         StandardButton,
     },
 };
 
 #[command]
-/// Get information about the next launch that has been marked as certain
+/// Get information about the next launch whose date is known with at least some certainty
 #[options(
     {
         option_type: String,
@@ -84,7 +63,7 @@ async fn nextlaunch(ctx: &Context, interaction: &CommandInteraction) -> CommandR
         }
     }?
     .into_iter()
-    .filter(|l| l.status == LaunchStatus::Go)
+    .filter(|l| l.status == LaunchStatus::Go || l.status == LaunchStatus::ToBeDetermined)
     .collect();
 
     if launches.is_empty() {
@@ -141,6 +120,7 @@ async fn nextlaunch(ctx: &Context, interaction: &CommandInteraction) -> CommandR
             Timestamp::from_unix_timestamp(
                 launch
                     .net
+                    .and_utc()
                     .timestamp(),
             )
             .expect("Invalid timestamp"),
@@ -161,6 +141,7 @@ async fn nextlaunch(ctx: &Context, interaction: &CommandInteraction) -> CommandR
             &launch.payload,
             launch
                 .net
+                .and_utc()
                 .timestamp(),
             &launch.lsp,
             &launch.location,
@@ -204,7 +185,9 @@ fn list_page(
             list.clone()
         } else {
             list.iter()
-                .filter(|l| l.status == LaunchStatus::Go)
+                .filter(|l| {
+                    l.status == LaunchStatus::Go || l.status == LaunchStatus::ToBeDetermined
+                })
                 .cloned()
                 .collect()
         };
@@ -228,7 +211,7 @@ fn list_page(
             This list shows the upcoming launches (max 100), both certain and uncertain.\n\
             Use the arrow reactions to get to other pages and the green reaction to filter on only the launches that are certain.
             "} else {"
-            This list shows upcoming launches that are certain.\n\
+            This list shows upcoming launches that are known with at least some certainty.\n\
             Use the arrow reactions to get to other pages and the red reaction to get all the launches.
             "}).fields(launches[min..top].iter().map(|launch| (format!(
                 "{}: {} - {}",
@@ -242,7 +225,7 @@ fn list_page(
                 "**Payload:** {}\n**NET:** <t:{}>\n**Provider:** {}\n**Location:** {}",
                 &launch.payload,
                 launch
-                    .net
+                    .net.and_utc()
                     .timestamp(),
                 &launch.lsp,
                 &launch.location
@@ -295,7 +278,7 @@ fn list_page(
         if all
             && launches
                 .iter()
-                .any(|l| l.status == LaunchStatus::Go)
+                .any(|l| l.status == LaunchStatus::Go || l.status == LaunchStatus::ToBeDetermined)
         {
             let certain_page_launches = list.clone();
             let certain_page_session = session.clone();
@@ -561,6 +544,7 @@ async fn launchinfo(ctx: &Context, interaction: &CommandInteraction) -> CommandR
             Timestamp::from_unix_timestamp(
                 launch
                     .net
+                    .and_utc()
                     .timestamp(),
             )
             .expect("Invalid timestamp"),
@@ -578,6 +562,7 @@ async fn launchinfo(ctx: &Context, interaction: &CommandInteraction) -> CommandR
                 "<t:{}>",
                 launch
                     .net
+                    .and_utc()
                     .timestamp()
             ),
             false,

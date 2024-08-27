@@ -1,66 +1,33 @@
-use std::{
-    collections::HashMap,
-    str::FromStr,
-    sync::Arc,
-};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
-use chrono::{
-    Duration,
-    NaiveDateTime,
-    Utc,
-};
+use chrono::{DateTime, Duration, Utc};
 use futures::{
     future,
-    stream::{
-        self,
-        FuturesUnordered,
-        StreamExt,
-    },
+    stream::{self, FuturesUnordered, StreamExt},
 };
 use itertools::Itertools;
 use mongodb::{
-    bson::{
-        self,
-        doc,
-        Document,
-    },
+    bson::{self, doc, Document},
     error::Result as MongoResult,
     Database,
 };
 use serenity::{
-    builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-        CreateMessage,
-    },
+    builder::{CreateEmbed, CreateEmbedAuthor, CreateMessage},
     http::Http,
     model::Timestamp,
     prelude::RwLock,
 };
 
-use super::{
-    filtering::passes_filters,
-    launch_tracking,
-};
+use super::{filtering::passes_filters, launch_tracking};
 use crate::{
     models::{
-        launches::{
-            LaunchData,
-            LaunchStatus,
-        },
+        launches::{LaunchData, LaunchStatus},
         reminders::Reminder,
     },
     utils::{
-        constants::{
-            DEFAULT_COLOR,
-            DEFAULT_ICON,
-        },
-        error_log,
-        format_duration,
-        reminders::{
-            get_guild_settings,
-            get_user_settings,
-        },
+        constants::{DEFAULT_COLOR, DEFAULT_ICON},
+        error_log, format_duration,
+        reminders::{get_guild_settings, get_user_settings},
     },
 };
 
@@ -88,7 +55,7 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
             .read()
             .await
             .iter()
-            .filter(|l| l.status == LaunchStatus::Go)
+            .filter(|l| l.status == LaunchStatus::Go || l.status == LaunchStatus::ToBeConfirmed)
             .cloned()
             .collect();
         if launches.is_empty() {
@@ -100,8 +67,9 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
 
         for l in launches {
             let difference = l.net
-                - NaiveDateTime::from_timestamp_opt(now, 0)
-                    .expect("invalid timestamp for launch difference");
+                - DateTime::from_timestamp(now, 0)
+                    .expect("invalid timestamp for launch difference")
+                    .naive_utc();
 
             if let Some(dur) = reminded.get(&l.ll_id) {
                 if *dur == difference.num_minutes() {
@@ -141,7 +109,7 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
 
 async fn get_reminders(db: &Database, minutes: i64) -> MongoResult<Option<Document>> {
     db.collection("reminders")
-        .find_one(doc! { "minutes": minutes }, None)
+        .find_one(doc! { "minutes": minutes })
         .await
 }
 
@@ -231,8 +199,12 @@ async fn execute_reminder(
 
 fn reminder_embed(l: &LaunchData, diff: Duration) -> CreateEmbed {
     let live = if let Some(link) = l
-        .vid_urls.iter().find_or_first(|v| v.url.contains("youtube.com"))
-    {
+        .vid_urls
+        .iter()
+        .find_or_first(|v| {
+            v.url
+                .contains("youtube.com")
+        }) {
         format!("**Live at:** {}", format_url(&link.url))
     } else {
         String::new()
@@ -255,12 +227,14 @@ fn reminder_embed(l: &LaunchData, diff: Duration) -> CreateEmbed {
             &l.payload,
             &l.vehicle,
             l.net
+                .and_utc()
                 .timestamp(),
             live
         ))
         .timestamp(
             Timestamp::from_unix_timestamp(
                 l.net
+                    .and_utc()
                     .timestamp(),
             )
             .expect("Invalid timestamp"),
