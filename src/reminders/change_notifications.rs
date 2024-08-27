@@ -2,48 +2,27 @@ use std::sync::Arc;
 
 use futures::{
     future,
-    stream::{
-        self,
-        FuturesUnordered,
-    },
+    stream::{self, FuturesUnordered},
     StreamExt,
 };
 use mongodb::{
-    bson::{
-        self,
-        doc,
-        Document,
-    },
+    bson::{self, doc, Document},
     error::Result as MongoResult,
     Database,
 };
 use serde::de::DeserializeOwned;
 use serenity::{
-    builder::{
-        CreateEmbed,
-        CreateMessage,
-    },
+    builder::{CreateEmbed, CreateMessage},
     http::Http,
-    model::{
-        channel::Message,
-        id::ChannelId,
-        Colour,
-        Timestamp,
-    },
+    model::{channel::Message, id::ChannelId, Colour, Timestamp},
     Error as SerenityError,
 };
 
 use super::filtering::passes_filters;
 use crate::{
     models::{
-        launches::{
-            LaunchData,
-            LaunchStatus,
-        },
-        reminders::{
-            GuildSettings,
-            UserSettings,
-        },
+        launches::{LaunchData, LaunchStatus},
+        reminders::{GuildSettings, UserSettings},
     },
     utils::default_embed,
 };
@@ -54,7 +33,7 @@ where
 {
     let Ok(cursor) = db
         .collection(collection)
-        .find(doc! {toggled: true}, None)
+        .find(doc! {toggled: true})
         .await
     else {
         return Vec::new();
@@ -185,6 +164,7 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
             new.payload,
             new.vehicle,
             new.net
+                .and_utc()
                 .timestamp(),
             if new.status == LaunchStatus::Tbd {
                 " (TBD)"
@@ -192,6 +172,7 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
                 ""
             },
             old.net
+                .and_utc()
                 .timestamp(),
             if old.status == LaunchStatus::Tbd {
                 " (TBD)"
@@ -204,6 +185,7 @@ fn scrub_embed<'r>(old: &'r LaunchData, new: &'r LaunchData) -> CreateEmbed {
     .timestamp(
         Timestamp::from_unix_timestamp(
             new.net
+                .and_utc()
                 .timestamp(),
         )
         .expect("Invalid timestamp"),

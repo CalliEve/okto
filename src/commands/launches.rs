@@ -2,51 +2,30 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use itertools::Itertools;
-use okto_framework::macros::command;
+use okto_framework::{macros::command, structs::CommandResult};
 use serenity::{
     all::InteractionResponseFlags,
     builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-        CreateEmbedFooter,
-        CreateInteractionResponse,
+        CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateInteractionResponse,
         CreateInteractionResponseMessage,
     },
-    framework::standard::CommandResult,
     model::{
-        application::{
-            ButtonStyle,
-            CommandInteraction,
-        },
+        application::{ButtonStyle, CommandInteraction},
         channel::ReactionType,
         id::EmojiId,
         Timestamp,
     },
-    prelude::{
-        Context,
-        RwLock,
-    },
+    prelude::{Context, RwLock},
 };
 
 use crate::{
-    events::statefulembed::{
-        ButtonType,
-        EmbedSession,
-        StatefulEmbed,
-    },
+    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
     models::{
         caches::LaunchesCacheKey,
-        launches::{
-            LaunchData,
-            LaunchStatus,
-        },
+        launches::{LaunchData, LaunchStatus},
     },
     utils::{
-        constants::*,
-        cutoff_on_last_dot,
-        default_embed,
-        format_duration,
-        launches::*,
+        constants::*, cutoff_on_last_dot, default_embed, format_duration, launches::*,
         StandardButton,
     },
 };
@@ -141,6 +120,7 @@ async fn nextlaunch(ctx: &Context, interaction: &CommandInteraction) -> CommandR
             Timestamp::from_unix_timestamp(
                 launch
                     .net
+                    .and_utc()
                     .timestamp(),
             )
             .expect("Invalid timestamp"),
@@ -161,6 +141,7 @@ async fn nextlaunch(ctx: &Context, interaction: &CommandInteraction) -> CommandR
             &launch.payload,
             launch
                 .net
+                .and_utc()
                 .timestamp(),
             &launch.lsp,
             &launch.location,
@@ -242,7 +223,7 @@ fn list_page(
                 "**Payload:** {}\n**NET:** <t:{}>\n**Provider:** {}\n**Location:** {}",
                 &launch.payload,
                 launch
-                    .net
+                    .net.and_utc()
                     .timestamp(),
                 &launch.lsp,
                 &launch.location
@@ -561,6 +542,7 @@ async fn launchinfo(ctx: &Context, interaction: &CommandInteraction) -> CommandR
             Timestamp::from_unix_timestamp(
                 launch
                     .net
+                    .and_utc()
                     .timestamp(),
             )
             .expect("Invalid timestamp"),
@@ -578,6 +560,7 @@ async fn launchinfo(ctx: &Context, interaction: &CommandInteraction) -> CommandR
                 "<t:{}>",
                 launch
                     .net
+                    .and_utc()
                     .timestamp()
             ),
             false,

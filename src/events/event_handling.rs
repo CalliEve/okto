@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    time::Duration,
-};
+use std::{collections::HashMap, time::Duration};
 
 use okto_framework::Handler as InteractionHandler;
 use reqwest::header::AUTHORIZATION;
@@ -13,36 +10,20 @@ use serenity::{
         application::Interaction,
         channel::Message,
         gateway::Ready,
-        guild::{
-            Guild,
-            UnavailableGuild,
-        },
-        id::{
-            ChannelId,
-            GuildId,
-            MessageId,
-        },
+        guild::{Guild, UnavailableGuild},
+        id::{ChannelId, GuildId, MessageId},
     },
-    prelude::{
-        Context,
-        EventHandler,
-    },
+    prelude::{Context, EventHandler},
 };
 
 use crate::{
     commands::help::slash_command_message,
     events::{
         interaction_handler::handle_interaction,
-        statefulembed::{
-            on_button_click as embed_button_click,
-            on_message_delete as embed_delete,
-        },
+        statefulembed::{on_button_click as embed_button_click, on_message_delete as embed_delete},
     },
     utils::{
-        constants::{
-            DEFAULT_CLIENT,
-            TOPGG_TOKEN,
-        },
+        constants::{DEFAULT_CLIENT, GUILD_LOG_CHANNEL_ID, STARUP_LOG_CHANNEL_ID, TOPGG_TOKEN},
         error_log,
     },
 };
@@ -82,7 +63,7 @@ impl EventHandler for Handler {
                 .guilds
                 .len(),
         );
-        let _ = ChannelId::new(448224720177856513)
+        let _ = STARUP_LOG_CHANNEL_ID
             .send_message(
                 &ctx.http,
                 CreateMessage::new().content(content),
@@ -100,9 +81,6 @@ impl EventHandler for Handler {
                     let amount: usize = ctx
                         .cache
                         .guild_count();
-                    // let status = format!("{} servers", amount);
-                    // ctx.set_activity(Activity::listening(&status))
-                    //     .await;
 
                     let mut map = HashMap::new();
                     map.insert("server_count", amount);
@@ -141,43 +119,31 @@ impl EventHandler for Handler {
 
     async fn guild_create(&self, ctx: Context, guild: Guild, is_new: Option<bool>) {
         if is_new.unwrap_or(false) {
-            if let Some(channel) = ctx
-                .cache
-                .channel(755401788294955070)
-                .map(|c| c.id)
-            {
-                let content = format!(
-                    "Joined a new guild: {} ({})\nIt has {} members",
-                    guild.name, guild.id, guild.member_count
-                );
-                let _ = channel
-                    .send_message(
-                        &ctx.http,
-                        CreateMessage::new().content(content),
-                    )
-                    .await;
-            }
+            let content = format!(
+                "Joined a new guild: {} ({})\nIt has {} members",
+                guild.name, guild.id, guild.member_count
+            );
+            let _ = GUILD_LOG_CHANNEL_ID
+                .send_message(
+                    &ctx.http,
+                    CreateMessage::new().content(content),
+                )
+                .await;
         }
     }
 
     async fn guild_delete(&self, ctx: Context, incomplete: UnavailableGuild, _full: Option<Guild>) {
         if !incomplete.unavailable {
-            if let Some(channel) = ctx
-                .cache
-                .channel(755401788294955070)
-                .map(|c| c.id)
-            {
-                let content = format!(
-                    "Left the following guild: {}",
-                    incomplete.id
-                );
-                let _ = channel
-                    .send_message(
-                        &ctx.http,
-                        CreateMessage::new().content(content),
-                    )
-                    .await;
-            }
+            let content = format!(
+                "Left the following guild: {}",
+                incomplete.id
+            );
+            let _ = GUILD_LOG_CHANNEL_ID
+                .send_message(
+                    &ctx.http,
+                    CreateMessage::new().content(content),
+                )
+                .await;
         }
     }
 

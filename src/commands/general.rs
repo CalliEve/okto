@@ -2,33 +2,19 @@ use std::collections::HashMap;
 
 use chrono::Utc;
 use itertools::Itertools;
-use okto_framework::macros::command;
+use okto_framework::{macros::command, structs::CommandResult};
 use rand::seq::SliceRandom;
-use serde::{
-    Deserialize,
-    Serialize,
-};
+use serde::{Deserialize, Serialize};
 use serenity::{
     builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-        CreateEmbedFooter,
-        CreateInteractionResponse,
-        CreateInteractionResponseMessage,
-        EditInteractionResponse,
+        CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateInteractionResponse,
+        CreateInteractionResponseMessage, EditInteractionResponse,
     },
-    framework::standard::CommandResult,
-    model::{
-        application::CommandInteraction,
-        Colour,
-    },
+    model::{application::CommandInteraction, Colour},
     prelude::Context,
 };
 
-use crate::{
-    models::caches::PictureCacheKey,
-    utils::constants::*,
-};
+use crate::{models::caches::PictureCacheKey, utils::constants::*};
 
 #[command]
 /// Get the ping of the bot
@@ -76,25 +62,50 @@ async fn info(ctx: &Context, interaction: &CommandInteraction) -> CommandResult 
         .cache
         .current_user()
         .id;
+
+    let mut stats = "".to_owned();
+    if OWNER_ID
+        == interaction
+            .user
+            .id
+    {
+        stats = format!(
+            "**Approx total members:** {}\n",
+            ctx.cache
+                .guilds()
+                .into_iter()
+                .map(|id| ctx
+                    .cache
+                    .guild(id)
+                    .map_or(0, |g| {
+                        match g.approximate_member_count {
+                            Some(0..=1) => g.member_count,
+                            Some(n) => n,
+                            None => g.member_count,
+                        }
+                    }))
+                .sum::<u64>()
+        );
+    }
+
     interaction.create_response(&ctx.http, CreateInteractionResponse::Message(CreateInteractionResponseMessage::new().embed(CreateEmbed::new()
             .title("OKTO")
             .description(
                 format!(
                     "This is a bot to show upcoming launches and provide additional information on everything to do with spaceflight\n\
-                    **Author:** Calli#3141\n\
+                    **Author:** callieve\n\
                     **Version:** `4.0` \"slash-commands\"\n\
                     **Source Code:** [GitHub link](https://github.com/callieve/okto)\n\
                     **Library:** [Serenity](https://github.com/serenity-rs/serenity)\n\
-                    **Total servers:** {}\n\
+                    **Total servers:** {}\n{}\
                     <:RustRainbow:752508751675654204>\n\
                     \n<:discord:314003252830011395>\n\
                     [**Support Server**](https://discord.gg/dXPHfPJ)\n\
                     [**The Space Devs**](https://discord.gg/p7ntkNA)\n\
-                    [**Rocket Watch server**](https://discord.gg/Hyd4umg)\n\
                     \n<:botTag:230105988211015680>\n\
                     If you want OKTO on your server, click [**here**](https://discord.com/api/oauth2/authorize?client_id={}&permissions=388160&scope=bot%20applications.commands)\n\
                     If you like OKTO, please [**vote**](https://discordbots.org/bot/429306620439166977/vote) ^-^",
-                    ctx.cache.guild_count(), user_id
+                    ctx.cache.guild_count(), stats, user_id
                 )
             )
             .author(CreateEmbedAuthor::new("Bot Information")

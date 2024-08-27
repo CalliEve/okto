@@ -4,44 +4,20 @@ mod settings;
 use std::sync::Arc;
 
 use chrono::Utc;
-use okto_framework::macros::command;
-use pages::{
-    filters_page,
-    mentions_page,
-    other_page,
-    reminders_page,
-};
+use okto_framework::{macros::command, structs::CommandResult};
+use pages::{filters_page, mentions_page, other_page, reminders_page};
 use serenity::{
     all::InteractionResponseFlags,
     builder::{
-        CreateEmbed,
-        CreateEmbedAuthor,
-        CreateInteractionResponse,
-        CreateInteractionResponseMessage,
+        CreateEmbed, CreateEmbedAuthor, CreateInteractionResponse, CreateInteractionResponseMessage,
     },
-    framework::standard::CommandResult,
-    model::application::{
-        ButtonStyle,
-        CommandInteraction,
-    },
-    prelude::{
-        Context,
-        RwLock,
-    },
+    model::application::{ButtonStyle, CommandInteraction},
+    prelude::{Context, RwLock},
 };
 
 use crate::{
-    events::statefulembed::{
-        ButtonType,
-        EmbedSession,
-        StatefulEmbed,
-    },
-    utils::{
-        constants::*,
-        default_embed,
-        reminders::ID,
-        StandardButton,
-    },
+    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
+    utils::{constants::*, default_embed, reminders::ID, StandardButton},
 };
 
 #[command]
@@ -82,11 +58,18 @@ async fn notifychannel(ctx: &Context, interaction: &CommandInteraction) -> Comma
         .iter()
         .find(|o| o.name == "target_channel")
     {
-        channel_id
+        let given_channel = channel_id
             .value
             .as_channel_id()
-            .ok_or("Invalid argument given")?
-            .to_channel_cached(&ctx.cache)
+            .ok_or("Invalid argument given")?;
+
+        interaction
+            .guild_id
+            .unwrap()
+            .to_guild_cached(&ctx.cache)
+            .unwrap()
+            .channels
+            .get(&given_channel)
             .map_or(interaction.channel_id, |channel| {
                 channel.id
             })

@@ -15,43 +15,21 @@ mod models;
 mod reminders;
 mod utils;
 
-use std::{
-    collections::HashMap,
-    env,
-    sync::Arc,
-};
+use std::{collections::HashMap, env, sync::Arc};
 
-use commands::{
-    general::*,
-    help::*,
-    launches::*,
-    pictures::*,
-    reminders::*,
-};
+use commands::{general::*, help::*, launches::*, pictures::*, reminders::*};
 use models::caches::{
-    CommandListKey,
-    DatabaseKey,
-    EmbedSessionsKey,
-    InteractionKey,
-    LaunchesCacheKey,
+    CommandListKey, DatabaseKey, EmbedSessionsKey, InteractionKey, LaunchesCacheKey,
     PictureCacheKey,
 };
 use mongodb::Client as MongoClient;
 use serenity::{
     all::ApplicationId,
-    builder::CreateMessage,
     client::Client,
-    framework::standard::StandardFramework,
     model::gateway::GatewayIntents,
-    prelude::{
-        RwLock,
-        TypeMap,
-    },
+    prelude::{RwLock, TypeMap},
 };
-use utils::{
-    error_log,
-    preloading::preload_data,
-};
+use utils::preloading::preload_data;
 
 #[tokio::main]
 async fn main() {
@@ -72,27 +50,6 @@ async fn main() {
     } else {
         "mongodb://mongo:27017".to_owned()
     };
-
-    let framework = StandardFramework::new().after(|ctx, msg, cmd_name, error| {
-        Box::pin(async move {
-            //  Print out an error if it happened
-            if let Err(why) = error {
-                let _ = msg
-                    .channel_id
-                    .send_message(
-                        &ctx.http,
-                        CreateMessage::new()
-                            .content("Oh no, an error happened.\nPlease try again at a later time"),
-                    )
-                    .await;
-                error_log(
-                    &ctx.http,
-                    format!("An error happened in {cmd_name}:\n```{why}```",),
-                )
-                .await
-            }
-        })
-    });
 
     let slash_framework = okto_framework::create_framework!(
         &token,
@@ -144,7 +101,6 @@ async fn main() {
 
     let mut client = Client::builder(&token, intents)
         .application_id(application_id)
-        .framework(framework)
         .type_map(data_map)
         .event_handler(events::Handler::new(slash_framework))
         .await
