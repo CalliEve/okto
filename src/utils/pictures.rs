@@ -1,11 +1,9 @@
 use std::ops::Range;
 
-use rand::{
-    prelude::{
-        Rng,
-        RngCore,
-    },
-    seq::SliceRandom,
+use rand::prelude::{
+    IndexedRandom,
+    Rng,
+    RngCore,
 };
 use reqwest::Error;
 
@@ -62,7 +60,7 @@ pub async fn fetch_rover_camera_picture(
         sol = RNG
             .lock()
             .await
-            .gen_range(sol_range.clone());
+            .random_range(sol_range.clone());
 
         rovers = fetch_rover_image_from_api(sol, rover)
             .await

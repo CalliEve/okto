@@ -163,7 +163,7 @@ async fn spacepic(ctx: &Context, interaction: &CommandInteraction) -> CommandRes
         let day = RNG
             .lock()
             .await
-            .gen_range(0..days);
+            .random_range(0..days);
         start + Duration::days(day)
     };
 

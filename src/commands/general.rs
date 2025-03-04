@@ -6,7 +6,7 @@ use okto_framework::{
     macros::command,
     structs::CommandResult,
 };
-use rand::seq::SliceRandom;
+use rand::prelude::IndexedRandom;
 use serde::{
     Deserialize,
     Serialize,

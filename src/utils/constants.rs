@@ -6,8 +6,8 @@ use std::{
 
 use rand::{
     SeedableRng,
+    rng,
     rngs::StdRng,
-    thread_rng,
 };
 use regex::Regex;
 use reqwest::{
@@ -353,4 +353,4 @@ pub static LAUNCH_AGENCIES: LazyLock<HashMap<&'static str, &'static str>> =
 pub static LAUNCH_VEHICLES: LazyLock<HashMap<&'static str, Vec<&'static str>>> =
     LazyLock::new(vehicle_map);
 pub static RNG: LazyLock<Mutex<StdRng>> =
-    LazyLock::new(|| Mutex::new(StdRng::from_rng(thread_rng()).unwrap()));
+    LazyLock::new(|| Mutex::new(StdRng::from_rng(&mut rng())));
