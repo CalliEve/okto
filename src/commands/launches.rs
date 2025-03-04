@@ -2,36 +2,60 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use itertools::Itertools;
-use okto_framework::{macros::command, structs::CommandResult};
+use okto_framework::{
+    macros::command,
+    structs::CommandResult,
+};
 use serenity::{
     all::InteractionResponseFlags,
     builder::{
-        CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateInteractionResponse,
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateEmbedFooter,
+        CreateInteractionResponse,
         CreateInteractionResponseMessage,
     },
     model::{
-        application::{ButtonStyle, CommandInteraction},
+        Timestamp,
+        application::{
+            ButtonStyle,
+            CommandInteraction,
+        },
         channel::ReactionType,
         id::EmojiId,
-        Timestamp,
     },
-    prelude::{Context, RwLock},
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
-    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
+    events::statefulembed::{
+        ButtonType,
+        EmbedSession,
+        StatefulEmbed,
+    },
     models::{
         caches::LaunchesCacheKey,
-        launches::{LaunchData, LaunchStatus},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
     },
     utils::{
-        constants::*, cutoff_on_last_dot, default_embed, format_duration, launches::*,
         StandardButton,
+        constants::*,
+        cutoff_on_last_dot,
+        default_embed,
+        format_duration,
+        launches::*,
     },
 };
 
 #[command]
-/// Get information about the next launch whose date is known with at least some certainty
+/// Get information about the next launch whose date is known with at least some
+/// certainty
 #[options(
     {
         option_type: String,

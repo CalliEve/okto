@@ -6,6 +6,7 @@ use std::{
 use futures::future::BoxFuture;
 use itertools::Itertools;
 use serenity::{
+    Error,
     all::ComponentInteractionDataKind,
     builder::{
         CreateActionRow,
@@ -26,12 +27,11 @@ use serenity::{
         RwLock,
         TypeMap,
     },
-    Error,
 };
 
 use super::interaction_handler::{
-    respond_to_interaction,
     InteractionHandler,
+    respond_to_interaction,
 };
 use crate::{
     models::caches::InteractionKey,

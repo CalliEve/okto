@@ -1,13 +1,27 @@
-use std::{collections::HashMap, time::Duration as StdDuration};
+use std::{
+    collections::HashMap,
+    time::Duration as StdDuration,
+};
 
-use chrono::{Duration, TimeZone, Utc};
-use okto_framework::{macros::command, structs::CommandResult};
+use chrono::{
+    Duration,
+    TimeZone,
+    Utc,
+};
+use okto_framework::{
+    macros::command,
+    structs::CommandResult,
+};
 use rand::Rng;
 use reqwest::Response;
 use serenity::{
     builder::{
-        CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateInteractionResponse,
-        CreateInteractionResponseMessage, EditInteractionResponse,
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateEmbedFooter,
+        CreateInteractionResponse,
+        CreateInteractionResponseMessage,
+        EditInteractionResponse,
     },
     model::application::CommandInteraction,
     prelude::Context,
@@ -15,7 +29,13 @@ use serenity::{
 
 use crate::{
     models::pictures::*,
-    utils::{constants::*, default_embed, error_log, other::cutoff_on_last_dot, pictures::*},
+    utils::{
+        constants::*,
+        default_embed,
+        error_log,
+        other::cutoff_on_last_dot,
+        pictures::*,
+    },
 };
 
 #[command]

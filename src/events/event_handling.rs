@@ -1,4 +1,7 @@
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::HashMap,
+    time::Duration,
+};
 
 use okto_framework::Handler as InteractionHandler;
 use reqwest::header::AUTHORIZATION;
@@ -10,20 +13,38 @@ use serenity::{
         application::Interaction,
         channel::Message,
         gateway::Ready,
-        guild::{Guild, UnavailableGuild},
-        id::{ChannelId, GuildId, MessageId},
+        guild::{
+            Guild,
+            UnavailableGuild,
+        },
+        id::{
+            ChannelId,
+            GuildId,
+            MessageId,
+        },
     },
-    prelude::{Context, EventHandler},
+    prelude::{
+        Context,
+        EventHandler,
+    },
 };
 
 use crate::{
     commands::help::slash_command_message,
     events::{
         interaction_handler::handle_interaction,
-        statefulembed::{on_button_click as embed_button_click, on_message_delete as embed_delete},
+        statefulembed::{
+            on_button_click as embed_button_click,
+            on_message_delete as embed_delete,
+        },
     },
     utils::{
-        constants::{DEFAULT_CLIENT, GUILD_LOG_CHANNEL_ID, STARUP_LOG_CHANNEL_ID, TOPGG_TOKEN},
+        constants::{
+            DEFAULT_CLIENT,
+            GUILD_LOG_CHANNEL_ID,
+            STARUP_LOG_CHANNEL_ID,
+            TOPGG_TOKEN,
+        },
         error_log,
     },
 };
@@ -167,7 +188,7 @@ impl EventHandler for Handler {
             )
             .await;
             return;
-        };
+        }
 
         futures::join!(
             embed_button_click(&ctx, &interaction),

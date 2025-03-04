@@ -1,19 +1,45 @@
-use std::{fmt::Write, ops::Add};
+use std::{
+    fmt::Write,
+    ops::Add,
+    sync::LazyLock,
+};
 
-use chrono::{Duration, Utc};
-use lazy_static::lazy_static;
+use chrono::{
+    Duration,
+    Utc,
+};
 use regex::Regex;
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateMessage,
+    },
     http::Http,
-    model::{application::ButtonStyle, channel::ReactionType, Colour},
+    model::{
+        Colour,
+        application::ButtonStyle,
+        channel::ReactionType,
+    },
 };
 
 use super::constants::{
-    CHECK_EMOJI, DEBUG_CHANNEL_ID, DEFAULT_COLOR, DEFAULT_ICON, EXIT_EMOJI, FINAL_PAGE_EMOJI,
-    FIRST_PAGE_EMOJI, LAST_PAGE_EMOJI, NEXT_PAGE_EMOJI, PROGRADE, RETROGRADE,
+    CHECK_EMOJI,
+    DEBUG_CHANNEL_ID,
+    DEFAULT_COLOR,
+    DEFAULT_ICON,
+    EXIT_EMOJI,
+    FINAL_PAGE_EMOJI,
+    FIRST_PAGE_EMOJI,
+    LAST_PAGE_EMOJI,
+    NEXT_PAGE_EMOJI,
+    PROGRADE,
+    RETROGRADE,
 };
-use crate::{events::statefulembed::ButtonType, utils::constants::ERROR_CHANNEL_ID};
+use crate::{
+    events::statefulembed::ButtonType,
+    utils::constants::ERROR_CHANNEL_ID,
+};
 
 pub fn cutoff_on_last_dot(text: &str, length: usize) -> &str {
     let mut last: usize = 0;
@@ -36,11 +62,13 @@ pub fn cutoff_on_last_dot(text: &str, length: usize) -> &str {
 pub fn default_embed(content: &str, success: bool) -> CreateEmbed {
     CreateEmbed::new()
         .author(CreateEmbedAuthor::new("OKTO").icon_url(DEFAULT_ICON))
-        .color(if success {
-            DEFAULT_COLOR.into()
-        } else {
-            Colour::RED
-        })
+        .color(
+            if success {
+                DEFAULT_COLOR.into()
+            } else {
+                Colour::RED
+            },
+        )
         .description(content)
         .timestamp(Utc::now())
 }
@@ -105,12 +133,12 @@ pub fn format_duration(dur: Duration, include_seconds: bool) -> String {
     res
 }
 
-lazy_static! {
-    pub static ref DAYS_REGEX: Regex = Regex::new("([0-9]+) days?").unwrap();
-    pub static ref HOURS_REGEX: Regex = Regex::new("([0-9]+) hours?").unwrap();
-    pub static ref MINUTES_REGEX: Regex = Regex::new("([0-9]+) minutes?").unwrap();
-    pub static ref SECONDS_REGEX: Regex = Regex::new("([0-9]+) seconds?").unwrap();
-}
+pub static DAYS_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new("([0-9]+) days?").unwrap());
+pub static HOURS_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new("([0-9]+) hours?").unwrap());
+pub static MINUTES_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("([0-9]+) minutes?").unwrap());
+pub static SECONDS_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new("([0-9]+) seconds?").unwrap());
 
 pub fn parse_duration(input: &str) -> Duration {
     let mut dur = Duration::zero();
@@ -203,45 +231,61 @@ pub enum StandardButton {
 impl StandardButton {
     pub fn to_button(self) -> ButtonType {
         match self {
-            Self::Last => ButtonType {
-                label: "Last page".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(ReactionType::from(FINAL_PAGE_EMOJI)),
+            Self::Last => {
+                ButtonType {
+                    label: "Last page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(FINAL_PAGE_EMOJI)),
+                }
             },
-            Self::First => ButtonType {
-                label: "First page".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(ReactionType::from(FIRST_PAGE_EMOJI)),
+            Self::First => {
+                ButtonType {
+                    label: "First page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(FIRST_PAGE_EMOJI)),
+                }
             },
-            Self::Forward => ButtonType {
-                label: "Forward one page".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(ReactionType::from(NEXT_PAGE_EMOJI)),
+            Self::Forward => {
+                ButtonType {
+                    label: "Forward one page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(NEXT_PAGE_EMOJI)),
+                }
             },
-            Self::Back => ButtonType {
-                label: "Back one page".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(ReactionType::from(LAST_PAGE_EMOJI)),
+            Self::Back => {
+                ButtonType {
+                    label: "Back one page".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(ReactionType::from(LAST_PAGE_EMOJI)),
+                }
             },
-            Self::Exit => ButtonType {
-                label: "Exit".to_owned(),
-                style: ButtonStyle::Danger,
-                emoji: Some(ReactionType::from(EXIT_EMOJI)),
+            Self::Exit => {
+                ButtonType {
+                    label: "Exit".to_owned(),
+                    style: ButtonStyle::Danger,
+                    emoji: Some(ReactionType::from(EXIT_EMOJI)),
+                }
             },
-            Self::Submit => ButtonType {
-                label: "Submit".to_owned(),
-                style: ButtonStyle::Success,
-                emoji: Some(ReactionType::from(CHECK_EMOJI)),
+            Self::Submit => {
+                ButtonType {
+                    label: "Submit".to_owned(),
+                    style: ButtonStyle::Success,
+                    emoji: Some(ReactionType::from(CHECK_EMOJI)),
+                }
             },
-            Self::Prograde => ButtonType {
-                label: "Next".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(PROGRADE.clone()),
+            Self::Prograde => {
+                ButtonType {
+                    label: "Next".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(PROGRADE.clone()),
+                }
             },
-            Self::Retrograde => ButtonType {
-                label: "Back".to_owned(),
-                style: ButtonStyle::Secondary,
-                emoji: Some(RETROGRADE.clone()),
+            Self::Retrograde => {
+                ButtonType {
+                    label: "Back".to_owned(),
+                    style: ButtonStyle::Secondary,
+                    emoji: Some(RETROGRADE.clone()),
+                }
             },
         }
     }

@@ -1,17 +1,31 @@
 use std::{
-    fmt::{self, Display},
+    fmt::{
+        self,
+        Display,
+    },
     io::ErrorKind as IoErrorKind,
     sync::Arc,
 };
 
 use mongodb::{
-    bson::{self, doc},
-    error::{Error as MongoError, ErrorKind as MongoErrorKind, Result as MongoResult},
     Database,
+    bson::{
+        self,
+        doc,
+    },
+    error::{
+        Error as MongoError,
+        ErrorKind as MongoErrorKind,
+        Result as MongoResult,
+    },
 };
 use regex::Regex;
 use serenity::{
-    model::id::{ChannelId, GuildId, UserId},
+    model::id::{
+        ChannelId,
+        GuildId,
+        UserId,
+    },
     prelude::RwLock,
 };
 
@@ -19,9 +33,15 @@ use crate::{
     events::statefulembed::EmbedSession,
     models::{
         caches::DatabaseKey,
-        reminders::{GuildSettings, UserSettings},
+        reminders::{
+            GuildSettings,
+            UserSettings,
+        },
     },
-    utils::constants::{WORD_FILTER_REGEX, WORD_REGEX},
+    utils::constants::{
+        WORD_FILTER_REGEX,
+        WORD_REGEX,
+    },
 };
 
 pub async fn get_user_settings(db: &Database, id: u64) -> MongoResult<UserSettings> {

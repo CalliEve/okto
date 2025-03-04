@@ -16,13 +16,13 @@ impl From<LaunchInfo> for LaunchData {
                 if let Ok(link) = url::Url::from_str(&u.url) {
                     if let Some(domain) = link.domain() {
                         return domain.to_owned();
-                    };
-                };
+                    }
+                }
                 u.title
                     .clone()
                     .unwrap_or_else(|| "Title Unknown".to_owned())
             });
-        };
+        }
 
         LaunchData {
             id: 0,

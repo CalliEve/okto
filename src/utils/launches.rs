@@ -43,11 +43,7 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
         }
     }
 
-    if res.is_empty() {
-        None
-    } else {
-        Some(res)
-    }
+    if res.is_empty() { None } else { Some(res) }
 }
 
 pub fn filter_launches(

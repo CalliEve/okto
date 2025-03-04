@@ -3,6 +3,7 @@ use std::sync::Arc;
 use futures::future::BoxFuture;
 use itertools::Itertools;
 use serenity::{
+    Result,
     builder::{
         CreateActionRow,
         CreateButton,
@@ -31,7 +32,6 @@ use serenity::{
         RwLock,
         TypeMap,
     },
-    Result,
 };
 
 use crate::{
@@ -138,7 +138,8 @@ impl StatefulEmbed {
     }
 
     async fn get_components(&self) -> Vec<CreateActionRow> {
-        let interaction_id = self.session
+        let interaction_id = self
+            .session
             .read()
             .await
             .interaction
@@ -153,16 +154,13 @@ impl StatefulEmbed {
         {
             let mut row = Vec::new();
             for option in option_batch {
-                let mut button = CreateButton::new(
-                    format!(
-                        "{}-{}", 
-                        option
-                            .button
-                            .label
-                            .to_string(),
-                        interaction_id
-                    ),
-                )
+                let mut button = CreateButton::new(format!(
+                    "{}-{}",
+                    option
+                        .button
+                        .label,
+                    interaction_id
+                ))
                 .style(
                     option
                         .button
@@ -191,7 +189,9 @@ impl StatefulEmbed {
     }
 
     pub async fn show(&self) -> serenity::Result<()> {
-        let components = self.get_components().await;
+        let components = self
+            .get_components()
+            .await;
 
         {
             let mut session = self
@@ -233,7 +233,7 @@ impl StatefulEmbed {
                     self.session
                         .clone(),
                 );
-            };
+            }
         }
 
         Ok(())
@@ -322,14 +322,18 @@ pub async fn on_button_click(ctx: &Context, full_interaction: &Interaction) {
                         .as_ref()
                         .and_then(|embed| {
                             let mut handler: Option<(Arc<Handler>, bool)> = None;
+                            let id = interaction
+                                .data
+                                .custom_id
+                                .split('-')
+                                .next()
+                                .unwrap();
 
                             for opt in &embed.options {
                                 if opt
                                     .button
                                     .label
-                                    == interaction
-                                        .data
-                                        .custom_id
+                                    == id
                                 {
                                     handler = Some((
                                         opt.handler

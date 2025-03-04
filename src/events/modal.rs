@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use futures::future::BoxFuture;
 use serenity::{
+    Error,
     builder::{
         CreateActionRow,
         CreateInputText,
@@ -21,12 +22,11 @@ use serenity::{
         RwLock,
         TypeMap,
     },
-    Error,
 };
 
 use super::interaction_handler::{
-    respond_to_interaction,
     InteractionHandler,
+    respond_to_interaction,
 };
 use crate::{
     models::caches::InteractionKey,

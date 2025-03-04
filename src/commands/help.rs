@@ -1,31 +1,71 @@
-use std::{fmt::Write, sync::Arc};
+use std::{
+    fmt::Write,
+    sync::Arc,
+};
 
 use itertools::Itertools;
-use mongodb::bson::{doc, document::Document, from_bson};
+use mongodb::bson::{
+    doc,
+    document::Document,
+    from_bson,
+};
 use okto_framework::{
     macros::command,
-    structs::{Command, CommandError, CommandResult},
+    structs::{
+        Command,
+        CommandError,
+        CommandResult,
+    },
 };
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, EditInteractionResponse},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        EditInteractionResponse,
+    },
     framework::standard::macros::hook,
     model::{
-        application::{ButtonStyle, CommandInteraction},
-        prelude::{Channel, Message, MessageType, ReactionType},
         Permissions,
+        application::{
+            ButtonStyle,
+            CommandInteraction,
+        },
+        prelude::{
+            Channel,
+            Message,
+            MessageType,
+            ReactionType,
+        },
     },
-    prelude::{Context, RwLock},
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
-    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
+    events::statefulembed::{
+        ButtonType,
+        EmbedSession,
+        StatefulEmbed,
+    },
     models::{
-        caches::{CommandListKey, DatabaseKey},
+        caches::{
+            CommandListKey,
+            DatabaseKey,
+        },
         settings::GuildSettings,
     },
     utils::{
         capitalize,
-        constants::{BACK_EMOJI, DEFAULT_COLOR, DEFAULT_ICON, EXIT_EMOJI, NUMBER_EMOJIS, OWNERS},
+        constants::{
+            BACK_EMOJI,
+            DEFAULT_COLOR,
+            DEFAULT_ICON,
+            EXIT_EMOJI,
+            NUMBER_EMOJIS,
+            OWNERS,
+        },
     },
 };
 
@@ -169,7 +209,7 @@ fn help_menu(
                 .unwrap()
                 .0
                 .split('/')
-                .last()
+                .next_back()
                 .map(capitalize)
                 .unwrap();
             if group_name == "Help" {

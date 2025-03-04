@@ -4,20 +4,46 @@ mod settings;
 use std::sync::Arc;
 
 use chrono::Utc;
-use okto_framework::{macros::command, structs::CommandResult};
-use pages::{filters_page, mentions_page, other_page, reminders_page};
+use okto_framework::{
+    macros::command,
+    structs::CommandResult,
+};
+use pages::{
+    filters_page,
+    mentions_page,
+    other_page,
+    reminders_page,
+};
 use serenity::{
     all::InteractionResponseFlags,
     builder::{
-        CreateEmbed, CreateEmbedAuthor, CreateInteractionResponse, CreateInteractionResponseMessage,
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateInteractionResponse,
+        CreateInteractionResponseMessage,
     },
-    model::application::{ButtonStyle, CommandInteraction},
-    prelude::{Context, RwLock},
+    model::application::{
+        ButtonStyle,
+        CommandInteraction,
+    },
+    prelude::{
+        Context,
+        RwLock,
+    },
 };
 
 use crate::{
-    events::statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
-    utils::{constants::*, default_embed, reminders::ID, StandardButton},
+    events::statefulembed::{
+        ButtonType,
+        EmbedSession,
+        StatefulEmbed,
+    },
+    utils::{
+        StandardButton,
+        constants::*,
+        default_embed,
+        reminders::ID,
+    },
 };
 
 #[command]

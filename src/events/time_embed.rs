@@ -17,8 +17,8 @@ use super::statefulembed::{
     StatefulEmbed,
 };
 use crate::utils::{
-    format_duration,
     StandardButton,
+    format_duration,
 };
 
 type Handler = Arc<Box<dyn Fn(Duration) -> BoxFuture<'static, ()> + Send + Sync>>;

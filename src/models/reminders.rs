@@ -1,8 +1,16 @@
 use chrono::Duration;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use serde_regex;
-use serenity::model::id::{ChannelId, GuildId, RoleId, UserId};
+use serenity::model::id::{
+    ChannelId,
+    GuildId,
+    RoleId,
+    UserId,
+};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Reminder {

@@ -1,33 +1,66 @@
-use std::{collections::HashMap, str::FromStr, sync::Arc};
+use std::{
+    collections::HashMap,
+    str::FromStr,
+    sync::Arc,
+};
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{
+    DateTime,
+    Duration,
+    Utc,
+};
 use futures::{
     future,
-    stream::{self, FuturesUnordered, StreamExt},
+    stream::{
+        self,
+        FuturesUnordered,
+        StreamExt,
+    },
 };
 use itertools::Itertools;
 use mongodb::{
-    bson::{self, doc, Document},
-    error::Result as MongoResult,
     Database,
+    bson::{
+        self,
+        Document,
+        doc,
+    },
+    error::Result as MongoResult,
 };
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor, CreateMessage},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateMessage,
+    },
     http::Http,
     model::Timestamp,
     prelude::RwLock,
 };
 
-use super::{filtering::passes_filters, launch_tracking};
+use super::{
+    filtering::passes_filters,
+    launch_tracking,
+};
 use crate::{
     models::{
-        launches::{LaunchData, LaunchStatus},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
         reminders::Reminder,
     },
     utils::{
-        constants::{DEFAULT_COLOR, DEFAULT_ICON},
-        error_log, format_duration,
-        reminders::{get_guild_settings, get_user_settings},
+        constants::{
+            DEFAULT_COLOR,
+            DEFAULT_ICON,
+        },
+        error_log,
+        format_duration,
+        reminders::{
+            get_guild_settings,
+            get_user_settings,
+        },
     },
 };
 
@@ -253,6 +286,6 @@ fn format_url(rawlink: &str) -> String {
             domain = domain.trim_start_matches("www.");
             return format!("[{domain}]({rawlink})\n");
         }
-    };
+    }
     rawlink.to_owned()
 }

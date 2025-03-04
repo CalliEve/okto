@@ -1,3 +1,5 @@
+#![allow(clippy::ref_option)] // Needed for serde
+
 use serde::{
     self,
     Deserialize,

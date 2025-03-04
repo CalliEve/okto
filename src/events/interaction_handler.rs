@@ -8,6 +8,8 @@ use futures::{
     },
 };
 use serenity::{
+    Error,
+    Result,
     all::ComponentInteractionDataKind,
     client::Context,
     http::Http,
@@ -22,8 +24,6 @@ use serenity::{
             UserId,
         },
     },
-    Error,
-    Result,
 };
 
 use crate::{
@@ -230,7 +230,9 @@ impl InteractionHandlerBuilder {
                 .interaction_type
             {
                 if interaction_type != InteractionType::Component {
-                    return Err(Error::Other("If the component type has been set, the interaction type must be MessageComponent"));
+                    return Err(Error::Other(
+                        "If the component type has been set, the interaction type must be MessageComponent",
+                    ));
                 }
             }
         }

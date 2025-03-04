@@ -1,10 +1,20 @@
-use std::{fmt::Write, sync::Arc};
+use std::{
+    fmt::Write,
+    sync::Arc,
+};
 
 use chrono::Utc;
 use serenity::{
-    builder::{CreateEmbed, CreateEmbedAuthor},
+    builder::{
+        CreateEmbed,
+        CreateEmbedAuthor,
+    },
     model::{
-        application::{ButtonStyle, InputTextStyle, Interaction},
+        application::{
+            ButtonStyle,
+            InputTextStyle,
+            Interaction,
+        },
         channel::ReactionType,
     },
     prelude::RwLock,
@@ -13,25 +23,48 @@ use serenity::{
 use super::{
     main_menu,
     settings::{
-        add_filter, add_mention, add_reminder, get_reminders, remove_filter, remove_mention,
-        remove_reminder, set_notification_channel, toggle_setting,
+        add_filter,
+        add_mention,
+        add_reminder,
+        get_reminders,
+        remove_filter,
+        remove_mention,
+        remove_reminder,
+        set_notification_channel,
+        toggle_setting,
     },
 };
 use crate::{
     events::{
-        modal::{Field, Modal},
+        modal::{
+            Field,
+            Modal,
+        },
         select_menu::SelectMenu,
-        statefulembed::{ButtonType, EmbedSession, StatefulEmbed},
+        statefulembed::{
+            ButtonType,
+            EmbedSession,
+            StatefulEmbed,
+        },
         time_embed::TimeEmbed,
     },
     models::reminders::Reminder,
     utils::{
         constants::*,
-        default_select_menus::{channel_select_menu, role_select_menu},
-        format_duration, parse_duration,
+        default_select_menus::{
+            channel_select_menu,
+            role_select_menu,
+        },
+        format_duration,
+        parse_duration,
         reminders::{
-            filter_from_string_input, get_db, get_guild_settings, get_user_settings,
-            regex_filter_to_string, State, ID,
+            ID,
+            State,
+            filter_from_string_input,
+            get_db,
+            get_guild_settings,
+            get_user_settings,
+            regex_filter_to_string,
         },
     },
 };
@@ -61,10 +94,12 @@ pub fn reminders_page(
                         .collect::<Vec<_>>(),
                 )
             },
-            _ => (
-                "No reminders have been set yet".to_owned(),
-                Vec::new(),
-            ),
+            _ => {
+                (
+                    "No reminders have been set yet".to_owned(),
+                    Vec::new(),
+                )
+            },
         };
 
         let mut em = StatefulEmbed::new_with_embed(
@@ -306,10 +341,12 @@ fn disallow_filters_page(
                                 .clone(),
                         )
                     },
-                    _ => (
-                        "No agency filters have been set yet".to_owned(),
-                        Vec::new(),
-                    ),
+                    _ => {
+                        (
+                            "No agency filters have been set yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
             ID::User(user_id) => {
@@ -338,10 +375,12 @@ fn disallow_filters_page(
                                 .clone(),
                         )
                     },
-                    _ => (
-                        "No agency filters have been set yet".to_owned(),
-                        Vec::new(),
-                    ),
+                    _ => {
+                        (
+                            "No agency filters have been set yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
         };
@@ -549,10 +588,12 @@ fn allow_filters_page(
                                 .clone(),
                         )
                     },
-                    _ => (
-                        "No agency allow filters have been set yet".to_owned(),
-                        Vec::new(),
-                    ),
+                    _ => {
+                        (
+                            "No agency allow filters have been set yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
             ID::User(user_id) => {
@@ -582,10 +623,12 @@ fn allow_filters_page(
                                 .clone(),
                         )
                     },
-                    _ => (
-                        "No agency allow filters have been set yet".to_owned(),
-                        Vec::new(),
-                    ),
+                    _ => {
+                        (
+                            "No agency allow filters have been set yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
         };
@@ -791,10 +834,12 @@ fn payload_filters_page(
                                 .clone(),
                         )
                     },
-                    _ => (
-                        "No payload filters have been added yet".to_owned(),
-                        Vec::new(),
-                    ),
+                    _ => {
+                        (
+                            "No payload filters have been added yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
             ID::User(user_id) => {
@@ -821,10 +866,12 @@ fn payload_filters_page(
                                 .clone(),
                         )
                     },
-                    _ => (
-                        "No payload filters have been added yet".to_owned(),
-                        Vec::new(),
-                    ),
+                    _ => {
+                        (
+                            "No payload filters have been added yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
         };
@@ -1054,10 +1101,12 @@ pub fn mentions_page(
                                 .clone(),
                         )
                     },
-                    _ => (
-                        "No role mentions have been set yet".to_owned(),
-                        Vec::new(),
-                    ),
+                    _ => {
+                        (
+                            "No role mentions have been set yet".to_owned(),
+                            Vec::new(),
+                        )
+                    },
                 }
             },
             ID::User(_) => return,
@@ -1239,7 +1288,7 @@ pub fn other_page(
                     }
                 }
             },
-        };
+        }
 
         let mut em = StatefulEmbed::new_with_embed(
             ses.clone(),

@@ -1,16 +1,39 @@
-use std::{collections::HashMap, convert::TryFrom, sync::Arc};
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    sync::Arc,
+};
 
 use chrono::Duration;
-use futures::stream::{FuturesUnordered, StreamExt};
+use futures::stream::{
+    FuturesUnordered,
+    StreamExt,
+};
 use mongodb::Database;
-use reqwest::{header::AUTHORIZATION, Result};
-use serenity::{http::Http, prelude::RwLock};
+use reqwest::{
+    Result,
+    header::AUTHORIZATION,
+};
+use serenity::{
+    http::Http,
+    prelude::RwLock,
+};
 
-use super::{notify_outcome, notify_scrub};
+use super::{
+    notify_outcome,
+    notify_scrub,
+};
 use crate::{
-    models::launches::{LaunchContainer, LaunchData, LaunchStatus},
+    models::launches::{
+        LaunchContainer,
+        LaunchData,
+        LaunchStatus,
+    },
     utils::{
-        constants::{DEFAULT_CLIENT, LL_KEY},
+        constants::{
+            DEFAULT_CLIENT,
+            LL_KEY,
+        },
         error_log,
     },
 };
@@ -20,11 +43,12 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
 
     // Get new set of launches
     let mut launches: Vec<LaunchData> = match get_new_launches().await {
-        Ok(ls) => ls
-            .results
-            .into_iter()
-            .map(LaunchData::from)
-            .collect(),
+        Ok(ls) => {
+            ls.results
+                .into_iter()
+                .map(LaunchData::from)
+                .collect()
+        },
         Err(e) => {
             dbg!(e);
             return;
@@ -90,7 +114,7 @@ pub async fn launch_tracking(http: Arc<Http>, db: Database, cache: Arc<RwLock<Ve
                 old_launches
                     .iter()
                     .find(|ol| nl.ll_id == ol.ll_id)
-                    .map_or(false, |ol| {
+                    .is_some_and(|ol| {
                         matches!(
                             ol.status,
                             LaunchStatus::Go

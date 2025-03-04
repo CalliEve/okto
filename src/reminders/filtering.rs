@@ -1,5 +1,8 @@
 use crate::{
-    models::{launches::LaunchData, reminders::ReminderSettings},
+    models::{
+        launches::LaunchData,
+        reminders::ReminderSettings,
+    },
     utils::constants::LAUNCH_AGENCIES,
 };
 
@@ -32,12 +35,21 @@ where
 
 #[cfg(test)]
 mod tests {
-    use chrono::{DateTime, Duration};
+    use chrono::{
+        DateTime,
+        Duration,
+    };
     use regex::Regex;
-    use serenity::model::id::{ChannelId, GuildId};
+    use serenity::model::id::{
+        ChannelId,
+        GuildId,
+    };
 
     use super::*;
-    use crate::models::{launches::LaunchStatus, reminders::GuildSettings};
+    use crate::models::{
+        launches::LaunchStatus,
+        reminders::GuildSettings,
+    };
 
     fn create_fake_launches() -> Vec<LaunchData> {
         vec![

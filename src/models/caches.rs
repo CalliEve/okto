@@ -1,14 +1,26 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+};
 
 use mongodb::Database;
 use okto_framework::structs::Command;
 use serenity::{
     model::id::MessageId,
-    prelude::{RwLock, TypeMapKey},
+    prelude::{
+        RwLock,
+        TypeMapKey,
+    },
 };
 
-use super::{launches::LaunchData, pictures::MarsRoverPicture};
-use crate::events::{interaction_handler::InteractionHandler, statefulembed::EmbedSession};
+use super::{
+    launches::LaunchData,
+    pictures::MarsRoverPicture,
+};
+use crate::events::{
+    interaction_handler::InteractionHandler,
+    statefulembed::EmbedSession,
+};
 
 #[derive(Debug, Clone)]
 pub struct PictureDataCache {

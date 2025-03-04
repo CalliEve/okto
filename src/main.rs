@@ -8,6 +8,7 @@
 #![allow(clippy::used_underscore_binding)] // the commands/events structure of serenity requires these
 #![allow(clippy::too_many_lines)] // TODO: refactor some functions to be smaller
 #![allow(clippy::non_ascii_literal)] // I want to use emojis uwu
+#![allow(clippy::result_large_err)] // Serenity error is very large
 
 mod commands;
 mod events;
@@ -15,11 +16,25 @@ mod models;
 mod reminders;
 mod utils;
 
-use std::{collections::HashMap, env, sync::Arc};
+use std::{
+    collections::HashMap,
+    env,
+    sync::Arc,
+};
 
-use commands::{general::*, help::*, launches::*, pictures::*, reminders::*};
+use commands::{
+    general::*,
+    help::*,
+    launches::*,
+    pictures::*,
+    reminders::*,
+};
 use models::caches::{
-    CommandListKey, DatabaseKey, EmbedSessionsKey, InteractionKey, LaunchesCacheKey,
+    CommandListKey,
+    DatabaseKey,
+    EmbedSessionsKey,
+    InteractionKey,
+    LaunchesCacheKey,
     PictureCacheKey,
 };
 use mongodb::Client as MongoClient;
@@ -27,7 +42,10 @@ use serenity::{
     all::ApplicationId,
     client::Client,
     model::gateway::GatewayIntents,
-    prelude::{RwLock, TypeMap},
+    prelude::{
+        RwLock,
+        TypeMap,
+    },
 };
 use utils::preloading::preload_data;
 

@@ -2,19 +2,35 @@ use std::collections::HashMap;
 
 use chrono::Utc;
 use itertools::Itertools;
-use okto_framework::{macros::command, structs::CommandResult};
+use okto_framework::{
+    macros::command,
+    structs::CommandResult,
+};
 use rand::seq::SliceRandom;
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use serenity::{
     builder::{
-        CreateEmbed, CreateEmbedAuthor, CreateEmbedFooter, CreateInteractionResponse,
-        CreateInteractionResponseMessage, EditInteractionResponse,
+        CreateEmbed,
+        CreateEmbedAuthor,
+        CreateEmbedFooter,
+        CreateInteractionResponse,
+        CreateInteractionResponseMessage,
+        EditInteractionResponse,
     },
-    model::{application::CommandInteraction, Colour},
+    model::{
+        Colour,
+        application::CommandInteraction,
+    },
     prelude::Context,
 };
 
-use crate::{models::caches::PictureCacheKey, utils::constants::*};
+use crate::{
+    models::caches::PictureCacheKey,
+    utils::constants::*,
+};
 
 #[command]
 /// Get the ping of the bot
@@ -74,15 +90,16 @@ async fn info(ctx: &Context, interaction: &CommandInteraction) -> CommandResult 
             ctx.cache
                 .guilds()
                 .into_iter()
-                .map(|id| ctx
-                    .cache
-                    .guild(id)
-                    .map_or(0, |g| {
-                        match g.approximate_member_count {
-                            Some(0..=1) | None => g.member_count,
-                            Some(n) => n,
-                        }
-                    }))
+                .map(|id| {
+                    ctx.cache
+                        .guild(id)
+                        .map_or(0, |g| {
+                            match g.approximate_member_count {
+                                Some(0..=1) | None => g.member_count,
+                                Some(n) => n,
+                            }
+                        })
+                })
                 .sum::<u64>()
         );
     }
@@ -400,7 +417,7 @@ async fn exoplanet(ctx: &Context, interaction: &CommandInteraction) -> CommandRe
             }?;
             get_planet(ctx, interaction, rand_name).await?
         },
-    };
+    }
 
     Ok(())
 }

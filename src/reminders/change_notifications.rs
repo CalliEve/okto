@@ -1,28 +1,49 @@
 use std::sync::Arc;
 
 use futures::{
-    future,
-    stream::{self, FuturesUnordered},
     StreamExt,
+    future,
+    stream::{
+        self,
+        FuturesUnordered,
+    },
 };
 use mongodb::{
-    bson::{self, doc, Document},
-    error::Result as MongoResult,
     Database,
+    bson::{
+        self,
+        Document,
+        doc,
+    },
+    error::Result as MongoResult,
 };
 use serde::de::DeserializeOwned;
 use serenity::{
-    builder::{CreateEmbed, CreateMessage},
-    http::Http,
-    model::{channel::Message, id::ChannelId, Colour, Timestamp},
     Error as SerenityError,
+    builder::{
+        CreateEmbed,
+        CreateMessage,
+    },
+    http::Http,
+    model::{
+        Colour,
+        Timestamp,
+        channel::Message,
+        id::ChannelId,
+    },
 };
 
 use super::filtering::passes_filters;
 use crate::{
     models::{
-        launches::{LaunchData, LaunchStatus},
-        reminders::{GuildSettings, UserSettings},
+        launches::{
+            LaunchData,
+            LaunchStatus,
+        },
+        reminders::{
+            GuildSettings,
+            UserSettings,
+        },
     },
     utils::default_embed,
 };
@@ -48,15 +69,11 @@ where
         return Vec::new();
     };
 
-    if let Ok(settings) = documents
+    documents
         .into_iter()
         .map(bson::from_document)
-        .collect()
-    {
-        settings
-    } else {
-        Vec::new()
-    }
+        .collect::<Result<Vec<T>, bson::de::Error>>()
+        .unwrap_or_default()
 }
 
 fn get_mentions(settings: &GuildSettings) -> Option<String> {

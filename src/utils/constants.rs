@@ -1,17 +1,31 @@
-use std::{collections::HashMap, env};
+use std::{
+    collections::HashMap,
+    env,
+    sync::LazyLock,
+};
 
-use lazy_static::lazy_static;
-use rand::{rngs::StdRng, thread_rng, SeedableRng};
+use rand::{
+    SeedableRng,
+    rngs::StdRng,
+    thread_rng,
+};
 use regex::Regex;
 use reqwest::{
-    header::{HeaderMap, ACCEPT},
-    Client, ClientBuilder,
+    Client,
+    ClientBuilder,
+    header::{
+        ACCEPT,
+        HeaderMap,
+    },
 };
 use serenity::{
     all::ChannelId,
     model::{
         channel::ReactionType,
-        id::{EmojiId, UserId},
+        id::{
+            EmojiId,
+            UserId,
+        },
     },
     prelude::Mutex,
 };
@@ -52,43 +66,52 @@ fn default_headers() -> HeaderMap {
     headers
 }
 
-lazy_static! {
-    pub static ref GOOGLE_KEY: String = env::var("GOOGLE_KEY").expect("no GOOGLE_KEY has been set");
-    pub static ref NASA_KEY: String = env::var("NASA_KEY").expect("no NASA_KEY has been set");
-    pub static ref TOPGG_TOKEN: String =
-        env::var("TOPGG_TOKEN").expect("no TOPGG_TOKEN has been set");
-    pub static ref LL_KEY: String = format!(
+pub static GOOGLE_KEY: LazyLock<String> =
+    LazyLock::new(|| env::var("GOOGLE_KEY").expect("no GOOGLE_KEY has been set"));
+pub static NASA_KEY: LazyLock<String> =
+    LazyLock::new(|| env::var("NASA_KEY").expect("no NASA_KEY has been set"));
+pub static TOPGG_TOKEN: LazyLock<String> =
+    LazyLock::new(|| env::var("TOPGG_TOKEN").expect("no TOPGG_TOKEN has been set"));
+pub static LL_KEY: LazyLock<String> = LazyLock::new(|| {
+    format!(
         "Token {}",
         env::var("LL_KEY").expect("no LL_KEY has been set")
-    );
-    pub static ref DEFAULT_CLIENT: Client = ClientBuilder::new()
+    )
+});
+pub static DEFAULT_CLIENT: LazyLock<Client> = LazyLock::new(|| {
+    ClientBuilder::new()
         .user_agent("okto-bot")
         .default_headers(default_headers())
         .build()
-        .expect("reqwest client could not be built");
-    pub static ref PROGRADE: ReactionType = ReactionType::Custom {
+        .expect("reqwest client could not be built")
+});
+pub static PROGRADE: LazyLock<ReactionType> = LazyLock::new(|| {
+    ReactionType::Custom {
         animated: false,
         name: Some("Prograde".to_owned()),
         id: EmojiId::new(433308892584476674),
-    };
-    pub static ref RETROGRADE: ReactionType = ReactionType::Custom {
+    }
+});
+pub static RETROGRADE: LazyLock<ReactionType> = LazyLock::new(|| {
+    ReactionType::Custom {
         animated: false,
         name: Some("Retrograde".to_owned()),
         id: EmojiId::new(433308874343448576),
-    };
-    pub static ref MENTION_REGEX: Regex = Regex::new("<[@#][!&]?([0-9]{17,20})>").unwrap();
-    pub static ref ID_REGEX: Regex = Regex::new("^[0-9]{17,20}$").unwrap();
-    pub static ref WORD_REGEX: Regex = Regex::new(r"^[a-zA-Z\-_0-9]+$").unwrap();
-    pub static ref WORD_FILTER_REGEX: Regex =
-        Regex::new(r"^\(\?i\)\\b[a-zA-Z\-_0-9]+\\b$").unwrap();
-    pub static ref NUMBER_EMOJIS: Vec<ReactionType> = [
-        "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"
+    }
+});
+pub static WORD_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z\-_0-9]+$").unwrap());
+pub static WORD_FILTER_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\(\?i\)\\b[a-zA-Z\-_0-9]+\\b$").unwrap());
+pub static NUMBER_EMOJIS: LazyLock<Vec<ReactionType>> = LazyLock::new(|| {
+    [
+        "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟",
     ]
     .iter()
     .map(|e| ReactionType::Unicode((*e).to_string()))
-    .collect();
-    pub static ref OWNERS: Vec<UserId> = vec![247745860979392512.into()];
-}
+    .collect()
+});
+pub static OWNERS: LazyLock<Vec<UserId>> = LazyLock::new(|| vec![247745860979392512.into()]);
 
 fn agency_map() -> HashMap<&'static str, &'static str> {
     let mut res = HashMap::with_capacity(25);
@@ -325,8 +348,9 @@ fn vehicle_map() -> HashMap<&'static str, Vec<&'static str>> {
     res
 }
 
-lazy_static! {
-    pub static ref LAUNCH_AGENCIES: HashMap<&'static str, &'static str> = agency_map();
-    pub static ref LAUNCH_VEHICLES: HashMap<&'static str, Vec<&'static str>> = vehicle_map();
-    pub static ref RNG: Mutex<StdRng> = Mutex::new(StdRng::from_rng(thread_rng()).unwrap());
-}
+pub static LAUNCH_AGENCIES: LazyLock<HashMap<&'static str, &'static str>> =
+    LazyLock::new(agency_map);
+pub static LAUNCH_VEHICLES: LazyLock<HashMap<&'static str, Vec<&'static str>>> =
+    LazyLock::new(vehicle_map);
+pub static RNG: LazyLock<Mutex<StdRng>> =
+    LazyLock::new(|| Mutex::new(StdRng::from_rng(thread_rng()).unwrap()));
