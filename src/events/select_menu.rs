@@ -148,11 +148,12 @@ impl SelectMenu {
                     .map(|(i, chunk)| {
                         CreateActionRow::SelectMenu(CreateSelectMenu::new(
                             format!(
-                                "{}-{}",
+                                "{}-{}-{}",
                                 self.custom_id
                                     .as_ref()
                                     .map_or("select-row", |s| s.as_str()),
-                                i
+                                i,
+                                interaction.id()
                             ),
                             CreateSelectMenuKind::String {
                                 options: chunk

@@ -137,7 +137,13 @@ impl StatefulEmbed {
         self
     }
 
-    fn get_components(&self) -> Vec<CreateActionRow> {
+    async fn get_components(&self) -> Vec<CreateActionRow> {
+        let interaction_id = self.session
+            .read()
+            .await
+            .interaction
+            .id;
+
         let mut components = Vec::new();
 
         for option_batch in &self
@@ -148,10 +154,14 @@ impl StatefulEmbed {
             let mut row = Vec::new();
             for option in option_batch {
                 let mut button = CreateButton::new(
-                    option
-                        .button
-                        .label
-                        .to_string(),
+                    format!(
+                        "{}-{}", 
+                        option
+                            .button
+                            .label
+                            .to_string(),
+                        interaction_id
+                    ),
                 )
                 .style(
                     option
@@ -181,6 +191,8 @@ impl StatefulEmbed {
     }
 
     pub async fn show(&self) -> serenity::Result<()> {
+        let components = self.get_components().await;
+
         {
             let mut session = self
                 .session
@@ -196,7 +208,7 @@ impl StatefulEmbed {
                 .edit_response(
                     &http,
                     EditInteractionResponse::new()
-                        .components(self.get_components())
+                        .components(components)
                         .content("")
                         .embed(
                             self.inner

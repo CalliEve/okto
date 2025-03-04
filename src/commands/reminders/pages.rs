@@ -893,8 +893,8 @@ fn payload_filters_page(
                     .add_field(
                         Field::new(
                             InputTextStyle::Short,
-                            "added_payload_filter",
-                            "New payload filter",
+                            &format!("added_payload_filter_{user_id}"),
+                            &"New payload filter".to_owned(),
                         )
                         .set_max_length(20)
                         .set_min_length(3)

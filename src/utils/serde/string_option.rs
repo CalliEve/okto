@@ -10,7 +10,7 @@ where
     S: Serializer,
 {
     Ok(match string {
-        Some(ref s) => serializer.serialize_str(s)?,
+        Some(s) => serializer.serialize_str(s)?,
         None => serializer.serialize_none()?,
     })
 }
