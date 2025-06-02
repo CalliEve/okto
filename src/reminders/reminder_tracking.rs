@@ -72,9 +72,9 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
     let mut reminded: HashMap<String, i64> = HashMap::new();
 
     loop {
-        println!("running loop {loop_count}");
-
         if loop_count % 5 == 0 {
+            println!("running loop {loop_count}");
+
             tokio::spawn(launch_tracking(
                 http.clone(),
                 db.clone(),

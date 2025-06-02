@@ -30,9 +30,12 @@ use serenity::{
 use crate::{
     events::statefulembed::EmbedSession,
     models::reminders::Reminder,
-    utils::reminders::{
-        ID,
-        get_db,
+    utils::{
+        error_log,
+        reminders::{
+            ID,
+            get_db,
+        },
     },
 };
 
@@ -108,8 +111,13 @@ pub async fn add_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: Dur
         .await;
 
     if let Err(e) = result {
-        eprintln!("error while adding reminder:");
-        dbg!(e);
+        error_log(
+            &ses.read()
+                .await
+                .http,
+            &format!("Error while adding reminder: {e}"),
+        )
+        .await;
     }
 }
 
@@ -144,8 +152,13 @@ pub async fn remove_reminder(ses: &Arc<RwLock<EmbedSession>>, id: ID, duration: 
         .await;
 
     if let Err(e) = result {
-        eprintln!("error while removing reminder:");
-        dbg!(e);
+        error_log(
+            &ses.read()
+                .await
+                .http,
+            &format!("Error while removing reminder: {e}"),
+        )
+        .await;
     }
 }
 
@@ -202,8 +215,13 @@ pub async fn add_filter(
     .await;
 
     if let Err(e) = result {
-        eprintln!("error while adding filter:");
-        dbg!(e);
+        error_log(
+            &ses.read()
+                .await
+                .http,
+            &format!("Error while adding filter: {e}"),
+        )
+        .await;
     }
 }
 
@@ -248,8 +266,13 @@ pub async fn remove_filter(
     .await;
 
     if let Err(e) = result {
-        eprintln!("error while removing filter:");
-        dbg!(e);
+        error_log(
+            &ses.read()
+                .await
+                .http,
+            &format!("Error while removing filter: {e}"),
+        )
+        .await;
     }
 }
 
@@ -301,8 +324,13 @@ pub async fn toggle_setting(ses: &Arc<RwLock<EmbedSession>>, id: ID, setting: &s
     .await;
 
     if let Err(e) = result {
-        eprintln!("error while toggling setting:");
-        dbg!(e);
+        error_log(
+            &ses.read()
+                .await
+                .http,
+            &format!("Error while toggling {setting} setting: {e}"),
+        )
+        .await;
     }
 }
 
@@ -335,8 +363,13 @@ pub async fn set_notification_channel(ses: &Arc<RwLock<EmbedSession>>, id: ID, c
     .await;
 
     if let Err(e) = result {
-        eprintln!("error while setting notification channel:");
-        dbg!(e);
+        error_log(
+            &ses.read()
+                .await
+                .http,
+            &format!("Error while setting notification channel: {e}"),
+        )
+        .await;
     }
 }
 
@@ -367,8 +400,13 @@ pub async fn add_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleId) 
         .await;
 
     if let Err(e) = result {
-        eprintln!("error while adding mention:");
-        dbg!(e);
+        error_log(
+            &ses.read()
+                .await
+                .http,
+            &format!("Error while adding mention: {e}"),
+        )
+        .await;
     }
 }
 
@@ -394,7 +432,12 @@ pub async fn remove_mention(ses: &Arc<RwLock<EmbedSession>>, id: ID, role: RoleI
         .await;
 
     if let Err(e) = result {
-        eprintln!("error while removing mention:");
-        dbg!(e);
+        error_log(
+            &ses.read()
+                .await
+                .http,
+            &format!("Error while removing mention: {e}"),
+        )
+        .await;
     }
 }

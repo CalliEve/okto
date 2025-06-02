@@ -66,6 +66,7 @@ use crate::{
             NUMBER_EMOJIS,
             OWNERS,
         },
+        error_log,
     },
 };
 
@@ -275,6 +276,7 @@ fn help_menu(
             }
         }
 
+        let exit_ses = ses.clone();
         em.add_option(
             &ButtonType {
                 label: "Exit".to_owned(),
@@ -282,7 +284,7 @@ fn help_menu(
                 emoji: Some(ReactionType::from(EXIT_EMOJI)),
             },
             move |_| {
-                let close_ses = ses.clone();
+                let close_ses = exit_ses.clone();
                 Box::pin(async move {
                     let lock = close_ses
                         .read()
@@ -299,7 +301,13 @@ fn help_menu(
             .show()
             .await;
         if let Err(e) = show_res {
-            eprintln!("Error in help: {e}");
+            error_log(
+                &ses.read()
+                    .await
+                    .http,
+                &format!("Error in help: {e}"),
+            )
+            .await;
         }
     })
 }
@@ -366,6 +374,7 @@ fn command_details(
             }
         }
 
+        let back_ses = ses.clone();
         em = em.add_field(
             "Back",
             "Back to help menu",
@@ -376,7 +385,7 @@ fn command_details(
                 emoji: Some(BACK_EMOJI.into()),
             },
             move |_| {
-                let back_ses = ses.clone();
+                let back_ses = back_ses.clone();
                 let back_ctx = ctx.clone();
                 let back_interaction = interaction.clone();
                 Box::pin(async move { help_menu(back_ses, back_ctx, back_interaction).await })
@@ -386,8 +395,15 @@ fn command_details(
         let show_res = em
             .show()
             .await;
+
         if let Err(e) = show_res {
-            eprintln!("Error in help: {e}");
+            error_log(
+                &ses.read()
+                    .await
+                    .http,
+                &format!("Error in help: {e}"),
+            )
+            .await;
         }
     })
 }
