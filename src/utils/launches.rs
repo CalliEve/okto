@@ -24,22 +24,22 @@ pub fn format_links(links: &[VidURL]) -> Option<String> {
     let mut res = String::new();
 
     for link_obj in links {
-        if let Ok(link) = url::Url::from_str(&link_obj.url) {
-            if let Some(mut domain) = link.domain() {
-                domain = domain.trim_start_matches("www.");
+        if let Ok(link) = url::Url::from_str(&link_obj.url)
+            && let Some(mut domain) = link.domain()
+        {
+            domain = domain.trim_start_matches("www.");
 
-                write!(
-                    res,
-                    "\"{}\"\n[{}]({})\n\n",
-                    link_obj
-                        .title
-                        .as_ref()
-                        .map_or("unknown url", String::as_str),
-                    domain,
-                    &link_obj.url
-                )
-                .expect("write to String: can't fail");
-            }
+            write!(
+                res,
+                "\"{}\"\n[{}]({})\n\n",
+                link_obj
+                    .title
+                    .as_ref()
+                    .map_or("unknown url", String::as_str),
+                domain,
+                &link_obj.url
+            )
+            .expect("write to String: can't fail");
         }
     }
 

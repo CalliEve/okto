@@ -104,10 +104,10 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
                     .expect("invalid timestamp for launch difference")
                     .naive_utc();
 
-            if let Some(dur) = reminded.get(&l.ll_id) {
-                if *dur == difference.num_minutes() {
-                    continue;
-                }
+            if let Some(dur) = reminded.get(&l.ll_id)
+                && *dur == difference.num_minutes()
+            {
+                continue;
             }
             reminded.insert(
                 l.ll_id
@@ -115,23 +115,23 @@ pub async fn reminder_tracking(http: Arc<Http>, cache: Arc<RwLock<Vec<LaunchData
                 difference.num_minutes(),
             );
 
-            if let Ok(Some(r)) = get_reminders(&db, difference.num_minutes()).await {
-                if let Ok(res) = bson::from_bson(r.into()) {
-                    let handle = tokio::spawn(execute_reminder(
-                        db.clone(),
-                        http.clone(),
-                        res,
-                        l.clone(),
-                        difference,
-                    ));
+            if let Ok(Some(r)) = get_reminders(&db, difference.num_minutes()).await
+                && let Ok(res) = bson::from_bson(r.into())
+            {
+                let handle = tokio::spawn(execute_reminder(
+                    db.clone(),
+                    http.clone(),
+                    res,
+                    l.clone(),
+                    difference,
+                ));
 
-                    if let Err(e) = handle.await {
-                        error_log(
-                            http.clone(),
-                            &format!("A panic happened in reminders: ```{e}```",),
-                        )
-                        .await
-                    }
+                if let Err(e) = handle.await {
+                    error_log(
+                        http.clone(),
+                        &format!("A panic happened in reminders: ```{e}```",),
+                    )
+                    .await
                 }
             }
         }
@@ -281,11 +281,11 @@ fn reminder_embed(l: &LaunchData, diff: Duration) -> CreateEmbed {
 }
 
 fn format_url(rawlink: &str) -> String {
-    if let Ok(link) = url::Url::from_str(rawlink) {
-        if let Some(mut domain) = link.domain() {
-            domain = domain.trim_start_matches("www.");
-            return format!("[{domain}]({rawlink})\n");
-        }
+    if let Ok(link) = url::Url::from_str(rawlink)
+        && let Some(mut domain) = link.domain()
+    {
+        domain = domain.trim_start_matches("www.");
+        return format!("[{domain}]({rawlink})\n");
     }
     rawlink.to_owned()
 }

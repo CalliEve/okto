@@ -143,48 +143,40 @@ pub static SECONDS_REGEX: LazyLock<Regex> =
 pub fn parse_duration(input: &str) -> Duration {
     let mut dur = Duration::zero();
 
-    if let Some(captures) = DAYS_REGEX.captures(input) {
-        if let Some(days_str) = captures.get(1) {
-            if let Ok(days) = days_str
-                .as_str()
-                .parse::<i64>()
-            {
-                dur = dur.add(Duration::days(days));
-            }
-        }
+    if let Some(captures) = DAYS_REGEX.captures(input)
+        && let Some(days_str) = captures.get(1)
+        && let Ok(days) = days_str
+            .as_str()
+            .parse::<i64>()
+    {
+        dur = dur.add(Duration::days(days));
     }
 
-    if let Some(captures) = HOURS_REGEX.captures(input) {
-        if let Some(hour_str) = captures.get(1) {
-            if let Ok(hours) = hour_str
-                .as_str()
-                .parse::<i64>()
-            {
-                dur = dur.add(Duration::hours(hours));
-            }
-        }
+    if let Some(captures) = HOURS_REGEX.captures(input)
+        && let Some(hour_str) = captures.get(1)
+        && let Ok(hours) = hour_str
+            .as_str()
+            .parse::<i64>()
+    {
+        dur = dur.add(Duration::hours(hours));
     }
 
-    if let Some(captures) = MINUTES_REGEX.captures(input) {
-        if let Some(minutes_str) = captures.get(1) {
-            if let Ok(minutes) = minutes_str
-                .as_str()
-                .parse::<i64>()
-            {
-                dur = dur.add(Duration::minutes(minutes));
-            }
-        }
+    if let Some(captures) = MINUTES_REGEX.captures(input)
+        && let Some(minutes_str) = captures.get(1)
+        && let Ok(minutes) = minutes_str
+            .as_str()
+            .parse::<i64>()
+    {
+        dur = dur.add(Duration::minutes(minutes));
     }
 
-    if let Some(captures) = SECONDS_REGEX.captures(input) {
-        if let Some(seconds_str) = captures.get(1) {
-            if let Ok(seconds) = seconds_str
-                .as_str()
-                .parse::<i64>()
-            {
-                dur = dur.add(Duration::seconds(seconds));
-            }
-        }
+    if let Some(captures) = SECONDS_REGEX.captures(input)
+        && let Some(seconds_str) = captures.get(1)
+        && let Ok(seconds) = seconds_str
+            .as_str()
+            .parse::<i64>()
+    {
+        dur = dur.add(Duration::seconds(seconds));
     }
 
     dur

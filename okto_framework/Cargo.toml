@@ -2,7 +2,7 @@
 name = "okto_framework"
 version = "0.1.0"
 authors = ["Calli <me@calli.dev>"]
-edition = "2021"
+edition = "2024"
 license = "MIT"
 
 [dependencies.slash_command_macros]

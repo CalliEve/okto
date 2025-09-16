@@ -13,10 +13,10 @@ impl From<LaunchInfo> for LaunchData {
         {
             urls.sort_by_key(|u| u.priority);
             urls.dedup_by_key(|u| {
-                if let Ok(link) = url::Url::from_str(&u.url) {
-                    if let Some(domain) = link.domain() {
-                        return domain.to_owned();
-                    }
+                if let Ok(link) = url::Url::from_str(&u.url)
+                    && let Some(domain) = link.domain()
+                {
+                    return domain.to_owned();
                 }
                 u.title
                     .clone()

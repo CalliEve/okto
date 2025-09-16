@@ -170,7 +170,7 @@ impl StatefulEmbed {
                     option
                         .button
                         .label
-                        .to_string(),
+                        .clone(),
                 );
 
                 if let Some(e) = &option

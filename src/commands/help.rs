@@ -4,11 +4,6 @@ use std::{
 };
 
 use itertools::Itertools;
-use mongodb::bson::{
-    doc,
-    document::Document,
-    from_bson,
-};
 use okto_framework::{
     macros::command,
     structs::{
@@ -23,7 +18,6 @@ use serenity::{
         CreateEmbedAuthor,
         EditInteractionResponse,
     },
-    framework::standard::macros::hook,
     model::{
         Permissions,
         application::{
@@ -49,13 +43,7 @@ use crate::{
         EmbedSession,
         StatefulEmbed,
     },
-    models::{
-        caches::{
-            CommandListKey,
-            DatabaseKey,
-        },
-        settings::GuildSettings,
-    },
+    models::caches::CommandListKey,
     utils::{
         capitalize,
         constants::{
@@ -466,56 +454,6 @@ async fn allowed(
     }
 
     Ok(true)
-}
-
-#[hook]
-pub async fn calc_prefix(ctx: &Context, msg: &Message) -> String {
-    if msg
-        .guild_id
-        .is_none()
-    {
-        return ";".to_owned();
-    }
-
-    let db = if let Some(db) = ctx
-        .data
-        .read()
-        .await
-        .get::<DatabaseKey>()
-    {
-        db.clone()
-    } else {
-        eprintln!("No database found");
-        return ";".to_owned();
-    };
-
-    let res = db
-        .collection::<Document>("general_settings")
-        .find_one(doc! { "guild": msg.guild_id.unwrap().get() as i64 })
-        .await;
-
-    if res.is_err() {
-        eprintln!(
-            "Error in getting prefix: {:?}",
-            res.unwrap_err()
-        );
-        return ";".to_owned();
-    }
-
-    res.unwrap()
-        .and_then(|c| {
-            let settings = from_bson::<GuildSettings>(c.into());
-            if settings.is_err() {
-                eprintln!(
-                    "Error in getting prefix: {:?}",
-                    settings.unwrap_err()
-                );
-                return None;
-            }
-            let settings = settings.unwrap();
-            Some(settings)
-        })
-        .map_or_else(|| ";".to_owned(), |s| s.prefix)
 }
 
 pub async fn slash_command_message(ctx: &Context, msg: &Message) {

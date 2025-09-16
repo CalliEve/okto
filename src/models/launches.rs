@@ -124,6 +124,7 @@ pub struct MissionInfo {
     pub mission_type: String,
 }
 
+#[allow(dead_code)] // TODO: use or remove the launcher information handling
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct LauncherDetail {
     pub id: i32,
@@ -142,6 +143,7 @@ pub struct LauncherDetail {
     pub launcher_config: LauncherConfigDetail,
 }
 
+#[allow(dead_code)] // TODO: use or remove the launcher information handling
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct LauncherConfigDetail {
     pub id: i32,

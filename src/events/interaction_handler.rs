@@ -68,67 +68,64 @@ impl InteractionHandler {
 
         match interaction {
             Interaction::Component(component) => {
-                if let Some(user) = self.user {
-                    if component
+                if let Some(user) = self.user
+                    && component
                         .user
                         .id
                         != user
-                    {
-                        return false;
-                    }
+                {
+                    return false;
                 }
 
-                if let Some(channel) = self.channel {
-                    if component.channel_id != channel {
-                        return false;
-                    }
+                if let Some(channel) = self.channel
+                    && component.channel_id != channel
+                {
+                    return false;
                 }
 
-                if let Some(component_type) = self.component_type {
-                    if !component_type_equals_kind(
+                if let Some(component_type) = self.component_type
+                    && !component_type_equals_kind(
                         component_type,
                         &component
                             .data
                             .kind,
-                    ) {
-                        return false;
-                    }
+                    )
+                {
+                    return false;
                 }
 
-                if let Some(custom_id) = &self.custom_id {
-                    if !component
+                if let Some(custom_id) = &self.custom_id
+                    && !component
                         .data
                         .custom_id
                         .starts_with(custom_id)
-                    {
-                        return false;
-                    }
+                {
+                    return false;
                 }
             },
             Interaction::Modal(modal) => {
-                if let Some(user) = self.user {
-                    if modal
+                if let Some(user) = self.user
+                    && modal
                         .user
                         .id
                         != user
-                    {
-                        return false;
-                    }
+                {
+                    return false;
                 }
 
-                if let Some(channel) = self.channel {
-                    if modal.channel_id != channel {
-                        return false;
-                    }
+                if let Some(channel) = self.channel
+                    && modal.channel_id != channel
+                {
+                    return false;
                 }
             },
             _ => return false,
         }
 
-        if let Some(filter) = &self.filter {
-            if !filter(interaction.clone()).await {
-                return false;
-            }
+        if let Some(filter) = &self.filter
+            && !filter(interaction.clone()).await
+        {
+            return false;
         }
 
         (self.handler)(interaction.clone()).await;
@@ -224,17 +221,14 @@ impl InteractionHandlerBuilder {
             .inner
             .component_type
             .is_some()
-        {
-            if let Some(interaction_type) = self
+            && let Some(interaction_type) = self
                 .inner
                 .interaction_type
-            {
-                if interaction_type != InteractionType::Component {
-                    return Err(Error::Other(
-                        "If the component type has been set, the interaction type must be MessageComponent",
-                    ));
-                }
-            }
+            && interaction_type != InteractionType::Component
+        {
+            return Err(Error::Other(
+                "If the component type has been set, the interaction type must be MessageComponent",
+            ));
         }
 
         Ok(self.inner)
